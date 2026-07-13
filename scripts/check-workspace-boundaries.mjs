@@ -24,8 +24,39 @@
     process.exit(1);
   }
 
-  const checkerArgs = process.argv.slice(2);
-  if (checkerArgs.length > 1 || (checkerArgs.length === 1 && checkerArgs[0] !== "--git-clean")) {
+  function normalizeCheckerArgs(args) {
+    if (args.length === 0) return [];
+    if (args.length === 1 && args[0] === "--git-clean") return ["--git-clean"];
+    if (args.length === 2 && args[0] === "--" && args[1] === "--git-clean") return ["--git-clean"];
+    return undefined;
+  }
+
+  function runArgumentMatcherRegressionChecks() {
+    const accepted = [
+      { input: [], output: [] },
+      { input: ["--git-clean"], output: ["--git-clean"] },
+      { input: ["--", "--git-clean"], output: ["--git-clean"] }
+    ];
+    for (const test of accepted) {
+      check(same(normalizeCheckerArgs(test.input), test.output), `regression: accepted argument form was rejected: ${JSON.stringify(test.input)}`);
+    }
+
+    const rejected = [
+      ["--"],
+      ["--", "--"],
+      ["--git-clean", "extra"],
+      ["--", "--git-clean", "extra"],
+      ["--git-clean", "--git-clean"],
+      ["--", "--git-clean", "--git-clean"],
+      ["--unknown"]
+    ];
+    for (const input of rejected) {
+      check(normalizeCheckerArgs(input) === undefined, `regression: invalid argument form was accepted: ${JSON.stringify(input)}`);
+    }
+  }
+
+  const checkerArgs = normalizeCheckerArgs(process.argv.slice(2));
+  if (checkerArgs === undefined) {
     console.error("BOUNDARY CHECK FAILED: supported invocation is `pnpm check:boundaries` with optional `-- --git-clean`.");
     process.exit(1);
   }
@@ -56,6 +87,8 @@
   function check(condition, message) {
     if (!condition) fail(message);
   }
+
+  runArgumentMatcherRegressionChecks();
 
   function canonical(value) {
     if (Array.isArray(value)) return value.map(canonical);

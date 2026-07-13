@@ -16,6 +16,8 @@ Use one workspace application per deployable process and create shared workspace
 
 ```text
 AI_block/
+├── scripts/
+│   └── check-workspace-boundaries.mjs
 ├── apps/
 │   ├── runtime-server/
 │   │   ├── src/main.ts
@@ -35,12 +37,15 @@ AI_block/
 │       ├── package.json
 │       └── tsconfig.json
 ├── package.json
+├── pnpm-lock.yaml
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json
 └── tsconfig.json
 ```
 
-Only the paths shown above are created or modified in Phase 0A.2. Future internal module directories are documented but are not created until their implementation phase has real files to own.
+Phase 0A.2 creates the four workspace units, the root solution config, and one repository boundary checker. It modifies the root `package.json` and `pnpm-lock.yaml`. The existing `.gitignore`, `pnpm-workspace.yaml`, and `tsconfig.base.json` are verified prerequisites and remain unchanged: `.gitignore` already excludes `dist/` and `*.tsbuildinfo`, while `pnpm-workspace.yaml` already matches only `apps/*` and `packages/*`.
+
+Future internal module directories are documented but are not created until their implementation phase has real files to own.
 
 ## 3. Architectural meaning
 
@@ -52,13 +57,23 @@ Only the paths shown above are created or modified in Phase 0A.2. Future interna
 - `actor-host` is the separate process representing one Actor.
 - `runtime-cli` is a stateless Client of the Server API.
 
-Applications are private workspace packages. They are not imported by other applications or shared packages.
+Applications are private workspace packages with stable names required for pnpm filtering. Each application manifest sets `private: true`, declares `type: module`, and deliberately omits `exports`, `main`, `types`, and `bin`. Applications are not importable libraries and are not imported by other applications or shared packages.
 
 ### 3.2 `packages/runtime-contracts`
 
 `@ai-block/runtime-contracts` is the only shared package created in Phase 0A. It is the future transport-neutral schema and value-type boundary consumed by all three applications.
 
-Phase 0A.2 gives it an explicit root export and an empty compileable module. Brick, Package, Actor, Host Protocol, Run, error, validation, hashing, and compatibility definitions remain Phase 0B work.
+Phase 0A.2 gives it an explicit root export and an empty compileable module. Its manifest freezes the following package surface:
+
+- package name: `@ai-block/runtime-contracts`;
+- private workspace package for the current implementation line;
+- ESM only via `type: module`;
+- top-level type entry: `./dist/index.d.ts`;
+- exactly one `exports` entry, `.`, with `types: ./dist/index.d.ts` and `import: ./dist/index.js`;
+- build artifacts: `dist/index.js` and `dist/index.d.ts`;
+- no subpath exports and no CommonJS entry.
+
+Brick, Package, Actor, Host Protocol, Run, error, validation, hashing, and compatibility definitions remain Phase 0B work.
 
 No other domain package is created pre-emptively. In particular, Project, Actor, Package, Run Engine, Host Gateway, and Graph do not become separate workspace packages.
 
@@ -79,6 +94,8 @@ apps/runtime-server/src/
 ```
 
 Graph is added only in the Graph phase. These directories are architectural reservations in this design, not Phase 0A.2 filesystem outputs.
+
+Server internal modules import shared schemas and value types only from the `@ai-block/runtime-contracts` root. They remain internal folders of `runtime-server`; they do not become separate workspace consumers.
 
 ### 3.4 ActorHost internal boundary
 
@@ -105,6 +122,19 @@ These directories are likewise deferred until they own implementation files.
 7. `runtime-contracts` exposes only the `.` export in Phase 0A.2.
 8. Package-local `rootDir`, TypeScript project references, NodeNext resolution, and package `exports` encode these boundaries without adding a lint framework.
 9. Generic directories named `common`, `shared`, `core`, or `utils` are not created as catch-all ownership zones.
+10. `scripts/check-workspace-boundaries.mjs` enforces the dependency policy that TypeScript project references cannot express by themselves.
+
+The TypeScript reference graph is exact:
+
+```text
+root solution
+├── packages/runtime-contracts
+├── apps/runtime-server ──→ packages/runtime-contracts
+├── apps/actor-host ──────→ packages/runtime-contracts
+└── apps/runtime-cli ─────→ packages/runtime-contracts
+```
+
+The root solution owns no source files. Each application references Runtime Contracts. Runtime Contracts references no application. Applications do not reference each other.
 
 ## 5. Build shape
 
@@ -114,22 +144,60 @@ These directories are likewise deferred until they own implementation files.
 - Application entrypoints and the Runtime Contracts root are intentionally empty ESM modules in this phase. They prove compilation and package topology but perform no I/O and expose no product behavior.
 - The three application manifests declare the Runtime Contracts workspace dependency so package-manager topology matches the future allowed dependency direction.
 
-## 6. Boundary verification
+## 6. File responsibility map
+
+| File or path | Responsibility |
+|---|---|
+| root `package.json` | pinned package manager and tools; root build, clean, boundary-check, and verification scripts |
+| `pnpm-workspace.yaml` | exact workspace membership: `apps/*` and `packages/*`; preserved unchanged |
+| `pnpm-lock.yaml` | reproducible dependency graph and four workspace importers; regenerated and committed |
+| `.gitignore` | generated-output exclusions including `dist/` and `*.tsbuildinfo`; verified unchanged |
+| `tsconfig.base.json` | shared strict NodeNext compiler policy; preserved unchanged |
+| root `tsconfig.json` | source-free solution references for all four units |
+| application `package.json` | private application identity and `workspace:*` Runtime Contracts dependency; no export surface |
+| application `tsconfig.json` | local `rootDir`/`outDir`, composite build, and Runtime Contracts reference |
+| Contracts `package.json` | private ESM package identity and the single public root export |
+| Contracts `tsconfig.json` | composite library build and declaration output |
+| Contracts `src/index.ts` | sole public entrypoint; empty module until Phase 0B |
+| application `src/main.ts` | empty ESM application entrypoint; no I/O or product behavior |
+| `scripts/check-workspace-boundaries.mjs` | manifest, reference-graph, import-direction, directory-policy, and positive/negative boundary verification |
+
+## 7. Boundary verification
 
 Phase 0A.2 acceptance must prove:
 
-1. all four units build under the pinned Node, pnpm, and TypeScript versions;
-2. a frozen workspace install is reproducible and does not mutate versioned files;
-3. each application can resolve the Runtime Contracts root after build;
-4. a Runtime Contracts private/deep subpath is rejected;
-5. no application can resolve another application as a dependency;
-6. generated output stays local to ignored `dist/` directories and can be cleaned centrally;
-7. the root contains no new product source files or catch-all configuration clutter;
-8. no Contract schema, runtime validation, persistence, transport, process management, Claude adapter, Run, or Graph behavior exists.
+1. `pnpm install --frozen-lockfile` succeeds against the updated lockfile without changing it;
+2. `git diff --exit-code` succeeds after frozen installation;
+3. the root build command succeeds under the pinned Node, pnpm, and TypeScript versions;
+4. every application produces `dist/main.js`;
+5. Runtime Contracts produces `dist/index.js` and `dist/index.d.ts`;
+6. every application resolves `@ai-block/runtime-contracts` from the package root after build;
+7. a Runtime Contracts private/deep package import is rejected;
+8. an application-to-application package import is rejected;
+9. an application-to-application relative source import is rejected;
+10. Runtime Contracts source imports from applications or infrastructure are rejected;
+11. the clean command removes all four local `dist/` outputs;
+12. no new catch-all `common`, `shared`, `core`, or `utils` directory exists;
+13. no Contract schema, runtime validation, persistence, transport, process management, Claude adapter, Run, or Graph behavior exists.
+
+The boundary checker reads the real manifests, TypeScript references, and source imports. It uses the pinned TypeScript compiler and built application/package outputs for compact positive and negative probes without adding them to the normal build graph. It must cover the allowed Contracts root import, forbidden Contracts deep import, forbidden app package import, and forbidden relative cross-package import. Any temporary artifacts use ignored temporary storage and are always removed.
+
+The acceptance command sequence is explicit:
+
+```text
+pnpm install --frozen-lockfile
+git diff --exit-code
+pnpm build
+pnpm check:boundaries
+pnpm clean
+git diff --exit-code
+```
+
+The build creates the required local artifacts; `check:boundaries` verifies them and executes the positive/negative probes before `clean` removes them. Final status verification must also show no untracked, non-ignored generated files.
 
 Verification should use the existing TypeScript and package-manager toolchain. Phase 0A.2 adds no schema, testing, lint, bundling, or task-runner dependency.
 
-## 7. Alternatives rejected
+## 8. Alternatives rejected
 
 ### Domain package per Server module
 
@@ -143,7 +211,16 @@ Putting Server, Host, CLI, and Contracts under one root source directory would u
 
 A single root compiler project would reduce local files, but it would weaken ownership, build isolation, and cross-package root enforcement. Three small files per workspace unit are accepted structural cost rather than clutter.
 
-## 8. Non-goals
+## 9. Compatibility and precedence
+
+This design is authoritative for the physical Phase 0 workspace layout. It refines earlier generic sketches that showed Server domain modules near top-level package directories. Those sketches remain conceptually useful for module ownership, but their physical placement is superseded as follows:
+
+- Server domain modules live under `apps/runtime-server/src/modules/`;
+- ActorHost components live under `apps/actor-host/src/`;
+- only transport-neutral Runtime Contracts live under `packages/` during Phase 0;
+- internal Server modules consume Runtime Contracts through its package root without becoming workspace packages.
+
+## 10. Non-goals
 
 Phase 0A.2 does not implement:
 
@@ -154,7 +231,7 @@ Phase 0A.2 does not implement:
 - Server domain modules, ActorHost components, or Graph;
 - publication to an external package registry.
 
-## 9. Completion boundary
+## 11. Completion boundary
 
 Phase 0A is complete when the process-first workspace builds reproducibly, exposes only the intended Runtime Contracts root boundary, rejects forbidden dependency directions, and contains no Runtime Contract or runtime behavior.
 

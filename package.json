@@ -13,7 +13,7 @@
     "clean": "tsc -b tsconfig.json --clean",
     "check:types": "tsc -b tsconfig.json --pretty false",
     "check:boundaries": "node scripts/check-workspace-boundaries.mjs",
-    "verify": "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm check:boundaries && pnpm clean && git diff --exit-code"
+    "verify": "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

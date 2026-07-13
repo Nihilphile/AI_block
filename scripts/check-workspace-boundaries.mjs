@@ -111,11 +111,161 @@
     return files.sort();
   }
 
+
   function importSpecs(source) {
     const specs = [];
-    const pattern = /(?:import|export)\s+(?:type\s+)?(?:[^"'`;\r\n]*?\s+from\s+)?["']([^"']+)["']|(?:import|require)\s*\(\s*["']([^"']+)["']\s*\)/g;
-    for (const match of source.matchAll(pattern)) specs.push(match[1] ?? match[2]);
+
+    function skipTrivia(index) {
+      let cursor = index;
+      while (cursor < source.length) {
+        if (/\s/.test(source[cursor])) {
+          cursor += 1;
+          continue;
+        }
+        if (source.startsWith("//", cursor)) {
+          const newline = source.indexOf("\n", cursor + 2);
+          cursor = newline === -1 ? source.length : newline + 1;
+          continue;
+        }
+        if (source.startsWith("/*", cursor)) {
+          const end = source.indexOf("*/", cursor + 2);
+          cursor = end === -1 ? source.length : end + 2;
+          continue;
+        }
+        break;
+      }
+      return cursor;
+    }
+
+    function skipString(index) {
+      const quote = source[index];
+      let cursor = index + 1;
+      while (cursor < source.length) {
+        if (source[cursor] === "\\") cursor += 2;
+        else if (source[cursor] === quote) return cursor + 1;
+        else cursor += 1;
+      }
+      return source.length;
+    }
+
+    function readString(index) {
+      const quote = source[index];
+      let cursor = index + 1;
+      let value = "";
+      while (cursor < source.length) {
+        if (source[cursor] === "\\") {
+          if (cursor + 1 < source.length) value += source[cursor + 1];
+          cursor += 2;
+        } else if (source[cursor] === quote) {
+          return { value, next: cursor + 1 };
+        } else {
+          value += source[cursor];
+          cursor += 1;
+        }
+      }
+      return undefined;
+    }
+
+    function isIdentifierStart(character) {
+      return character !== undefined && /[A-Za-z_$]/.test(character);
+    }
+
+    function isIdentifierPart(character) {
+      return character !== undefined && /[A-Za-z0-9_$]/.test(character);
+    }
+
+    function readIdentifier(index) {
+      if (!isIdentifierStart(source[index])) return undefined;
+      let cursor = index + 1;
+      while (isIdentifierPart(source[cursor])) cursor += 1;
+      return { value: source.slice(index, cursor), next: cursor };
+    }
+
+    function readAfterFrom(index) {
+      const cursor = skipTrivia(index);
+      return source[cursor] === "\"" || source[cursor] === "'" ? readString(cursor) : undefined;
+    }
+
+    function readFromClause(index) {
+      let cursor = index;
+      while (cursor < source.length) {
+        cursor = skipTrivia(cursor);
+        if (cursor >= source.length || source[cursor] === ";") return undefined;
+        if (source[cursor] === "\"" || source[cursor] === "'" || source[cursor] === String.fromCharCode(96)) {
+          cursor = skipString(cursor);
+          continue;
+        }
+        const identifier = readIdentifier(cursor);
+        if (identifier) {
+          if (identifier.value === "from") return readAfterFrom(identifier.next);
+          cursor = identifier.next;
+        } else {
+          cursor += 1;
+        }
+      }
+      return undefined;
+    }
+
+    let cursor = 0;
+    while (cursor < source.length) {
+      cursor = skipTrivia(cursor);
+      if (cursor >= source.length) break;
+      if (source[cursor] === "\"" || source[cursor] === "'" || source[cursor] === String.fromCharCode(96)) {
+        cursor = skipString(cursor);
+        continue;
+      }
+      const identifier = readIdentifier(cursor);
+      if (!identifier) {
+        cursor += 1;
+        continue;
+      }
+      cursor = identifier.next;
+      if (identifier.value === "import" || identifier.value === "require") {
+        const next = skipTrivia(cursor);
+        if (source[next] === "(") {
+          const argument = skipTrivia(next + 1);
+          if (source[argument] === "\"" || source[argument] === "'") {
+            const module = readString(argument);
+            if (module) specs.push(module.value);
+          }
+        } else if (identifier.value === "import" && (source[next] === "\"" || source[next] === "'")) {
+          const module = readString(next);
+          if (module) specs.push(module.value);
+        } else if (identifier.value === "import") {
+          const module = readFromClause(next);
+          if (module) specs.push(module.value);
+        }
+      } else if (identifier.value === "export") {
+        const module = readFromClause(cursor);
+        if (module) specs.push(module.value);
+      }
+    }
     return specs;
+  }
+
+  function runHardeningRegressionChecks() {
+    const cases = [
+      { label: "single-line import", source: `import "${contractName}";`, expected: [contractName] },
+      { label: "multiline import", source: `import {\n  value\n} from "${contractName}";`, expected: [contractName] },
+      { label: "multiline export-from", source: `export {\n  value\n} from "${contractName}";`, expected: [contractName] },
+      { label: "comment-separated dynamic import", source: `import(/* ignored */\n  "${contractName}"\n);`, expected: [contractName] },
+      {
+        label: "comment and string false positives",
+        source: `// import "${contractName}/comment";\nconst text = "export { value } from '${contractName}/string'";\nconst template = \`import("${contractName}/template")\`;`,
+        expected: []
+      }
+    ];
+    for (const testCase of cases) {
+      check(same(importSpecs(testCase.source), testCase.expected), `regression: ${testCase.label} scanner case mismatch`);
+    }
+    check(!tscExpectationMatches(1, "probe.mts(1,1): error TS2307: unrelated module", "", {
+      codes: ["TS6059"],
+      fragments: ["expected source"]
+    }), "regression: unrelated TypeScript diagnostics were accepted");
+    check(!nodeExpectationMatches(42, "", "", {
+      status: 1,
+      stderrIncludes: ["ERR_PACKAGE_PATH_NOT_EXPORTED"]
+    }), "regression: unrelated normal Node exit was accepted");
   }
 
   function sourceTarget(file, spec) {
@@ -182,7 +332,7 @@
       clean: "tsc -b tsconfig.json --clean",
       "check:types": "tsc -b tsconfig.json --pretty false",
       "check:boundaries": "node scripts/check-workspace-boundaries.mjs",
-      verify: "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm check:boundaries && pnpm clean && git diff --exit-code"
+      verify: "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
       },
       devDependencies: { "@types/node": "24.13.3", typescript: "7.0.2" }
     };
@@ -279,6 +429,32 @@
     return typeof value === "string" ? value : value === undefined || value === null ? "" : String(value);
   }
 
+  function parseTscDiagnostics(stdout, stderr) {
+    const diagnostics = [];
+    for (const line of `${stdout}\n${stderr}`.split(/\r?\n/)) {
+      const match = line.match(/error (TS\d+):\s*(.*)$/i);
+      if (match) diagnostics.push({ code: match[1].toUpperCase(), message: match[2] });
+    }
+    return diagnostics;
+  }
+
+  function tscExpectationMatches(status, stdout, stderr, expected) {
+    const diagnostics = parseTscDiagnostics(stdout, stderr);
+    if (expected.success) return status === 0 && diagnostics.length === 0;
+    if (status !== 1 || diagnostics.length !== expected.codes.length) return false;
+    const actualCodes = diagnostics.map((diagnostic) => diagnostic.code).sort();
+    const expectedCodes = [...expected.codes].map((code) => code.toUpperCase()).sort();
+    if (JSON.stringify(actualCodes) !== JSON.stringify(expectedCodes)) return false;
+    const output = `${stdout}\n${stderr}`;
+    return expected.fragments.every((fragment) => output.includes(fragment));
+  }
+
+  function nodeExpectationMatches(status, stdout, stderr, expected) {
+    if (status !== expected.status) return false;
+    return (expected.stdoutIncludes ?? []).every((fragment) => stdout.includes(fragment))
+      && (expected.stderrIncludes ?? []).every((fragment) => stderr.includes(fragment));
+  }
+
   function validateProcess(label, result, expected) {
     const stdout = outputText(result.stdout);
     const stderr = outputText(result.stderr);
@@ -311,6 +487,16 @@
     return validateProcess(label, result, expected);
   }
 
+  function checkGitClean() {
+    const result = spawnSync("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
+      cwd: root,
+      encoding: "utf8",
+      windowsHide: true,
+      shell: false
+    });
+    return validateProcess("Git cleanliness", result, (status, stdout, stderr) => status === 0 && stdout.trim() === "" && stderr.trim() === "");
+  }
+
   function checkArtifactsAndToolchain() {
     runPnpm("pnpm version", ["--version"], (status, stdout) => status === 0 && stdout.trim() === "11.10.0");
     runPnpm("TypeScript version", ["exec", "tsc", "--version"], (status, stdout) => status === 0 && stdout.trim() === "Version 7.0.2");
@@ -319,7 +505,7 @@
     check(existsSync(join(contracts.dir, "dist", "index.d.ts")), "Runtime Contracts dist/index.d.ts missing");
   }
 
-  function runNodeProbe(file, source, expectStatus) {
+  function runNodeProbe(file, source, expected) {
     writeFileSync(file, source, "utf8");
     const result = spawnSync(process.execPath, [file], {
       cwd: root,
@@ -327,10 +513,10 @@
       windowsHide: true,
       shell: false
     });
-    return validateProcess(`Node probe ${file}`, result, (status) => expectStatus(status));
+    return validateProcess(`Node probe ${file}`, result, (status, stdout, stderr) => nodeExpectationMatches(status, stdout, stderr, expected));
   }
 
-  function runTscProbe(label, directory, source, expectSuccess) {
+  function runTscProbe(label, directory, source, expected) {
     const sourceFile = join(directory, `${label}.mts`);
     const configFile = join(directory, `${label}.tsconfig.json`);
     const config = {
@@ -347,10 +533,7 @@
     };
     writeFileSync(sourceFile, source, "utf8");
     writeFileSync(configFile, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-    const result = runPnpm(`tsc probe ${label}`, ["exec", "tsc", "--project", configFile, "--noEmit", "--pretty", "false"], (status, stdout, stderr) => {
-      if (expectSuccess) return status === 0;
-      return status !== 0 && /error TS\d+:/i.test(`${stdout}\n${stderr}`);
-    });
+    const result = runPnpm(`tsc probe ${label}`, ["exec", "tsc", "--project", configFile, "--noEmit", "--pretty", "false"], (status, stdout, stderr) => tscExpectationMatches(status, stdout, stderr, expected));
     return result;
   }
 
@@ -359,44 +542,78 @@
     return value.startsWith(".") ? value : `./${value}`;
   }
 
+  function diagnosticPath(path) {
+    return resolve(path).replaceAll("\\", "/");
+  }
+
   function runBoundaryProbes() {
     const temporary = [];
     try {
       for (const app of apps) {
         const dir = mkdtempSync(join(join(app.dir, "node_modules"), ".ai-block-boundaries-"));
         temporary.push(dir);
-        runTscProbe(`root-${app.name.split("/").pop()}`, dir, `import ${JSON.stringify(contractName)};\n`, true);
-        check(runNodeProbe(join(dir, "root.mjs"), `import ${JSON.stringify(contractName)};\n`, (status) => status === 0) !== undefined, `${app.name}: package-root runtime import did not return numeric status 0`);
+        check(runTscProbe(`root-${app.name.split("/").pop()}`, dir, `import ${JSON.stringify(contractName)};\n`, { success: true }) !== undefined, `${app.name}: package-root TypeScript probe failed`);
+        check(runNodeProbe(join(dir, "root.mjs"), `import ${JSON.stringify(contractName)};\n`, { status: 0 }) !== undefined, `${app.name}: package-root runtime import failed`);
       }
 
       const app = apps[0];
       const appDir = temporary[0];
-      runTscProbe("deep", appDir, `import ${JSON.stringify(`${contractName}/src/index.js`)};\n`, false);
-      check(runNodeProbe(join(appDir, "deep.mjs"), `import ${JSON.stringify(`${contractName}/src/index.js`)};\n`, (status) => status !== 0) !== undefined, "Runtime Contracts deep-import runtime probe did not return a numeric nonzero status");
+      const deepSpecifier = `${contractName}/src/index.js`;
+      check(runTscProbe("deep", appDir, `import ${JSON.stringify(deepSpecifier)};\n`, {
+        codes: ["TS2882"],
+        fragments: [`Cannot find module or type declarations for side-effect import of '${deepSpecifier}'.`]
+      }) !== undefined, "Runtime Contracts deep-import TypeScript probe did not fail for the exact package boundary reason");
+      check(runNodeProbe(join(appDir, "deep.mjs"), `import ${JSON.stringify(deepSpecifier)};\n`, {
+        status: 1,
+        stderrIncludes: ["ERR_PACKAGE_PATH_NOT_EXPORTED", "Package subpath './src/index.js' is not defined by \"exports\""]
+      }) !== undefined, "Runtime Contracts deep-import runtime probe did not fail for the exact package boundary reason");
 
-      runTscProbe("app-package", appDir, `import ${JSON.stringify(appNames[1])};\n`, false);
-      check(runNodeProbe(join(appDir, "app-package.mjs"), `import ${JSON.stringify(appNames[1])};\n`, (status) => status !== 0) !== undefined, "application-to-application package runtime probe did not return a numeric nonzero status");
+      const appPackageSpecifier = appNames[1];
+      check(runTscProbe("app-package", appDir, `import ${JSON.stringify(appPackageSpecifier)};\n`, {
+        codes: ["TS2882"],
+        fragments: [`Cannot find module or type declarations for side-effect import of '${appPackageSpecifier}'.`]
+      }) !== undefined, "application-to-application package TypeScript probe did not fail for the exact package boundary reason");
+      check(runNodeProbe(join(appDir, "app-package.mjs"), `import ${JSON.stringify(appPackageSpecifier)};\n`, {
+        status: 1,
+        stderrIncludes: ["ERR_MODULE_NOT_FOUND", "Cannot find package '@ai-block/actor-host'"]
+      }) !== undefined, "application-to-application package runtime probe did not fail for the exact package boundary reason");
 
       const relativeFile = join(appDir, "relative.mts");
-      const relativeSpec = toImportPath(relative(dirname(relativeFile), join(contracts.dir, "src", "index.ts")));
+      const relativeTarget = join(contracts.dir, "src", "index.ts");
+      const relativeSpec = toImportPath(relative(dirname(relativeFile), relativeTarget)).replace(/\.ts$/, ".js");
       const relativeSource = `import ${JSON.stringify(relativeSpec)};\n`;
-      runTscProbe("relative-contracts", appDir, relativeSource, false);
+      check(runTscProbe("relative-contracts", appDir, relativeSource, {
+        codes: ["TS6059"],
+        fragments: [`File '${diagnosticPath(relativeTarget)}' is not under 'rootDir'`]
+      }) !== undefined, "relative cross-package TypeScript probe did not fail for the exact rootDir boundary reason");
       check(importViolations(relativeFile, relativeSource).length > 0, "relative cross-package source probe was accepted by policy");
 
       const appRelativeFile = join(appDir, "relative-application.mts");
-      const appRelativeSpec = toImportPath(relative(dirname(appRelativeFile), join(apps[1].dir, "src", "main.ts")));
+      const appRelativeTarget = join(apps[1].dir, "src", "main.ts");
+      const appRelativeSpec = toImportPath(relative(dirname(appRelativeFile), appRelativeTarget)).replace(/\.ts$/, ".js");
       const appRelativeSource = `import ${JSON.stringify(appRelativeSpec)};\n`;
-      runTscProbe("relative-application", appDir, appRelativeSource, false);
+      check(runTscProbe("relative-application", appDir, appRelativeSource, {
+        codes: ["TS6059"],
+        fragments: [`File '${diagnosticPath(appRelativeTarget)}' is not under 'rootDir'`]
+      }) !== undefined, "application-to-application relative TypeScript probe did not fail for the exact rootDir boundary reason");
       check(importViolations(appRelativeFile, appRelativeSource).length > 0, "application-to-application relative source probe was accepted by policy");
 
       const contractsDir = mkdtempSync(join(join(root, "node_modules"), ".ai-block-boundaries-contracts-"));
       temporary.push(contractsDir);
       const contractsAppFile = join(contracts.dir, "synthetic-app-probe.mts");
-      const contractsAppSource = `import ${JSON.stringify(toImportPath(relative(contracts.dir, join(apps[0].dir, "src", "main.ts"))))};\n`;
-      runTscProbe("contracts-application", contractsDir, contractsAppSource, false);
+      const contractsAppTarget = join(apps[0].dir, "src", "main.ts");
+      const contractsAppSpec = toImportPath(relative(contracts.dir, contractsAppTarget)).replace(/\.ts$/, ".js");
+      const contractsAppSource = `import ${JSON.stringify(contractsAppSpec)};\n`;
+      check(runTscProbe("contracts-application", contractsDir, contractsAppSource, {
+        codes: ["TS6059"],
+        fragments: [`File '${diagnosticPath(contractsAppTarget)}' is not under 'rootDir'`]
+      }) !== undefined, "Runtime Contracts-to-application TypeScript probe did not fail for the exact rootDir boundary reason");
       check(importViolations(contractsAppFile, contractsAppSource).length > 0, "Runtime Contracts-to-application probe was accepted");
       const infrastructureSource = 'import "infrastructure/internal.js";\n';
-      runTscProbe("contracts-infrastructure", contractsDir, infrastructureSource, false);
+      check(runTscProbe("contracts-infrastructure", contractsDir, infrastructureSource, {
+        codes: ["TS2882"],
+        fragments: ["Cannot find module or type declarations for side-effect import of 'infrastructure/internal.js'."]
+      }) !== undefined, "Runtime Contracts-to-infrastructure TypeScript probe did not fail for the exact unresolved specifier reason");
       check(importViolations(join(contracts.dir, "src", "synthetic-infrastructure-probe.mts"), infrastructureSource).length > 0, "Runtime Contracts-to-infrastructure probe was accepted");
     } finally {
       for (const dir of temporary) {
@@ -410,17 +627,24 @@
     }
   }
 
-  checkManifestShape();
-  checkDirectories();
-  checkTsGraph();
-  checkSourcesAndImports();
-  checkArtifactsAndToolchain();
-  runBoundaryProbes();
+  runHardeningRegressionChecks();
+  if (process.argv.includes("--git-clean")) {
+    checkGitClean();
+  } else {
+    checkManifestShape();
+    checkDirectories();
+    checkTsGraph();
+    checkSourcesAndImports();
+    checkArtifactsAndToolchain();
+    runBoundaryProbes();
+  }
 
   if (failures.length > 0) {
     console.error("BOUNDARY CHECK FAILED");
     for (const failure of failures) console.error(`- ${failure}`);
     process.exitCode = 1;
   } else {
-    console.log("PASS: workspace boundaries, manifests, references, artifacts, and probes verified");
+    console.log(process.argv.includes("--git-clean")
+      ? "PASS: Git worktree clean; no nonignored tracked or untracked paths remain"
+      : "PASS: workspace boundaries, manifests, references, artifacts, and probes verified");
   }

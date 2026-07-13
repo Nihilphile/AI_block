@@ -58,7 +58,7 @@ It retains compressed, decision-relevant reports with references to full artifac
 - does not approve its own implementation
 - returns prioritized findings and a release recommendation
 
-All delegated workers use the Luna model family unless the controller records a task-specific exception requested by the user. The controller selects reasoning effort from task complexity and risk; worker creation must set the model and reasoning explicitly rather than silently inheriting the controller configuration.
+All delegated workers use the Luna model family. Sol is reserved for the main controller and is never dispatched as a worker. The controller selects Luna reasoning effort from task complexity and risk; worker creation must set the model and reasoning explicitly rather than silently inheriting the controller configuration.
 
 ## 3. Module-task preflight gate
 

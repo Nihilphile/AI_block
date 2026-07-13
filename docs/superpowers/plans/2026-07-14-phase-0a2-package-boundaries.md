@@ -60,6 +60,7 @@
 - Do not modify `.gitignore`, `pnpm-workspace.yaml`, or `tsconfig.base.json`; do not alter Git configuration or invent `user.name`/`user.email`. If identity is missing, report `NEEDS_CONTEXT` and stop before committing.
 - The controller-owned plan file is outside the Coder write scope and is never staged by the product Coder. The controller commits this plan before Coder preflight, so the baseline `HEAD` already contains it. Final Git cleanliness means no product diff and no untracked non-ignored file.
 - The boundary checker is invoked only through the root pnpm lifecycle script. It resolves `process.env.npm_execpath` once, requires a non-empty absolute file path, and invokes pnpm only through `spawnSync(process.execPath, [pnpmEntry, ...pnpmArgs], { cwd: root, encoding: "utf8", windowsHide: true, shell: false })`; direct `node scripts/check-workspace-boundaries.mjs` fails with a concise instruction to run `pnpm check:boundaries`.
+- Checker argument handling accepts semantic modes exactly `[]` and `["--git-clean"]`. Because pnpm may transport `pnpm check:boundaries -- --git-clean` as `["--", "--git-clean"]`, only that exact nested form is normalized to `["--git-clean"]`; every other argument sequence is rejected.
 - Negative probes are cause-specific. TypeScript failures must have normal status `1`, exactly the expected diagnostic count/code and path/message evidence; Node failures must have normal status `1` and the exact expected error code/message evidence. Launch errors, signals, missing statuses, status `42`, operational pnpm failures, and unrelated diagnostics are checker failures.
 - Phase 0A.2 adds no Runtime Contract types or schemas, TypeBox, Ajv, `ajv-formats`, Vitest, fast-check, RFC 8785/JCS implementation, HTTP, SSE, WebSocket, SQLite, MCP, Claude adapter, CLI command, daemon lifecycle, Server module, ActorHost component, Run, Graph, persistence, transport, process management, or registry publication behavior.
 
@@ -810,9 +811,20 @@ The root importer remains the current pinned `@types/node` `24.13.3` and TypeScr
     process.exit(1);
   }
 
-  const checkerArgs = process.argv.slice(2);
-  if (checkerArgs.length > 1 || (checkerArgs.length === 1 && checkerArgs[0] !== "--git-clean")) {
-    console.error("BOUNDARY CHECK FAILED: supported invocation is `pnpm check:boundaries` with optional `-- --git-clean`.");
+  function normalizeCheckerArgs(args) {
+    return args.length === 2 && args[0] === "--" && args[1] === "--git-clean"
+      ? ["--git-clean"]
+      : [...args];
+  }
+
+  function isSupportedCheckerArgs(args) {
+    return args.length === 0 || (args.length === 1 && args[0] === "--git-clean");
+  }
+
+  const rawCheckerArgs = process.argv.slice(2);
+  const checkerArgs = normalizeCheckerArgs(rawCheckerArgs);
+  if (!isSupportedCheckerArgs(checkerArgs)) {
+    console.error("BOUNDARY CHECK FAILED: use `pnpm check:boundaries` or `pnpm check:boundaries -- --git-clean`; no other arguments are supported.");
     process.exit(1);
   }
   const gitCleanMode = checkerArgs[0] === "--git-clean";
@@ -1021,6 +1033,22 @@ The root importer remains the current pinned `@types/node` `24.13.3` and TypeScr
   }
 
   function runProbeMatcherRegressionChecks() {
+    const argumentCases = [
+      { raw: [], normalized: [], accepted: true },
+      { raw: ["--git-clean"], normalized: ["--git-clean"], accepted: true },
+      { raw: ["--", "--git-clean"], normalized: ["--git-clean"], accepted: true },
+      { raw: ["--"], normalized: ["--"], accepted: false },
+      { raw: ["--", "--"], normalized: ["--", "--"], accepted: false },
+      { raw: ["--git-clean", "--git-clean"], normalized: ["--git-clean", "--git-clean"], accepted: false },
+      { raw: ["--unknown"], normalized: ["--unknown"], accepted: false },
+      { raw: ["--git-clean", "trailing"], normalized: ["--git-clean", "trailing"], accepted: false },
+      { raw: ["--", "--git-clean", "trailing"], normalized: ["--", "--git-clean", "trailing"], accepted: false }
+    ];
+    for (const testCase of argumentCases) {
+      const normalized = normalizeCheckerArgs(testCase.raw);
+      check(same(normalized, testCase.normalized), `regression: incorrect argument normalization for ${JSON.stringify(testCase.raw)}`);
+      check(isSupportedCheckerArgs(normalized) === testCase.accepted, `regression: incorrect argument acceptance for ${JSON.stringify(testCase.raw)}`);
+    }
     const expectedTsc = {
       status: 1,
       codes: ["TS6059"],
@@ -1246,7 +1274,7 @@ The root importer remains the current pinned `@types/node` `24.13.3` and TypeScr
 
 - [ ] **Step 4: Confirm every negative probe is rejected for its intended cause.** Run `pnpm check:boundaries` and retain the result. Expected: the deep Contracts package import fails in Node with status `1`, `ERR_PACKAGE_PATH_NOT_EXPORTED`, and the exact `./src/index.js` exports message; the app package import fails in Node with status `1`, `ERR_MODULE_NOT_FOUND`, and the exact `@ai-block/actor-host` package message; the app-relative and Contracts-to-app compiler probes each fail with status `1`, only `TS6059`, and the exact target/rootDir evidence; the Contracts-to-infrastructure probe fails with status `1`, only `TS2882`, and the exact `infrastructure/internal.js` message. The command exits `0` only because all expected rejections match; an unrelated diagnostic, status `42`, launch error, signal, or missing status makes it exit `1`.
 
-- [ ] **Step 5: Verify the remediation Git-clean mode is present without running it against the intentionally dirty pre-commit tree.** Inspect the exact implementation above and confirm that only `pnpm check:boundaries -- --git-clean` selects the mode, that it requires status `0` plus empty stdout/stderr from `git status --porcelain=v1 --untracked-files=all`, and that its exact success line is `PASS: Git worktree clean; no nonignored tracked or untracked paths remain`. Its first executable acceptance check is Task 5 Step 11 after the product commit and generated-file cleanup. Direct Node invocation remains forbidden.
+- [ ] **Step 5: Verify the remediation Git-clean mode and its exact pnpm argument normalization without running it against the intentionally dirty pre-commit tree.** Inspect the implementation and regression matrix above. Expected: raw `[]` remains normal mode; raw `["--git-clean"]` remains Git-clean mode; raw `["--", "--git-clean"]` alone normalizes to `["--git-clean"]`; `["--"]`, `["--", "--"]`, repeated flags, unknown flags, trailing arguments, and every other sequence are rejected. Git-clean mode requires status `0` plus empty stdout/stderr from `git status --porcelain=v1 --untracked-files=all`, and its exact success line is `PASS: Git worktree clean; no nonignored tracked or untracked paths remain`. Its first executable acceptance check is Task 5 Step 11 after the product commit and generated-file cleanup. Direct Node invocation remains forbidden.
 
 ## Task 5: Run the Phase 0A.2 module milestone, review by risk, and commit the accepted boundary
 
@@ -1392,7 +1420,7 @@ The root importer remains the current pinned `@types/node` `24.13.3` and TypeScr
   'PASS: final Git status is clean and transient node_modules remains ignored'
   ```
 
-  Expected: the checker first prints exactly `PASS: Git worktree clean; no nonignored tracked or untracked paths remain`, then PowerShell prints exactly `PASS: final Git status is clean and transient node_modules remains ignored`.
+  Expected: pnpm may deliver the Git-clean request as canonical `["--git-clean"]` or nested transport `["--", "--git-clean"]`; the checker normalizes only the latter and first prints exactly `PASS: Git worktree clean; no nonignored tracked or untracked paths remain`. PowerShell then prints exactly `PASS: final Git status is clean and transient node_modules remains ignored`. Any unsupported argument sequence is a checker failure.
 
 - [ ] **Step 12: Record the Tester milestone result and controller acceptance.** The Tester report must state frozen lockfile stability, successful build, all five required artifacts observed, allowed Contracts root imports accepted by TypeScript and Node, the deep and app-package imports rejected by their exact Node errors, the app-relative and Contracts-to-app probes rejected only by exact `TS6059` evidence, the Contracts-to-infrastructure probe rejected only by exact `TS2882` evidence, emitted files and `.tsbuildinfo` files removed after clean, Git-clean mode passed, and final Git status is clean. Tester PASS is required for controller acceptance. If Tester fails, return the work to the same Coder; any remediation receives a separate `IMPLEMENTATION_AUTHORIZED` envelope and may create a separately authorized remediation commit, followed by another independent Tester run.
 
@@ -1409,6 +1437,7 @@ This plan creates topology and verification only. It does not create Runtime Con
 - [ ] The lockfile task compares the complete committed pre-change lockfile outside `importers:` and compares the exact four-workspace importer structure without a YAML or dependency-list heuristic.
 - [ ] The acceptance sequence includes frozen install/hash stability, post-install Git diff, build artifacts, positive Contracts root imports, exact Node deep/app-package failures, exact TypeScript app-relative/Contracts failures, clean removal, the remediation Git-clean mode, and final Git cleanliness.
 - [ ] No general source-import parser, TypeScript unstable programmatic API, parser dependency, permanent probe fixture, or claim of arbitrary future source enforcement remains; Phase 0B owns that future mechanism.
+- [ ] Checker argument normalization maps only `["--", "--git-clean"]` to `["--git-clean"]`; the only accepted semantic modes are `[]` and `["--git-clean"]`, and the regression matrix rejects bare separators, repeated/unknown flags, trailing arguments, and all other sequences.
 - [ ] The controller-revised plan is committed before preflight, the product commit is exactly one descendant of captured baseline `HEAD`, the Tester runs against that commit, and Tester PASS gates controller acceptance.
 - [ ] The runbook gates require read-only Coder preflight, per-task `IMPLEMENTATION_AUTHORIZED`, same-Coder reuse, an independent Tester milestone, and risk-based rather than per-task Review.
 - [ ] No command in this plan modifies Git configuration, invents author identity, adds a dependency, or stages the controller-owned plan file.

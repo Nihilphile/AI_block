@@ -15,6 +15,26 @@ importers:
         specifier: 7.0.2
         version: 7.0.2
 
+  apps/actor-host:
+    dependencies:
+      '@ai-block/runtime-contracts':
+        specifier: workspace:*
+        version: link:../../packages/runtime-contracts
+
+  apps/runtime-cli:
+    dependencies:
+      '@ai-block/runtime-contracts':
+        specifier: workspace:*
+        version: link:../../packages/runtime-contracts
+
+  apps/runtime-server:
+    dependencies:
+      '@ai-block/runtime-contracts':
+        specifier: workspace:*
+        version: link:../../packages/runtime-contracts
+
+  packages/runtime-contracts: {}
+
 packages:
 
   '@types/node@24.13.3':

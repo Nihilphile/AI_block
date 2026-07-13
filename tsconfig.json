@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/runtime-contracts" },
+    { "path": "./apps/runtime-server" },
+    { "path": "./apps/actor-host" },
+    { "path": "./apps/runtime-cli" }
+  ]
+}

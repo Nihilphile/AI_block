@@ -1,1 +1,22 @@
-{"name":"ai-block","version":"0.0.0","private":true,"type":"module","packageManager":"pnpm@11.10.0","engines":{"node":">=24 <25","pnpm":"11.10.0"},"devDependencies":{"@types/node":"24.13.3","typescript":"7.0.2"}}
+{
+  "name": "ai-block",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.10.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": "11.10.0"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "clean": "tsc -b tsconfig.json --clean",
+    "check:types": "tsc -b tsconfig.json --pretty false",
+    "check:boundaries": "node scripts/check-workspace-boundaries.mjs",
+    "verify": "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm check:boundaries && pnpm clean && git diff --exit-code"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "typescript": "7.0.2"
+  }
+}

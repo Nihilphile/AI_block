@@ -1,0 +1,9 @@
+{
+  "name": "@ai-block/runtime-cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ai-block/runtime-contracts": "workspace:*"
+  }
+}

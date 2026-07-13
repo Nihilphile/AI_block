@@ -25,7 +25,7 @@ It retains compressed, decision-relevant reports with references to full artifac
 ### Coder
 
 - model: `gpt-5.6-luna`
-- reasoning: `high`
+- reasoning: `high` by default; `xhigh` for Contract-heavy, cross-module, security/concurrency-sensitive, or complex refactoring work
 - owns explicitly assigned production files
 - performs module preflight before implementation
 - implements only after explicit authorization
@@ -42,6 +42,8 @@ It retains compressed, decision-relevant reports with references to full artifac
 
 ### Researcher
 
+- model: `gpt-5.6-luna`
+- reasoning: `medium` by default; `high` when external behavior is ambiguous or requires reconciling conflicting evidence
 - investigates external documentation and empirical backend behavior
 - does not implement production code
 - separates verified facts, inferences, and behaviors requiring a controlled probe
@@ -49,10 +51,14 @@ It retains compressed, decision-relevant reports with references to full artifac
 
 ### Reviewer
 
+- model: `gpt-5.6-luna`
+- reasoning: `high` by default; `xhigh` for high-risk Contract, security, concurrency, or cross-module reviews
 - inspects detailed diffs and implementation quality
 - checks module boundaries, Contract compliance, security, and maintainability
 - does not approve its own implementation
 - returns prioritized findings and a release recommendation
+
+All delegated workers use the Luna model family unless the controller records a task-specific exception requested by the user. The controller selects reasoning effort from task complexity and risk; worker creation must set the model and reasoning explicitly rather than silently inheriting the controller configuration.
 
 ## 3. Module-task preflight gate
 

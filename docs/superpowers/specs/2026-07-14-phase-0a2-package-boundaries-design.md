@@ -122,7 +122,7 @@ These directories are likewise deferred until they own implementation files.
 7. `runtime-contracts` exposes only the `.` export in Phase 0A.2.
 8. Package-local `rootDir`, TypeScript project references, NodeNext resolution, and package `exports` encode these boundaries without adding a lint framework.
 9. Generic directories named `common`, `shared`, `core`, or `utils` are not created as catch-all ownership zones.
-10. `scripts/check-workspace-boundaries.mjs` enforces the dependency policy that TypeScript project references cannot express by themselves.
+10. `scripts/check-workspace-boundaries.mjs` verifies the current empty source tree and exercises the dependency policy through real TypeScript and Node positive/negative probes. It does not parse arbitrary future TypeScript source.
 
 The TypeScript reference graph is exact:
 
@@ -160,7 +160,7 @@ The root solution owns no source files. Each application references Runtime Cont
 | Contracts `tsconfig.json` | composite library build and declaration output |
 | Contracts `src/index.ts` | sole public entrypoint; empty module until Phase 0B |
 | application `src/main.ts` | empty ESM application entrypoint; no I/O or product behavior |
-| `scripts/check-workspace-boundaries.mjs` | manifest, reference-graph, import-direction, directory-policy, and positive/negative boundary verification |
+| `scripts/check-workspace-boundaries.mjs` | manifest, reference-graph, exact current source-tree, directory-policy, build-artifact, and positive/negative TypeScript/Node boundary verification |
 
 ## 7. Boundary verification
 
@@ -175,12 +175,14 @@ Phase 0A.2 acceptance must prove:
 7. a Runtime Contracts private/deep package import is rejected;
 8. an application-to-application package import is rejected;
 9. an application-to-application relative source import is rejected;
-10. Runtime Contracts source imports from applications or infrastructure are rejected;
+10. temporary Runtime Contracts-to-application and Runtime Contracts-to-infrastructure probes are rejected for their exact expected compiler diagnostics;
 11. the clean command removes all four local `dist/` outputs;
 12. no new catch-all `common`, `shared`, `core`, or `utils` directory exists;
 13. no Contract schema, runtime validation, persistence, transport, process management, Claude adapter, Run, or Graph behavior exists.
 
-The boundary checker reads the real manifests, TypeScript references, and source imports. It uses the pinned TypeScript compiler and built application/package outputs for compact positive and negative probes without adding them to the normal build graph. It must cover the allowed Contracts root import, forbidden Contracts deep import, forbidden app package import, and forbidden relative cross-package import. Any temporary artifacts use ignored temporary storage and are always removed.
+The boundary checker reads the real manifests, TypeScript references, and exact current source-tree contents. It uses the pinned TypeScript compiler and built application/package outputs for compact positive and negative probes without adding them to the normal build graph. It must cover the allowed Contracts root import, forbidden Contracts deep import, forbidden app package import, forbidden relative cross-package import, and forbidden Contracts-to-application/infrastructure directions. Negative probes must match exact expected diagnostics or runtime error evidence rather than merely any failure. Any temporary artifacts use ignored temporary storage and are always removed.
+
+Phase 0A.2 deliberately does not implement a general JavaScript/TypeScript import parser. Its product source files are exactly empty ESM modules, so there is no real source import graph to scan yet. Project references, package dependencies, `rootDir`, NodeNext resolution, package `exports`, exact source contents, and real compiler/runtime probes jointly prove the Phase 0A.2 boundary. When Phase 0B introduces real imports, that phase must select a compiler- or parser-backed enforcement mechanism appropriate to TypeScript 7; it must not extend a handwritten lexer into a substitute language parser.
 
 The acceptance command sequence is explicit:
 
@@ -210,6 +212,14 @@ Putting Server, Host, CLI, and Contracts under one root source directory would u
 ### Central configuration without package-local TypeScript projects
 
 A single root compiler project would reduce local files, but it would weaken ownership, build isolation, and cross-package root enforcement. Three small files per workspace unit are accepted structural cost rather than clutter.
+
+### Handwritten JavaScript/TypeScript import parser
+
+A custom lexer initially appears dependency-free, but correct handling of Unicode escapes, template expressions, comments, dynamic imports, and token context would duplicate language-parser responsibilities. Phase 0A.2 uses real compiler/runtime probes instead.
+
+### TypeScript 7 unstable programmatic API
+
+TypeScript 7 exposes programmatic compiler surfaces under explicitly unstable entrypoints. Depending on those entrypoints for a workspace bootstrap would add native API-server lifecycle and compatibility risk. Phase 0A.2 uses the pinned CLI; Phase 0B may revisit a stable parser/compiler integration when real Contract source exists.
 
 ## 9. Compatibility and precedence
 

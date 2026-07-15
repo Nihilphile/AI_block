@@ -18,6 +18,16 @@ base workflow level
 
 It does not ask an LLM to assign an intuition-based numeric risk score.
 
+### 1.1 Authority and related records
+
+This document is authoritative for construction workflow levels, add-on gates, and Reviewer placement.
+
+- `docs/construction/task-report-audit.md` is authoritative for Task IDs, Task/Report ownership, and Git-tracked audit records.
+- `development-orchestration-runbook-v0.1.md` remains authoritative for Worker roles, model selection, context control, and communication mechanics.
+- approved product architecture, designs, and ADRs remain authoritative for product decisions.
+
+If an older construction rule applies the same approval, Tester, or Reviewer requirement unconditionally, the classification and gate rules in this document determine whether that ceremony is required. Product ambiguity still returns to the product-design authority; workflow classification never resolves it.
+
 ## 2. Core rules
 
 1. Impact range determines the base level.
@@ -43,7 +53,7 @@ W2 + Security Review
 W3 + Recovery
 ```
 
-The Task file records the chosen classification, the binary triggers that evaluated to yes, and any gate-specific acceptance evidence.
+The Task file records the chosen classification, the concrete base-level reason, the binary gate triggers that evaluated to yes, and any gate-specific acceptance evidence. It does not copy every checklist question whose answer was no.
 
 ## 4. Base-level decision tree
 
@@ -56,7 +66,8 @@ Does the Task modify product code or a product deliverable?
    ↓
 Does it establish or change a public boundary,
 cross more than one state owner,
-or require multiple coordinated construction slices?
+or require multiple slices whose shared interface or
+compatibility order must be controlled across integration?
 ├─ Yes → W3
 └─ No
    ↓
@@ -82,10 +93,12 @@ Use for read-only investigation, status reporting, and Controller-owned construc
 
 Default workflow:
 
-- handled directly by the Controller;
+- bounded architecture/construction-record read-back, status checks, and small factual inspection are handled directly by the Controller;
 - no delegated Task/Report pair is required;
 - perform a proportionate read-back or diff check when a construction record changes;
 - no Coder, Tester, or Reviewer by default.
+
+Deep product-code or log investigation remains delegated to an Explorer when doing it directly would displace the Controller's architecture and orchestration context. External technical facts remain Research work. A delegated W0 evidence task uses a minimal Task/Report pair when its result will authorize or materially constrain later construction.
 
 Product design work is outside this classification rather than being treated as W0.
 
@@ -129,7 +142,7 @@ Closely related internal steps may share one authorization. Per-file or per-func
 
 ### W3 — Controlled multi-boundary construction
 
-Use when construction establishes or changes a public boundary, crosses state owners, or requires coordinated slices whose integration must be controlled.
+Use when construction establishes or changes a public boundary, crosses state owners, or requires coordinated slices whose shared interface or compatibility order must be controlled across integration. Multiple ordinary implementation steps inside one state-owning module do not become W3 merely because there is more than one step.
 
 Default workflow:
 

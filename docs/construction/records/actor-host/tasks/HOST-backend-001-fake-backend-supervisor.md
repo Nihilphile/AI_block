@@ -25,13 +25,15 @@ The Coder may modify only:
 
 - `apps/actor-host/package.json`
 - `apps/actor-host/tsconfig.json`
+- `apps/actor-host/tsconfig.test.json`
 - `apps/actor-host/src/backend/**`
 - `apps/actor-host/test/backend/**`
 - `package.json`
+- `pnpm-lock.yaml`
 - `scripts/check-workspace-boundaries.mjs`
 - `docs/construction/records/actor-host/reports/HOST-backend-001-fake-backend-supervisor.coder.md`
 
-Do not modify `apps/actor-host/src/main.ts`, Runtime Contracts, another app/package, dependencies, the lockfile, architecture/design files, or prior construction records.
+Do not modify `apps/actor-host/src/main.ts`, Runtime Contracts, another app/package, runtime dependencies, architecture/design files, or prior construction records. The only dependency change authorized is adding the workspace's already pinned exact Vitest version as an ActorHost development dependency and recording that importer change in `pnpm-lock.yaml`.
 
 ## Required directory responsibility
 
@@ -59,6 +61,7 @@ Do not create generic `common`, `shared`, `core`, `utils`, or catch-all files. D
 - No real Claude executable, child process, WebSocket, HTTP, SQLite, MCP, AgentControlTool, Graph, Package routing, ActorTemplate compiler, or Run Engine behavior is introduced.
 - Runtime Contracts are imported only from `@ai-block/runtime-contracts` package root.
 - Root verification must execute ActorHost tests; a separately green package command that is absent from `pnpm verify` is insufficient.
+- ActorHost owns its test-runner declaration and a no-emit test TypeScript configuration. It must not invoke or borrow another workspace package's test command.
 - Serena memory and `.serena/` inspection are prohibited. Non-memory Serena LSP/IDE functions are allowed when useful; Git, TypeScript, tests, and ordinary diffs remain authoritative.
 - `docs/construction/superpowers-temporary-authorization.md` governs the Coder. It performs the Task preflight and authorized implementation only; it does not start brainstorming, rewrite the plan, dispatch subagents, request review, or perform independent review.
 
@@ -97,6 +100,24 @@ At minimum, focused tests must prove:
 - The FakeBackend provides deterministic test control through test-owned configuration or handles.
 - `pnpm --filter @ai-block/actor-host test` passes from a clean state.
 - Root `pnpm verify` runs Runtime Contracts and ActorHost tests, build/type checks, workspace boundaries, cleanup, and Git-clean verification.
-- No Runtime Contracts, application entrypoint, dependency, or lockfile change occurs.
+- No Runtime Contracts, application entrypoint, or runtime dependency change occurs. The lockfile changes only for the authorized ActorHost Vitest development-dependency importer entry.
 - The Coder Report records RED/GREEN evidence, internal API decisions, state transitions, verification, Serena non-memory use/fallbacks, and deviations.
 - Commit only authorized paths with message `feat: add fake backend supervisor skeleton`.
+
+## Controller clarification after preflight
+
+The following decisions are frozen before implementation:
+
+- `BackendAdapter.start` returns either a launch-failure fact or a running adapter execution handle. The running handle exposes session discovery and final completion separately and owns the backend-specific stop operation.
+- `BackendSupervisor.start` returns a module-local typed result. On success it returns immediately with a read-only supervised Invocation handle containing separate session and final `InvocationResult` promises. Expected lifecycle rejections are typed values, not transport envelopes and not Server Run states.
+- `BackendSupervisor.stop(invocationId)` also returns a module-local typed result. `not_initialized`, `busy`, `no_active_invocation`, `invocation_mismatch`, `already_initialized`, and adapter mismatch remain Host-local error discriminants.
+- Initialization verifies that the injected adapter ID matches `ActorLaunchSpec.backend.adapter_id`. Initialization failure leaves the supervisor uninitialized.
+- Repeating initialization for the same Project, Actor, and immutable `actor_config_snapshot_id` is idempotent. A different identity or snapshot is rejected. Detecting mutated contents behind the same immutable snapshot ID is a later protocol-integrity concern and is not solved with a handwritten canonicalizer here.
+- Legal lifecycle is `uninitialized → ready → running → ready`, with `running → stopping → ready` when stop is accepted. Launch failure leaves `ready`; initialize failure leaves `uninitialized`.
+- A start while running or stopping returns `busy` and does not call, stop, or replace the active adapter execution. A stop for the wrong Invocation returns `invocation_mismatch` and leaves it untouched.
+- The first settled real backend completion fact wins a stop-versus-natural-completion race. The supervisor reports that fact rather than manufacturing a stopped result.
+- Session discovery must be observable before process completion so a future ServerConnection can report/persist it promptly. This slice does not construct Host protocol envelopes.
+- FakeBackend script/control APIs stay on the concrete fake/test side and never enter `BackendAdapter`.
+- For this slice `InvocationResult.emitted_package_refs` is empty and `completion_requested` is false.
+- Add ActorHost's own exact-version Vitest development dependency and the corresponding lockfile importer change. Do not reuse Runtime Contracts' test command.
+- Add a dedicated no-emit ActorHost test TypeScript configuration so focused tests receive both runtime execution and static checking.

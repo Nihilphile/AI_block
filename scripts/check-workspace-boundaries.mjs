@@ -142,11 +142,82 @@
     "verifyPackageContentHash",
     "HOST_PROTOCOL_VERSION"
   ].sort();
+  const expectedPublicTypeExports = [
+    "AckPayload",
+    "ActorConfigSnapshotId",
+    "ActorId",
+    "ActorLaunchSpec",
+    "ActorTemplateId",
+    "BackendAdapterId",
+    "BackendAdapterLaunchConfig",
+    "BackendSessionId",
+    "BrickPrompt",
+    "BrickSysPrompt",
+    "CanonicalTimestamp",
+    "ClientPrincipalId",
+    "CompletionRequestPayload",
+    "CompositeBrickPrompt",
+    "ContractDecodeResult",
+    "ContractErrorEnvelope",
+    "ContractSchemaVersion",
+    "ContractValue",
+    "ContentHash",
+    "CreateSessionDirective",
+    "Delivery",
+    "DeliveryId",
+    "DeliveryState",
+    "ExitedProcessFact",
+    "GraphId",
+    "HeartbeatPayload",
+    "HostFaultPayload",
+    "HostHelloPayload",
+    "HostInstanceId",
+    "HostMessageId",
+    "HostProtocolVersion",
+    "HostReadyPayload",
+    "HostToServerMessage",
+    "HostToServerPayload",
+    "InitializeActorHostPayload",
+    "InvocationId",
+    "InvocationProcessFact",
+    "InvocationResult",
+    "InvocationResultPayload",
+    "InvocationSpec",
+    "JsonObject",
+    "JsonValue",
+    "LaunchFailedProcessFact",
+    "Package",
+    "PackageCreator",
+    "PackageHashMaterial",
+    "PackageHead",
+    "PackageId",
+    "PackageProvenance",
+    "PackagePublishRequestPayload",
+    "PackageRef",
+    "PackageSchemaVersion",
+    "PackageType",
+    "ProjectId",
+    "ResumeSessionDirective",
+    "RunId",
+    "ServerToHostMessage",
+    "ServerToHostPayload",
+    "SessionDirective",
+    "SessionReportPayload",
+    "ShutdownHostPayload",
+    "SignaledProcessFact",
+    "StartInvocationPayload",
+    "StopInvocationPayload",
+    "StoppedProcessFact",
+    "TextBrickPrompt",
+    "ToolProviderId",
+    "ToolProviderLaunchConfig"
+  ].sort();
   const contracts = {
     kind: "contracts",
     name: contractName,
     dir: join(root, "packages", "runtime-contracts")
   };
+  const compatibilityFixturePath = join(contracts.dir, "test", "compatibility", "fixtures.json");
   const apps = [
     { kind: "app", name: "@ai-block/runtime-server", dir: join(root, "apps", "runtime-server") },
     { kind: "app", name: "@ai-block/actor-host", dir: join(root, "apps", "actor-host") },
@@ -239,7 +310,7 @@
       type: "module",
       scripts: {
         test: "vitest run && pnpm run test:types",
-        "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts test/actor/actor.test.ts test/host/host.test.ts test/compatibility/compatibility.test.ts --pretty false"
+        "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts test/actor/actor.test.ts test/host/host.test.ts test/compatibility/compatibility.test.ts test/types/public-types.ts --pretty false"
       },
       dependencies: { ajv: "8.20.0", "ajv-formats": "3.0.1", canonicalize: "3.0.0", typebox: "1.3.6" },
       devDependencies: { "fast-check": "4.8.0", vitest: "4.1.10" },
@@ -286,16 +357,17 @@
       }
       if (unit.kind === "contracts") {
         const testRoot = join(unit.dir, "test");
-        check(same(directories(testRoot), ["actor", "brick", "compatibility", "error", "fixtures", "host", "identity", "package", "validation"]), `${testRoot}: B.4 test topology mismatch`);
+        check(same(directories(testRoot), ["actor", "brick", "compatibility", "error", "fixtures", "host", "identity", "package", "types", "validation"]), `${testRoot}: B.4 test topology mismatch`);
         const expectedTests = new Map([
           ["actor", ["actor.test.ts"]],
           ["brick", ["brick.test.ts"]],
-          ["compatibility", ["compatibility.test.ts", "fixtures.ts"]],
+          ["compatibility", ["compatibility.test.ts", "fixtures.json", "fixtures.ts"]],
           ["validation", ["contract-kernel.test.ts"]],
           ["identity", ["identity.test.ts"]],
           ["error", ["error-envelope.test.ts"]],
           ["host", ["host.test.ts"]],
-          ["package", ["hash.test.ts", "package.test.ts"]]
+          ["package", ["hash.test.ts", "package.test.ts"]],
+          ["types", ["public-types.ts"]]
         ]);
         for (const [directory, files] of expectedTests) {
           const directoryPath = join(testRoot, directory);
@@ -543,10 +615,12 @@ export type RuntimeContractsConsumerFixture = ActorLaunchSpec | HostToServerMess
       for (const app of apps) {
         const dir = mkdtempSync(join(join(app.dir, "node_modules"), ".ai-block-boundaries-"));
         temporary.push(dir);
-        const rootTypeSource = `import type { ActorLaunchSpec, HostToServerMessage, Package } from ${JSON.stringify(contractName)};\ntype ConsumerFixture = ActorLaunchSpec | HostToServerMessage | Package;\nconst fixture: ConsumerFixture | undefined = undefined;\nvoid fixture;\n`;
+        const rootTypeSource = `import type { ${expectedPublicTypeExports.join(", ")} } from ${JSON.stringify(contractName)};\ntype ConsumerFixture = {\n${expectedPublicTypeExports.map((name) => `  ${name}: ${name === "ContractDecodeResult" || name === "ContractValue" ? `${name}<unknown>` : name};`).join("\n")}\n};\nconst fixture: ConsumerFixture | undefined = undefined;\nvoid fixture;\n`;
         const rootRuntimeSource = `import * as contracts from ${JSON.stringify(contractName)};\nconst expected = ${JSON.stringify(expectedRuntimeExports)};\nif (JSON.stringify(Object.keys(contracts).sort()) !== JSON.stringify(expected)) process.exit(1);\n`;
+        const builtCompatibilitySource = `import { readFileSync } from "node:fs";\nimport * as contracts from ${JSON.stringify(contractName)};\nconst fixtures = JSON.parse(readFileSync(${JSON.stringify(compatibilityFixturePath)}, "utf8"));\nconst schemas = {\n  ContractErrorEnvelopeSchema: contracts.ContractErrorEnvelopeSchema,\n  PackageSchema: contracts.PackageSchema,\n  DeliverySchema: contracts.DeliverySchema,\n  ActorLaunchSpecSchema: contracts.ActorLaunchSpecSchema,\n  ServerToHostMessageSchema: contracts.ServerToHostMessageSchema,\n  HostToServerMessageSchema: contracts.HostToServerMessageSchema\n};\nif (!Array.isArray(fixtures) || fixtures.length !== 6) process.exit(1);\nfor (const fixture of fixtures) {\n  const schema = schemas[fixture.schema];\n  if (schema === undefined) {\n    console.error(\`unknown schema: \${fixture.schema}\`);\n    process.exit(1);\n  }\n  const decoded = contracts.decodeContract(schema, fixture.value);\n  if (!decoded.ok) {\n    console.error(\`fixture failed: \${fixture.name}\`);\n    process.exit(1);\n  }\n  const roundTripped = contracts.decodeContract(schema, JSON.parse(JSON.stringify(decoded.value)));\n  if (!roundTripped.ok) {\n    console.error(\`fixture round-trip failed: \${fixture.name}\`);\n    process.exit(1);\n  }\n}\n`;
         check(runTscProbe(`root-${app.name.split("/").pop()}`, dir, rootTypeSource, { success: true }) !== undefined, `${app.name}: package-root TypeScript probe failed`);
         check(runNodeProbe(join(dir, "root.mjs"), rootRuntimeSource, { status: 0, stdout: "", stderr: "" }) !== undefined, `${app.name}: package-root runtime/export probe failed`);
+        check(runNodeProbe(join(dir, "compatibility.mjs"), builtCompatibilitySource, { status: 0, stdout: "", stderr: "" }) !== undefined, `${app.name}: built package-root compatibility probe failed`);
       }
 
       const appDir = temporary[0];

@@ -6,5 +6,19 @@
       "literals": [null, true, false]
     },
     "canonical": "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27]}"
+  },
+  {
+    "name": "rfc8785-utf16-property-order",
+    "source": "RFC 8785 section 3.2.3",
+    "input": {
+      "\u20ac": "Euro Sign",
+      "\r": "Carriage Return",
+      "\ufb33": "Hebrew Letter Dalet With Dagesh",
+      "1": "One",
+      "\ud83d\ude00": "Emoji: Grinning Face",
+      "\u0080": "Control",
+      "\u00f6": "Latin Small Letter O With Diaeresis"
+    },
+    "expectedOrder": ["\r", "1", "\u0080", "\u00f6", "\u20ac", "\ud83d\ude00", "\ufb33"]
   }
 ]

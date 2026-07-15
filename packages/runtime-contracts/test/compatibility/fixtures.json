@@ -1,0 +1,122 @@
+[
+  {
+    "name": "ContractErrorEnvelope",
+    "schema": "ContractErrorEnvelopeSchema",
+    "value": {
+      "schema_version": "1.0.0",
+      "code": "contract.compatibility_failed",
+      "category": "compatibility",
+      "message": "Compatibility fixture failed.",
+      "retryable": false
+    }
+  },
+  {
+    "name": "Package",
+    "schema": "PackageSchema",
+    "value": {
+      "head": {
+        "package_id": "package_00000000-0000-4000-8000-000000000000",
+        "package_type": "task",
+        "schema_version": "1.0.0",
+        "project_id": "project_00000000-0000-4000-8000-000000000000",
+        "created_by": { "kind": "runtime" },
+        "created_at": "2026-07-16T12:34:56.789Z",
+        "content_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "provenance": { "parent_refs": [] }
+      },
+      "body": { "kind": "text", "text": "compatibility fixture" }
+    }
+  },
+  {
+    "name": "Delivery",
+    "schema": "DeliverySchema",
+    "value": {
+      "delivery_id": "delivery_00000000-0000-4000-8000-000000000000",
+      "package_ref": {
+        "package_id": "package_00000000-0000-4000-8000-000000000000",
+        "content_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "project_id": "project_00000000-0000-4000-8000-000000000000",
+      "run_id": "run_00000000-0000-4000-8000-000000000000",
+      "target_actor_id": "actor_00000000-0000-4000-8000-000000000000",
+      "state": "pending",
+      "created_at": "2026-07-16T12:34:56.789Z"
+    }
+  },
+  {
+    "name": "ActorLaunchSpec",
+    "schema": "ActorLaunchSpecSchema",
+    "value": {
+      "schema_version": "1.0.0",
+      "project_id": "project_00000000-0000-4000-8000-000000000000",
+      "actor_id": "actor_00000000-0000-4000-8000-000000000000",
+      "actor_config_snapshot_id": "actor_config_00000000-0000-4000-8000-000000000000",
+      "system_prompts": [
+        { "kind": "system_text", "text": "compatibility system prompt" }
+      ],
+      "working_directory": "C:\\work",
+      "backend": {
+        "adapter_id": "fake.backend",
+        "config": { "model": "fixture" }
+      },
+      "tool_providers": [
+        {
+          "provider_id": "tools.mock",
+          "config": { "enabled": true }
+        }
+      ]
+    }
+  },
+  {
+    "name": "ServerToHostMessage",
+    "schema": "ServerToHostMessageSchema",
+    "value": {
+      "protocol_version": "1.0.0",
+      "message_id": "message_00000000-0000-4000-8000-000000000000",
+      "sender_sequence": 0,
+      "connection_generation": 1,
+      "sent_at": "2026-07-16T12:34:56.789Z",
+      "payload": {
+        "kind": "initialize_actor_host",
+        "launch_spec": {
+          "schema_version": "1.0.0",
+          "project_id": "project_00000000-0000-4000-8000-000000000000",
+          "actor_id": "actor_00000000-0000-4000-8000-000000000000",
+          "actor_config_snapshot_id": "actor_config_00000000-0000-4000-8000-000000000000",
+          "system_prompts": [
+            { "kind": "system_text", "text": "compatibility system prompt" }
+          ],
+          "working_directory": "C:\\work",
+          "backend": {
+            "adapter_id": "fake.backend",
+            "config": { "model": "fixture" }
+          },
+          "tool_providers": [
+            {
+              "provider_id": "tools.mock",
+              "config": { "enabled": true }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "HostToServerMessage",
+    "schema": "HostToServerMessageSchema",
+    "value": {
+      "protocol_version": "1.0.0",
+      "message_id": "message_11111111-1111-4111-8111-111111111111",
+      "correlation_id": "message_00000000-0000-4000-8000-000000000000",
+      "sender_sequence": 1,
+      "connection_generation": 1,
+      "sent_at": "2026-07-16T12:34:57.789Z",
+      "payload": {
+        "kind": "host_hello",
+        "project_id": "project_00000000-0000-4000-8000-000000000000",
+        "host_instance_id": "host_00000000-0000-4000-8000-000000000000",
+        "actor_id": "actor_00000000-0000-4000-8000-000000000000"
+      }
+    }
+  }
+]

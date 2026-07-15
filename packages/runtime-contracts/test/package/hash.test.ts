@@ -47,11 +47,29 @@ function mustValue<T>(result: { ok: true; value: T } | { ok: false }): T {
 describe("B.2 Package hashing", () => {
   it("matches the attributed Cyberphone JCS sample", () => {
     const fixture = JSON.parse(readFileSync(new URL("../fixtures/rfc8785/vectors.json", import.meta.url), "utf8")) as Array<{
+      name: string;
       input: unknown;
-      canonical: string;
+      canonical?: string;
+      expectedOrder?: string[];
     }>;
-    expect(fixture).toHaveLength(1);
-    expect(canonicalize(fixture[0].input)).toBe(fixture[0].canonical);
+    expect(fixture).toHaveLength(2);
+    const cyberphoneSample = fixture.find((vector) => vector.name === "cyberphone-sample");
+    expect(cyberphoneSample).toBeDefined();
+    expect(canonicalize(cyberphoneSample?.input)).toBe(cyberphoneSample?.canonical);
+
+    const utf16Vector = fixture.find((vector) => vector.name === "rfc8785-utf16-property-order");
+    expect(utf16Vector).toBeDefined();
+    expect(utf16Vector?.expectedOrder).toEqual(["\r", "1", "\u0080", "\u00f6", "\u20ac", "\ud83d\ude00", "\ufb33"]);
+    const canonical = canonicalize(utf16Vector?.input);
+    expect(canonical).toBeTypeOf("string");
+    if (canonical !== undefined && utf16Vector?.expectedOrder !== undefined) {
+      let previousKeyPosition = -1;
+      for (const key of utf16Vector.expectedOrder) {
+        const keyPosition = canonical.indexOf(`${JSON.stringify(key)}:`, previousKeyPosition + 1);
+        expect(keyPosition, key).toBeGreaterThan(previousKeyPosition);
+        previousKeyPosition = keyPosition;
+      }
+    }
     expect(canonicalize({ zero: -0 })).toBe('{"zero":0}');
   });
 

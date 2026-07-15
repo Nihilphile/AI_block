@@ -109,3 +109,19 @@ Do not edit until exact `IMPLEMENTATION_AUTHORIZED` is returned.
 - Root `pnpm verify` passes and leaves the worktree clean.
 - Coder Report records APIs/statuses/error boundaries, exact options, tests, dependency/lock audit, verification, Serena use/fallbacks, and deviations.
 - Commit only authorized paths with message `feat: add host gateway websocket adapter`.
+
+## Controller clarification after preflight
+
+The following HTTP, timeout, and failure rules are frozen before implementation:
+
+- Wrong Upgrade path returns `404 Not Found`; missing/malformed Authorization and verifier `invalid` return `401 Unauthorized`; verifier `unavailable`, verifier exception, and verifier deadline return `503 Service Unavailable`; a synchronous pre-101 `handleUpgrade` failure returns `500 Internal Server Error`.
+- Every pre-Upgrade HTTP rejection has an empty body, `Content-Length: 0`, `Connection: close`, no `WWW-Authenticate`, no diagnostic detail, and then closes the raw socket. Never echo token, verifier reason, stack, identity, or internal error.
+- If the raw socket/request disconnects or aborts during verification, write no response and never call `handleUpgrade`. If failure occurs after Upgrade has begun, no HTTP response is attempted; terminate/destroy the accepted socket.
+- Ordinary non-Upgrade HTTP requests, including an ordinary request to the reserved path, remain the future HTTP composition root's responsibility. This adapter owns only the injected server's `upgrade` listener; it does not add a request handler or 426 route.
+- Credential verification deadline is 4,000 ms, intentionally below the ActorHost client's 5,000 ms handshake timeout so the Server can deterministically return 503 first.
+- Verification uses one idempotent settlement latch. The 4-second timer is cleared on every completion and may be `unref`ed; request/socket abort/error/close listeners are removed. Late verifier fulfillment/rejection is observed and ignored without unhandled rejection. Tests use fake timers/event promises, never real waits.
+- `attach(server)` installs only one Upgrade listener and returns an idempotent detach operation. Reattach/double attach is a typed local rejection. `shutdown()` stops new upgrades, settles pending verification, terminates active sockets, unregisters Gateway connections through the transport-failure channel, closes the noServer WebSocketServer, and is idempotent.
+- Maintain separate idempotent latches for adapter terminal socket state and transport failure notification. Independent socket/send/close failures notify Host Gateway at most once.
+- When `HostGatewayConnection.receive()` returns a rejection or a result whose core already terminally failed/unregistered the connection, adapter terminates the socket only and does not send a second failure notification. Valid registered/fact/acknowledged/ack_ignored results keep the socket live.
+- Check `request.socket.localAddress === "127.0.0.1"` before authentication/Upgrade. Other local-address forms, IPv6 loopback, proxies, and remote hosts are deferred and rejected in this slice.
+- Use only typed pinned server options: `noServer: true`, exact path, `clientTracking: true`, `perMessageDeflate: false`, `maxPayload: 4 MiB`, and UTF-8 validation enabled. Do not cast in type-missing ws options.

@@ -108,3 +108,22 @@ Subject to preflight decisions, focused tests must prove:
 - Runtime Server main, Runtime Contracts, ActorHost, and other modules remain unchanged.
 - The Coder Report records APIs/state ownership, generation/sequence/ACK decisions, RED/GREEN evidence, manifest/lock audit, verification, Serena use/fallbacks, and deviations.
 - Commit only authorized paths with message `feat: add in-memory host gateway core`.
+
+## Controller clarification after preflight
+
+The following module-local decisions are frozen before implementation:
+
+- The complete-object `HostGatewayTransport.send` contract is synchronous and non-reentrant in version one: it either returns after accepting the complete Server envelope or throws, and it never synchronously calls the Gateway receive path from the same send stack. Real WebSocket delivery satisfies this. A future reentrant transport requires an explicit provisional-pending design and is not silently supported here.
+- Opening an authenticated transport creates a pending connection only. Reserve both Actor and Host-instance identities while validating the first Hello; commit them to the live indexes only after the Hello receipt ACK sends successfully. Release both reservations on failure.
+- Unknown or duplicate Host ACK references are nonfatal `ack_ignored` local results. The valid ACK envelope consumes the expected inbound sequence, emits no response/fact, removes no unrelated pending command, and keeps the connection live.
+- A matching ACK removes exactly one pending Server command and returns a local `acknowledged` result. It never marks initialization, Invocation, Run, or execution success.
+- Every Server receipt ACK uses `correlation_id = inbound.message_id`. A Server application command uses only an explicitly supplied causal message ID; otherwise its envelope correlation is absent.
+- Outbound ID/timestamp/envelope construction failure and transport send failure are terminal. A failed command send creates no pending entry; the allocated outbound identity/sequence attempt is consumed only inside the now-failed connection and is never reused.
+- For a valid non-ACK Host fact: validate first, send ACK, consume inbound sequence, then call the fact sink. ACK failure prevents sequence consumption and fact delivery because the connection fails. After ACK succeeds, sequence consumption is final.
+- A fact-sink exception becomes typed local `fact_sink_failed`, terminally fails and unregisters the connection, and is never translated to HostFault. The already-sent receipt ACK and consumed sequence are not rolled back.
+- Validate every identity field present in a post-Hello payload against authenticated connection context, including HostReady Actor and InvocationResult Project/Actor. Payloads that omit identity are wrapped with the authenticated context for fact delivery; no identity is invented inside the wire payload.
+- Unknown/duplicate Hello, identity mismatch, wrong first payload, another live connection for the Actor, or reuse of the Host instance fails the new/offending connection without disturbing an existing live connection.
+- Only generation 1 is accepted for this slice. Higher-generation replacement and reconnect remain deferred.
+- Terminal failure unsubscribes transport failure observation, removes pending/live reservations and indexes, and discards the in-memory pending-command registry. It performs no retry, replay, persistence, or HostFault emission.
+- Runtime Server test scripts mirror the established clean-state pattern exactly: `pretest` is `pnpm --filter @ai-block/runtime-contracts exec tsc -b`; tests and no-emit checking are owned by Runtime Server with exact `vitest@4.1.10` dev dependency.
+- Root verification runs Runtime Server tests after ActorHost tests and before boundary checks. The boundary checker uses an explicit Runtime Server manifest/topology policy, not a broad workspace wildcard.

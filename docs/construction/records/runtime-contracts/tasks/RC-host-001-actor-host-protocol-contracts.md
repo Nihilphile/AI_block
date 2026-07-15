@@ -18,6 +18,7 @@ The Coder may add or modify only:
 
 ```text
 packages/runtime-contracts/src/index.ts
+packages/runtime-contracts/package.json
 packages/runtime-contracts/src/actor/**
 packages/runtime-contracts/src/host/**
 packages/runtime-contracts/test/actor/**
@@ -38,7 +39,7 @@ No application, dependency, lockfile, existing B.1/B.2 implementation, persisten
 - Host envelopes use exact protocol version, message ID, optional correlation, sender sequence, connection generation, sent timestamp, and one strict discriminated payload.
 - Include only the approved minimal Server→Host and Host→Server message variants, ACK, Package publication request, and completion request. Do not implement transport, authentication, retry, replay, reconnect, heartbeat scheduling, or orchestration behavior.
 - Follow strict RED → GREEN → REFACTOR, keep all public imports at the package root, and keep `pnpm verify` green.
-- Continue using Serena for useful symbol/declaration navigation. If running `serena memories check`, set `PYTHONUTF8=1`; do not modify memory or MCP configuration to address the CP936 display issue, and never stage `.serena/`.
+- Continue using Serena for useful symbol/declaration navigation and attempt its symbol-aware edit/insert/replace operations for at least one suitable B.3 change inside the authorized write scope. Review the resulting ordinary Git diff and verify it through the same TDD/type/test gates as any other edit. Serena never expands write authority. If running `serena memories check`, set `PYTHONUTF8=1`; do not modify memory or MCP configuration to address the CP936 display issue, and never stage `.serena/`.
 - Escalate any contradiction with existing Package authority, session ownership, or generic-versus-adapter-private boundaries.
 
 ## Acceptance
@@ -49,4 +50,9 @@ No application, dependency, lockfile, existing B.1/B.2 implementation, persisten
 - ACK/correlation, sender sequence, connection generation, Package publication, completion request, session report, and fault shapes are deterministic and transport-neutral.
 - Invalid cross-direction variants, unknown fields, incompatible versions, invalid identities, and malformed nested B.1/B.2 values fail closed.
 - TypeScript/Node/Ajv compatibility, focused tests, build, boundary checks, clean checks, and repository-wide `pnpm verify` pass.
+- The Coder Report distinguishes Serena navigation from Serena mutation operations, records what edit operation was attempted, and recommends whether symbol-aware editing should remain enabled for later Tasks.
 - The Coder commits only authorized files and its own Report with `subject commit: same-as-report`.
+
+## Controller clarification — 2026-07-16
+
+The approved Phase 0B design now freezes every B.3 preflight gap: extension-ID pattern and wrapper fields, ActorLaunchSpec fields, create/resume directives, InvocationSpec, structured process facts, InvocationResult, Host protocol version/envelope constraints, every directional payload and discriminator, ACK/correlation rules, publication/completion authority, and all public schema/type names. `packages/runtime-contracts/package.json` is added to write scope solely to extend the existing type-test inputs for B.3; no dependency or lockfile change is authorized. No external Research remains open.

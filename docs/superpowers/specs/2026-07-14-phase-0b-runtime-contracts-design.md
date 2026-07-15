@@ -350,70 +350,212 @@ An unexpected canonicalizer failure after successful validation returns code `co
 
 ## 9. Actor execution contracts
 
-`ActorLaunchSpec` is an immutable Host initialization snapshot containing:
-
-- schema version, Project ID, Actor ID, and ActorConfigSnapshot ID;
-- ordered `BrickSysPrompt` values;
-- a working-directory value;
-- one backend adapter launch entry;
-- an ordered set of tool-provider launch entries.
-
-Backend and tool entries use a strict public wrapper:
+`BackendAdapterId` and `ToolProviderId` are lowercase extension identifiers matching:
 
 ```text
-adapter_id/provider_id + config: JsonObject
+^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$
 ```
 
-The wrapper rejects unknown fields. The `config` field is an intentional JSON extension point and must receive second-stage validation from the selected adapter/provider before use. This preserves a backend-neutral shared package: Claude Code flags, executable discovery, MCP internals, Skills layout, and resume mechanics never become generic Runtime Contract fields.
+`BackendSessionId` and working-directory values are opaque non-empty strings. Runtime Contracts does not parse backend session IDs or platform paths.
 
-`InvocationSpec` contains:
+Backend and tool entries use these exact strict wrappers:
 
-- schema version and Project/Run/Actor/Invocation identity;
-- an ordered set of accepted PackageRefs;
-- exactly one root `BrickPrompt` input;
-- an explicit session directive: create, or resume with an opaque backend session ID.
+```text
+BackendAdapterLaunchConfig = {
+  adapter_id: BackendAdapterId,
+  config: JsonObject
+}
 
-No system prompt or tool mutation appears in an InvocationSpec.
+ToolProviderLaunchConfig = {
+  provider_id: ToolProviderId,
+  config: JsonObject
+}
+```
 
-`InvocationResult` is a process-level fact, not a Run completion decision. It reports Invocation identity, the observed backend session ID when available, process outcome/exit facts, emitted PackageRefs, whether completion was requested, and an optional stable error. Server Run Engine remains authoritative for completed, waiting, failed, or cancelled Run state.
+The `config` fields are intentional JSON extension points and must receive second-stage validation from the selected adapter/provider before use. This preserves a backend-neutral shared package: Claude Code flags, executable discovery, MCP internals, Skills layout, and resume mechanics never become generic Runtime Contract fields.
+
+`ActorLaunchSpec` has the exact shape:
+
+```text
+{
+  schema_version: ContractSchemaVersion,
+  project_id: ProjectId,
+  actor_id: ActorId,
+  actor_config_snapshot_id: ActorConfigSnapshotId,
+  system_prompts: BrickSysPrompt[],
+  working_directory: string,
+  backend: BackendAdapterLaunchConfig,
+  tool_providers: ToolProviderLaunchConfig[]
+}
+```
+
+The ordered system-prompt and tool-provider arrays may be empty. Provider-ID uniqueness and adapter-specific configuration validity are semantic ActorCompiler/Host adapter checks, not claims made by this structural schema.
+
+The exact session directive is:
+
+```text
+CreateSessionDirective = { mode: "create" }
+ResumeSessionDirective = { mode: "resume", session_id: BackendSessionId }
+SessionDirective = CreateSessionDirective | ResumeSessionDirective
+```
+
+`InvocationSpec` has the exact shape:
+
+```text
+{
+  schema_version: ContractSchemaVersion,
+  project_id: ProjectId,
+  run_id: RunId,
+  actor_id: ActorId,
+  invocation_id: InvocationId,
+  input_package_refs: PackageRef[],
+  prompt: BrickPrompt,
+  session: SessionDirective
+}
+```
+
+`input_package_refs` is ordered and non-empty. No system prompt, backend configuration, or tool mutation appears in an InvocationSpec.
+
+Process facts are a strict discriminated union:
+
+```text
+{ status: "exited", exit_code: integer >= 0 and <= Number.MAX_SAFE_INTEGER }
+{ status: "signaled", signal: non-empty string }
+{ status: "stopped" }
+{ status: "launch_failed", error: ContractErrorEnvelope }
+```
+
+`InvocationResult` has the exact shape:
+
+```text
+{
+  schema_version: ContractSchemaVersion,
+  project_id: ProjectId,
+  run_id: RunId,
+  actor_id: ActorId,
+  invocation_id: InvocationId,
+  session_id?: BackendSessionId,
+  process: InvocationProcessFact,
+  emitted_package_refs: PackageRef[],
+  completion_requested: boolean
+}
+```
+
+The session ID is omitted when the backend did not produce one. Emitted PackageRefs may be empty. InvocationResult is a process-level fact, not a Run completion decision; Server Run Engine remains authoritative for completed, waiting, failed, or cancelled Run state.
+
+Every named Actor contract above exports a schema constant with the `Schema` suffix and a derived type without the suffix: `BackendAdapterId`, `ToolProviderId`, `BackendSessionId`, `BackendAdapterLaunchConfig`, `ToolProviderLaunchConfig`, `ActorLaunchSpec`, `CreateSessionDirective`, `ResumeSessionDirective`, `SessionDirective`, `ExitedProcessFact`, `SignaledProcessFact`, `StoppedProcessFact`, `LaunchFailedProcessFact`, `InvocationProcessFact`, `InvocationSpec`, and `InvocationResult`.
 
 ## 10. Host protocol contracts
 
-Every Host message uses one transport-neutral envelope containing:
+B.3 exports `HOST_PROTOCOL_VERSION` with exact value `1.0.0`, plus `HostProtocolVersionSchema` and `HostProtocolVersion`.
 
-- exact protocol version;
-- message ID;
-- optional correlation ID;
-- non-negative sender sequence;
-- positive connection generation;
-- sent timestamp;
-- discriminated message payload.
+`sender_sequence` is a safe integer from `0` through `Number.MAX_SAFE_INTEGER`. `connection_generation` is a safe integer from `1` through `Number.MAX_SAFE_INTEGER`. `correlation_id`, when present, is a `HostMessageId`.
 
-The minimal Phase 0B message set is:
+Both directional messages use the exact envelope fields:
 
-Server to Host:
+```text
+{
+  protocol_version: HostProtocolVersion,
+  message_id: HostMessageId,
+  correlation_id?: HostMessageId,
+  sender_sequence,
+  connection_generation,
+  sent_at: CanonicalTimestamp,
+  payload
+}
+```
 
-- initialize ActorHost with ActorLaunchSpec;
-- start Invocation with InvocationSpec;
-- stop Invocation;
-- shutdown Host;
-- ACK.
+Server-to-Host payloads are:
 
-Host to Server:
+```text
+InitializeActorHostPayload = {
+  kind: "initialize_actor_host",
+  launch_spec: ActorLaunchSpec
+}
 
-- Host hello/registration identity;
-- ready report;
-- heartbeat;
-- backend session report;
-- process-level InvocationResult;
-- Package publication request;
-- completion request;
-- Host fault;
-- ACK.
+StartInvocationPayload = {
+  kind: "start_invocation",
+  invocation_spec: InvocationSpec
+}
 
-A Package publication request contains only Actor-produced semantic material: idempotency key, Package type, one BrickPrompt Body, and parent PackageRefs. Server-side identity, Project, Actor, Run, Invocation, timestamp, and hash are authoritative and are not trusted from the Actor payload.
+StopInvocationPayload = {
+  kind: "stop_invocation",
+  invocation_id: InvocationId,
+  reason: non-empty string
+}
 
-ACK references the original message ID. Duplicate message IDs are defined as idempotent within one connection generation, but retry timers, replay persistence, and reconnect reconciliation are not implemented in Phase 0B.
+ShutdownHostPayload = {
+  kind: "shutdown_host",
+  reason: non-empty string
+}
+```
+
+Host-to-Server payloads are:
+
+```text
+HostHelloPayload = {
+  kind: "host_hello",
+  project_id: ProjectId,
+  host_instance_id: HostInstanceId,
+  actor_id: ActorId
+}
+
+HostReadyPayload = {
+  kind: "host_ready",
+  actor_id: ActorId
+}
+
+HeartbeatPayload = { kind: "heartbeat" }
+
+SessionReportPayload = {
+  kind: "session_report",
+  invocation_id: InvocationId,
+  session_id: BackendSessionId
+}
+
+InvocationResultPayload = {
+  kind: "invocation_result",
+  result: InvocationResult
+}
+
+PackagePublishRequestPayload = {
+  kind: "package_publish_request",
+  invocation_id: InvocationId,
+  idempotency_key: non-empty string,
+  package_type: PackageType,
+  body: BrickPrompt,
+  parent_refs: PackageRef[]
+}
+
+CompletionRequestPayload = {
+  kind: "completion_request",
+  invocation_id: InvocationId,
+  result_package_refs: PackageRef[]
+}
+
+HostFaultPayload = {
+  kind: "host_fault",
+  invocation_id?: InvocationId,
+  error: ContractErrorEnvelope
+}
+```
+
+`result_package_refs` is non-empty; publication `parent_refs` may be empty. A Package publication request contains only Actor-produced semantic material. Server-side Project, Actor, Run, creator, timestamp, Package ID, and hash are authoritative and are not accepted from the publication payload.
+
+ACK is allowed in both directions and has exact shape:
+
+```text
+AckPayload = {
+  kind: "ack",
+  acknowledged_message_id: HostMessageId
+}
+```
+
+`ServerToHostPayload` is the strict union of initialize, start, stop, shutdown, and ACK. `HostToServerPayload` is the strict union of hello, ready, heartbeat, session report, invocation result, publication request, completion request, fault, and ACK. `ServerToHostMessage` and `HostToServerMessage` are separate strict envelope schemas, so a payload valid only in the opposite direction fails decoding.
+
+Every named payload/message contract exports a schema constant with the `Schema` suffix and a derived type without the suffix. Runtime Contracts does not export a directionless Host-message union that would weaken directional validation.
+
+Duplicate message IDs are defined as idempotent within one connection generation, but retry timers, replay persistence, authentication, heartbeat scheduling, and reconnect reconciliation are not implemented in Phase 0B.
 
 ## 11. Dependency policy
 

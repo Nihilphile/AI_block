@@ -3,7 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "test": "vitest run && pnpm run test:types",
+    "test:types": "tsc --project tsconfig.test.json --noEmit --pretty false"
+  },
   "dependencies": {
     "@ai-block/runtime-contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "4.1.10"
   }
 }

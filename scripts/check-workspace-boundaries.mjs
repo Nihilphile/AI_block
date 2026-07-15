@@ -286,20 +286,34 @@
         "check:types": "tsc -b tsconfig.json --pretty false",
         "check:boundaries": "node scripts/check-workspace-boundaries.mjs",
         "test:contracts": "pnpm --filter @ai-block/runtime-contracts test",
-        verify: "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm test:contracts && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
+        "test:actor-host": "pnpm --filter @ai-block/actor-host test",
+        verify: "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm test:contracts && pnpm test:actor-host && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
       },
       devDependencies: { "@types/node": "24.13.3", typescript: "7.0.2" }
     };
     check(same(readJson(join(root, "package.json")), expectedRoot), "root package manifest has extra, missing, or altered fields");
 
     for (const app of apps) {
-      const expected = {
-        name: app.name,
-        version: "0.0.0",
-        private: true,
-        type: "module",
-        dependencies: { [contractName]: "workspace:*" }
-      };
+      const expected = app === apps[1]
+        ? {
+          name: app.name,
+          version: "0.0.0",
+          private: true,
+          type: "module",
+          scripts: {
+            test: "vitest run && pnpm run test:types",
+            "test:types": "tsc --project tsconfig.test.json --noEmit --pretty false"
+          },
+          dependencies: { [contractName]: "workspace:*" },
+          devDependencies: { vitest: "4.1.10" }
+        }
+        : {
+          name: app.name,
+          version: "0.0.0",
+          private: true,
+          type: "module",
+          dependencies: { [contractName]: "workspace:*" }
+        };
       check(same(readJson(join(app.dir, "package.json")), expected), `${app.dir}: complete application manifest mismatch`);
     }
 
@@ -326,18 +340,27 @@
     const authorizedSourceFiles = new Map([
       [contracts, "index.ts"],
       [apps[0], "main.ts"],
-      [apps[1], "main.ts"],
       [apps[2], "main.ts"]
     ]);
     for (const unit of units) {
-      const expectedOwned = unit.kind === "contracts" ? ["src", "test"] : ["src"];
+      const expectedOwned = unit.kind === "contracts"
+        ? ["src", "test"]
+        : unit === apps[1]
+          ? ["src", "test"]
+          : ["src"];
       const owned = directories(unit.dir).filter((name) => name !== "dist" && name !== "node_modules");
       check(same(owned, expectedOwned), `${unit.dir}: unexpected owned directory`);
       const sourceRoot = join(unit.dir, "src");
       const entries = existsSync(sourceRoot) ? readdirSync(sourceRoot, { withFileTypes: true }) : [];
       if (unit.kind === "app") {
-        const expectedFile = authorizedSourceFiles.get(unit);
-        check(entries.length === 1 && entries[0].isFile() && entries[0].name === expectedFile, `${sourceRoot} must contain exactly ${expectedFile} and no subdirectory`);
+        if (unit === apps[1]) {
+          check(same(entries.map((entry) => entry.name).sort(), ["backend", "main.ts"]), `${sourceRoot}: ActorHost source topology mismatch`);
+          const backendRoot = join(sourceRoot, "backend");
+          check(same(readdirSync(backendRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["adapter.ts", "fake-backend.ts", "supervisor.ts"]), `${backendRoot}: ActorHost backend topology mismatch`);
+        } else {
+          const expectedFile = authorizedSourceFiles.get(unit);
+          check(entries.length === 1 && entries[0].isFile() && entries[0].name === expectedFile, `${sourceRoot} must contain exactly ${expectedFile} and no subdirectory`);
+        }
       } else {
         check(same(entries.map((entry) => entry.name).sort(), ["actor", "brick", "error", "host", "identity", "index.ts", "package", "validation"]), `${sourceRoot}: B.3 source topology mismatch`);
         check(entries.find((entry) => entry.name === "index.ts")?.isFile() === true, `${sourceRoot}/index.ts is missing`);
@@ -377,6 +400,11 @@
         check(same(readdirSync(fixtureRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["rfc8785"]), `${fixtureRoot}: fixture topology mismatch`);
         check(same(readdirSync(join(fixtureRoot, "rfc8785"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["README.md", "vectors.json"]), `${fixtureRoot}/rfc8785: fixture files mismatch`);
       }
+      if (unit === apps[1]) {
+        const testRoot = join(unit.dir, "test");
+        check(same(directories(testRoot), ["backend"]), `${testRoot}: ActorHost test topology mismatch`);
+        check(same(readdirSync(join(testRoot, "backend"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["backend-supervisor.test.ts"]), `${testRoot}/backend: ActorHost test files mismatch`);
+      }
     }
     const forbiddenCatchAll = new Set(["common", "shared", "core", "utils"]);
     for (const tree of [join(root, "apps"), join(root, "packages"), join(root, "scripts")]) {
@@ -414,6 +442,11 @@
       };
       check(same(readJson(join(unit.dir, "tsconfig.json")), expected), `${unit.dir}: complete local TypeScript project mismatch`);
     }
+    check(same(readJson(join(apps[1].dir, "tsconfig.test.json")), {
+      extends: "../../tsconfig.base.json",
+      compilerOptions: { noEmit: true, rootDir: ".", types: ["node"] },
+      include: ["src/**/*.ts", "test/**/*.ts"]
+    }), `${apps[1].dir}: complete ActorHost test TypeScript project mismatch`);
   }
 
   function checkSources() {

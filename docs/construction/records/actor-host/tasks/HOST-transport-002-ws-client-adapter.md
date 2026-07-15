@@ -111,3 +111,7 @@ The following adapter/API decisions are frozen before implementation:
 - Socket factory/test abstractions may use project-owned ws-free event/data types, but only the concrete production factory imports `ws`.
 - Unit cleanup uses explicit fake lifecycle; loopback cleanup is always performed in `finally`, terminates remaining clients, awaits close, and then awaits `WebSocketServer.close()`. Tests use no fixed sleeps or external endpoint.
 - Add only `ws@8.21.1`, `@types/ws@8.18.1`, and their exact lockfile importer/package entries. Optional native addons remain absent.
+
+## Controller acceptance gate after implementation
+
+Add one Independent Test gate before accepting this transport slice. Concrete trigger: the implementation is the first real network and credential-handling boundary and must independently verify loopback isolation, Upgrade-header secrecy, payload/buffer limits, terminal failure behavior, resource cleanup, and exact dependency/lock scope. This does not authorize product edits or add a per-slice Reviewer.

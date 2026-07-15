@@ -358,7 +358,7 @@
           const backendRoot = join(sourceRoot, "backend");
           check(same(readdirSync(backendRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["adapter.ts", "fake-backend.ts", "supervisor.ts"]), `${backendRoot}: ActorHost backend topology mismatch`);
           const serverConnectionRoot = join(sourceRoot, "server-connection");
-          check(same(readdirSync(serverConnectionRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["command-processor.ts"]), `${serverConnectionRoot}: ActorHost server-connection topology mismatch`);
+          check(same(readdirSync(serverConnectionRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["command-processor.ts", "server-connection.ts"]), `${serverConnectionRoot}: ActorHost server-connection topology mismatch`);
         } else {
           const expectedFile = authorizedSourceFiles.get(unit);
           check(entries.length === 1 && entries[0].isFile() && entries[0].name === expectedFile, `${sourceRoot} must contain exactly ${expectedFile} and no subdirectory`);
@@ -406,7 +406,7 @@
         const testRoot = join(unit.dir, "test");
         check(same(directories(testRoot), ["backend", "server-connection"]), `${testRoot}: ActorHost test topology mismatch`);
         check(same(readdirSync(join(testRoot, "backend"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["backend-supervisor.test.ts"]), `${testRoot}/backend: ActorHost test files mismatch`);
-        check(same(readdirSync(join(testRoot, "server-connection"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["command-processor.test.ts"]), `${testRoot}/server-connection: ActorHost test files mismatch`);
+        check(same(readdirSync(join(testRoot, "server-connection"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["command-processor.test.ts", "server-connection.test.ts"]), `${testRoot}/server-connection: ActorHost test files mismatch`);
       }
     }
     const forbiddenCatchAll = new Set(["common", "shared", "core", "utils"]);

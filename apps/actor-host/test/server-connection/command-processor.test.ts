@@ -13,6 +13,7 @@ import {
   ActorHostCommandProcessor,
   type HostOutboundIntent,
   type HostOutboundPayloadSink,
+  type HostOutboundSendResult,
 } from "../../src/server-connection/command-processor.js";
 
 const UUID = "00000000-0000-4000-8000-000000000000";
@@ -82,8 +83,9 @@ function faultCode(intent: HostOutboundIntent): string | undefined {
 class RecordingSink implements HostOutboundPayloadSink {
   public readonly intents: HostOutboundIntent[] = [];
 
-  public send(intent: HostOutboundIntent): void {
+  public send(intent: HostOutboundIntent): HostOutboundSendResult {
     this.intents.push(intent);
+    return { kind: "sent" };
   }
 }
 

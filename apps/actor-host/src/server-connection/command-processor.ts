@@ -19,12 +19,23 @@ export interface HostOutboundIntent {
 }
 
 export interface HostOutboundPayloadSink {
-  send(intent: HostOutboundIntent): void;
+  send(intent: HostOutboundIntent): HostOutboundSendResult;
 }
+
+export interface HostOutboundSendError {
+  readonly code: "transport_failed" | "not_started" | "already_started" | "failed";
+  readonly message: string;
+}
+
+export type HostOutboundSendResult =
+  | { readonly kind: "sent" }
+  | { readonly kind: "rejected"; readonly reason: "not_started" | "already_started" | "failed" }
+  | { readonly kind: "transport_failed"; readonly error: HostOutboundSendError };
 
 export type CommandDisposition =
   | { readonly kind: "handled" }
-  | { readonly kind: "not_command" };
+  | { readonly kind: "not_command" }
+  | { readonly kind: "transport_failed"; readonly error: HostOutboundSendError };
 
 export class ActorHostCommandProcessor {
   public constructor(
@@ -35,7 +46,15 @@ export class ActorHostCommandProcessor {
   public process(message: ServerToHostMessage): CommandDisposition {
     if (message.payload.kind === "ack") return { kind: "not_command" };
 
-    this.emit({ kind: "ack", acknowledged_message_id: message.message_id }, message.message_id);
+    const acknowledgement = this.emit({ kind: "ack", acknowledged_message_id: message.message_id }, message.message_id);
+    if (acknowledgement.kind !== "sent") {
+      return {
+        kind: "transport_failed",
+        error: acknowledgement.kind === "transport_failed"
+          ? acknowledgement.error
+          : { code: acknowledgement.reason, message: `Host connection rejected outbound payload: ${acknowledgement.reason}.` },
+      };
+    }
 
     switch (message.payload.kind) {
       case "initialize_actor_host":
@@ -83,17 +102,23 @@ export class ActorHostCommandProcessor {
     }
 
     const handle = result.invocation;
-    void handle.session.then((sessionId) => {
-      if (sessionId === undefined) return;
-      this.emit({
-        kind: "session_report",
-        invocation_id: handle.invocationId,
-        session_id: sessionId,
-      }, causalMessageId);
-    });
-    void handle.result.then((invocationResult) => {
-      this.emit({ kind: "invocation_result", result: invocationResult }, causalMessageId);
-    });
+    void handle.session.then(
+      (sessionId) => {
+        if (sessionId === undefined) return;
+        this.emit({
+          kind: "session_report",
+          invocation_id: handle.invocationId,
+          session_id: sessionId,
+        }, causalMessageId);
+      },
+      () => undefined,
+    );
+    void handle.result.then(
+      (invocationResult) => {
+        this.emit({ kind: "invocation_result", result: invocationResult }, causalMessageId);
+      },
+      () => undefined,
+    );
   }
 
   private stop(causalMessageId: HostMessageId, invocationId: InvocationId): void {
@@ -103,8 +128,18 @@ export class ActorHostCommandProcessor {
     }
   }
 
-  private emit(payload: HostToServerPayload, causalMessageId: HostMessageId): void {
-    this.outbound.send({ payload, causalMessageId });
+  private emit(payload: HostToServerPayload, causalMessageId: HostMessageId): HostOutboundSendResult {
+    try {
+      return this.outbound.send({ payload, causalMessageId });
+    } catch (error) {
+      return {
+        kind: "transport_failed",
+        error: {
+          code: "transport_failed",
+          message: error instanceof Error ? error.message : "Host outbound transport failed.",
+        },
+      };
+    }
   }
 
   private emitFault(

@@ -87,3 +87,25 @@ Only after preflight confirms representability, focused tests should prove:
 - No Runtime Contract, backend, manifest, dependency, lockfile, entrypoint, or other module change occurs.
 - The Coder Report records protocol facts, generation/sequence decisions, validation failure behavior, RED/GREEN evidence, verification, Serena use/fallbacks, and deviations.
 - Commit only authorized paths with message `feat: add actor host envelope channel`.
+
+## Controller clarification after preflight
+
+The following first-connection and connection-local rules are frozen for implementation:
+
+- `connection_generation` is a Host connection-attempt generation scoped to one immutable `host_instance_id`. ActorHost starts at generation `1` for that Host process instance and increments once for each new logical transport connection. It never changes during a live connection.
+- The future Server Host Gateway remains authoritative for accepting a generation and storing the latest accepted generation. It rejects stale/reused generations. A newly authorized `host_instance_id` starts its own generation at `1`.
+- This slice receives one already selected positive generation in `ServerConnection` construction. It does not implement the reconnect controller that increments it.
+- The same accepted generation appears on both directions for that logical connection. Structurally valid inbound envelopes with another generation are locally rejected, never ACKed, and never dispatched.
+- Sender sequence is independent per direction and per connection generation. The first envelope in each direction has `sender_sequence = 0`; every subsequent envelope is exactly previous plus one.
+- Inbound sequence must be contiguous. A duplicate/stale sequence below the next expected value and a gap above it are both local protocol rejections with no ACK and no command dispatch. Replay/idempotent re-ACK across reconnect remains deferred and must use a new accepted connection context later.
+- Outbound sequence is allocated together with message ID and timestamp immediately before transport send. If transport send fails, that allocation is considered consumed and the connection enters terminal local `failed` state; it never reuses the message ID or sequence.
+- HostHello is the first outbound frame at sequence `0`, carries the configured generation and trusted Host identity, has no causal correlation, and is sent once when the connection core starts.
+- HostHello does not wait for an ACK before the Host can receive initialization. Host readiness is represented only by the later `InitializeActorHost → HostReady` flow. A Server ACK for HostHello is ordinary connection/outbox information and receives no ACK loop.
+- Before HostHello is sent successfully, inbound messages and ordinary outbound intents are locally rejected. A second start/Hello attempt is locally rejected.
+- Decode failure, wrong direction, wrong version, unknown field, wrong generation, stale/duplicate sequence, and sequence gap return distinct Host-local dispositions where locally distinguishable. They emit no HostFault and no ACK. Protocol-version mismatch remains a generic strict decoder failure because the frozen decoder has no stable dedicated result.
+- `HostOutboundPayloadSink.send` is refined to return a typed local send result instead of relying on an uncaught transport exception. ServerConnection catches transport failure, records terminal failure, and returns the failure.
+- If the receipt ACK for a command cannot be enqueued/sent, ActorHostCommandProcessor returns a local transport-failed disposition and must not invoke BackendSupervisor for that command.
+- A later asynchronous session/result send failure records the same terminal connection failure without manufacturing HostFault, retry, outbox, Server state, or an unhandled promise rejection. The backend fact remains Host-local and recovery is deferred.
+- Once terminally failed, the connection core accepts no inbound command and emits no further envelope. A future reconnect controller creates a new connection core with the next generation.
+- The in-memory transport port accepts complete validated `HostToServerMessage` objects. Serialization to text/binary belongs to the later WebSocket adapter.
+- Deterministic providers supply Host message IDs and canonical timestamps. Tests assert exact IDs/timestamps/sequences and never use wall-clock time or randomness.

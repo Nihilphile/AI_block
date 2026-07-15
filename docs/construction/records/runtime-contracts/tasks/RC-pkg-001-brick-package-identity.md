@@ -61,3 +61,7 @@ No application, Actor execution, Host protocol, Graph, persistence, transport, r
 ## Controller clarification — 2026-07-16
 
 The approved Phase 0B design now freezes all preflight gaps: exact Brick discriminators and fields, creator and provenance variants, Package/PackageRef/Delivery fields, Delivery states, Package-version and schema/type export names, ContentHash format, and the three hashing function signatures and failure semantics. Creator identifies only the principal; authoritative Run/Invocation context is represented by provenance. No external Research remains open. Implementation must stop if the recursive TypeBox schema or canonicalize default ESM API fails the required local compatibility gate.
+
+During implementation, the user explicitly authorized Serena onboarding and normal ignored metadata writes under `.serena/`. This expanded construction-tool permission only; product write scope remained unchanged and no `.serena/` content could be staged or committed. The resulting Coder Report is the evidence for whether later Runtime Contracts Tasks should continue using Serena.
+
+The user subsequently reproduced the reported `serena memories check` failure locally: memory validation completes, but Click attempts to print Unicode `✓` and CP936/GBK raises `UnicodeEncodeError`. MCP, LSP, symbol navigation, project memory, and configuration are unaffected. Later Workers should run this optional CLI check with `PYTHONUTF8=1` (or `PYTHONIOENCODING=utf-8`) and must not alter memory data or MCP configuration to address the console-encoding issue.

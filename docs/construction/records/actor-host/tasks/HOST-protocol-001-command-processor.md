@@ -99,3 +99,23 @@ Subject to preflight confirmation that the frozen contracts can represent the be
 - No Runtime Contracts, backend implementation, manifest, dependency, lockfile, entrypoint, or other module change occurs.
 - The Coder Report records contract inventory, ACK/error decisions, async ordering, RED/GREEN evidence, verification, Serena non-memory use/fallbacks, and deviations.
 - Commit only authorized paths with message `feat: add actor host command processor`.
+
+## Controller clarification after preflight
+
+The following protocol decisions are frozen before implementation:
+
+- ACK is receipt-level only. Every non-ACK Server-to-Host command emits its ACK first, including commands later rejected by Host-local lifecycle checks. ACK never means accepted execution, successful launch, process completion, or Run completion.
+- An inbound Server ACK is not itself ACKed and is not a backend command. This slice returns/records a typed `not_command` or equivalent local disposition without outbound payload; durable ACK reconciliation remains with the future ServerConnection/outbox.
+- `ActorHostCommandProcessor.process(message)` consumes the full decoded directional message so it can retain the inbound `message_id`. It may be asynchronous for initialization dispatch, but accepted backend execution continues through separately observed session/result promises.
+- The outbound port emits an intent containing `HostToServerPayload` plus an optional causal inbound message ID. This is not a completed Host envelope. The future ServerConnection envelope writer alone converts that intent into outbound `correlation_id` and allocates `protocol_version`, outbound `message_id`, `sender_sequence`, `connection_generation`, and `sent_at`.
+- Every payload caused by initialize, start, stop, or shutdown carries the initiating inbound message ID as causal intent metadata. ACK also retains the inbound ID in `acknowledged_message_id` as required by the frozen payload.
+- The outbound sink is a synchronous enqueue/recording boundary so ACK-first and same-turn ordering are deterministic. Network backpressure and durable outbox behavior are deferred.
+- Initialize order is ACK, then `HostReadyPayload` on both successful and same-snapshot idempotent initialization; otherwise ACK, then `HostFaultPayload`.
+- Accepted start order is ACK, then actual session/result observation. Attach the session observer before the result observer. Emit `SessionReportPayload` when a session ID is discovered and `InvocationResultPayload` when the final result settles. If the backend genuinely settles them in a different order, report actual facts rather than inventing timing.
+- Launch failure is ACK then `InvocationResultPayload` with `process.status = "launch_failed"`; it is not a HostFault.
+- Start/stop lifecycle rejection is ACK then HostFault. Accepted stop is ACK followed later by the active Invocation's normal final result.
+- Shutdown is ACK-only in this slice and does not claim shutdown completion, terminate a process, or mutate daemon ownership.
+- Host-local supervisor rejections map losslessly to stable dotted wire error codes using the `actor_host.` namespace and the existing local discriminant, including `actor_host.not_initialized`, `actor_host.busy`, `actor_host.no_active_invocation`, `actor_host.invocation_mismatch`, `actor_host.already_initialized`, and `actor_host.adapter_mismatch` where applicable. Initialization exceptions use `actor_host.initialization_failed`. Do not add or change a Runtime Contract payload.
+- HostFault includes the target Invocation ID where the frozen payload permits it. Active-versus-target diagnostic values may be inert error details when already available, but must not expose a new authority claim.
+- `ContractErrorEnvelope.correlation_id` remains unset for these command rejections; command causality is carried by the outbound intent and later Host envelope correlation, avoiding two competing correlation channels.
+- Tests attach observers and use FakeBackend controls without sleeps. They assert ACK-first, causal intent preservation, session-before-result when session is exposed first, actual-order preservation otherwise, no ACK loop for inbound ACK, and absence of envelope-owned fields from payloads/intents.

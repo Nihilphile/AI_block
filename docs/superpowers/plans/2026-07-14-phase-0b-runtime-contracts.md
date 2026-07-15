@@ -22,18 +22,21 @@ Before edits, the Coder returns a read-only preflight containing:
 
 The first slice receives a full module preflight. Later slices receive a delta preflight focused on new decisions, changed paths, and changed assumptions. No write begins before the controller sends an exact `IMPLEMENTATION_AUTHORIZED` envelope.
 
-Each slice uses test-first implementation, keeps all public imports at the package root, and leaves the worktree clean except for its authorized commit.
+Each slice uses test-first implementation, keeps all public imports at the package root, and leaves the worktree clean except for its authorized commit. The repository-wide verification command must remain green at every accepted slice; no slice may knowingly defer a broken Phase 0A checker to B.4.
 
 ## B.1 Contract kernel
 
 Deliver:
 
 - exact Phase 0B dependency and test-tool installation;
+- `typebox@1.3.6` and Ajv `8.20.0` integration through the approved Draft-07-compatible schema subset;
 - inert JSON materialization and strict boundary decoding;
 - deep defensive copy and freeze;
 - identifier, exact-version, canonical-timestamp, and stable-error schemas;
 - root exports for B.1 only;
 - focused deterministic tests.
+- migration of the Phase 0A boundary checker from the empty-source invariant to the approved Runtime Contracts domain topology and dependency policy, without a handwritten source parser;
+- root verification integration for the B.1 Contract test.
 
 Acceptance:
 
@@ -41,6 +44,8 @@ Acceptance:
 - malformed JSON-like values, unknown fields, invalid IDs, unsupported versions, invalid timestamps, and unpaired surrogates fail through normalized stable errors;
 - Ajv implementation wording does not become public error identity;
 - frozen installation, TypeScript build, and B.1 tests pass;
+- every B.1 public schema compiles and validates under Node 24, TypeScript 7.0.2, NodeNext, and the Ajv main export;
+- repository-wide verification remains green after real Runtime Contracts source replaces the Phase 0A empty stub;
 - no Brick, Package, Actor, Host, persistence, transport, or workflow behavior is introduced.
 
 Checkpoint: independent Tester verifies B.1 because the validation kernel controls every later contract. Review is not automatic unless implementation reveals a semantic or security concern.
@@ -92,7 +97,7 @@ Deliver:
 
 - application consumer fixtures through `@ai-block/runtime-contracts` root exports;
 - complete deterministic package test command and root verification integration;
-- exact public export audit and dependency-boundary checks without a handwritten source parser;
+- final exact public export audit and dependency-boundary hardening without a handwritten source parser;
 - fixture attribution and module documentation required to consume the contracts;
 - cleanup of accidental dead exports or test-only production surface.
 

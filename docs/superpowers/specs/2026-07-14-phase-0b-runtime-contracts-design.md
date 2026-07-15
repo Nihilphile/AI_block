@@ -65,7 +65,9 @@ Only directories backed by real files are created. Exact filenames belong to the
 
 ## 4. Contract representation and decoding
 
-Cross-process values are JSON only. Schemas are TypeBox definitions compiled through Ajv. TypeScript types are derived from the schemas rather than maintained as parallel handwritten interfaces.
+Cross-process values are JSON only. Schemas are `typebox@1.3.6` definitions compiled through Ajv `8.20.0`. TypeScript types are derived from the schemas rather than maintained as parallel handwritten interfaces.
+
+Phase 0B uses the Ajv main export and a JSON Schema Draft-07-compatible TypeBox subset. TypeBox 1.x support for newer drafts does not authorize switching the shared validator to Ajv's 2020-12 mode. Every exported schema must pass a Node 24, TypeScript 7.0.2, NodeNext compile-and-runtime compatibility test against the selected Ajv mode. A builder that emits incompatible schema is rejected or isolated behind a separately approved dialect decision.
 
 All boundary decoders apply the same policy:
 
@@ -80,15 +82,38 @@ All boundary decoders apply the same policy:
 9. Accepted values are defensive copies and are deeply frozen before being returned.
 10. Validation-library wording and stack traces are normalized away from the stable error envelope.
 
+Plain-object outputs retain ordinary JSON object behavior and are populated through own data-property definitions so a `__proto__` key cannot mutate their prototype. Shared but acyclic input references are copied as independent JSON subtrees because JSON has no alias identity.
+
+JavaScript provides no reliable, side-effect-free Proxy detection: even reflection can trigger Proxy traps. Boundary decoding catches reflection failures and returns an invalid-JSON error, but the in-process `unknown` API assumes a non-hostile caller. Untrusted cross-process bytes must first pass through the future transport parser; Phase 0B does not claim a security boundary against a malicious in-process Proxy.
+
 Duplicate object keys and lexical distinctions in raw JSON, including whether a source token was written as `-0`, cannot be recovered from an already parsed value. Detecting those properties belongs to a future transport parser and is outside Phase 0B.
 
-The public decoding API should return a discriminated success/failure result rather than expose Ajv exceptions. The failure branch carries the stable error envelope. Convenience assertion helpers may exist only if they throw a package-owned error type whose stable data is the same envelope.
+The public decoding entry is named `decodeContract(schema, input)` and returns `ContractDecodeResult<T>`, a discriminated success/failure result. The failure branch carries the stable error envelope. TypeBox schemas and their derived value types are public; Ajv instances, raw Ajv errors, materialization helpers, normalizers, and freeze helpers are private. Phase 0B does not add a throwing assertion API.
 
 ## 5. Identity, version, and time
 
 Internal resource IDs are opaque, lowercase, prefix-qualified UUID strings. Phase 0B defines the identifiers required by the current contracts, including Project, ActorTemplate, ActorConfigSnapshot, Actor, Package, Delivery, Run, Invocation, Host instance, Host message, Client principal, and opaque Graph identifiers.
 
 The UUID payload is validated structurally but no business meaning is inferred from its version bits. Generation policy belongs to the owning runtime module.
+
+The exact B.1 prefixes are frozen as follows:
+
+| Type | Prefix |
+|---|---|
+| `ProjectId` | `project_` |
+| `ActorTemplateId` | `actor_template_` |
+| `ActorConfigSnapshotId` | `actor_config_` |
+| `ActorId` | `actor_` |
+| `PackageId` | `package_` |
+| `DeliveryId` | `delivery_` |
+| `RunId` | `run_` |
+| `InvocationId` | `invocation_` |
+| `HostInstanceId` | `host_` |
+| `HostMessageId` | `message_` |
+| `ClientPrincipalId` | `client_` |
+| `GraphId` | `graph_` |
+
+Each prefix is followed by a canonical lowercase `8-4-4-4-12` hexadecimal UUID payload. Uppercase, braces, compact UUIDs, and alternate separators are rejected. The schemas do not require or interpret a particular UUID version or variant. Backend session IDs are adapter-owned opaque strings and are defined with Invocation contracts rather than this resource-ID family.
 
 Contract schema version, Package schema version, and Host protocol version are separate exported concepts. Their Phase 0 values are all exactly `1.0.0`; each appears under the field appropriate to its contract and unsupported values fail closed.
 
@@ -115,6 +140,18 @@ The shared error value contains:
 The initial category set is structural rather than module-specific: validation, compatibility, authentication, authorization, not-found, conflict, unavailable, timeout, backend, and internal.
 
 Specific Server and Host modules may add stable error codes later without changing the envelope. Ajv paths may be normalized into deterministic details, but Ajv messages are never the public code or message contract.
+
+B.1 freezes these initial codes and fixed public messages:
+
+| Code | Category | Message |
+|---|---|---|
+| `contract.invalid_json_value` | validation | `Invalid JSON contract value.` |
+| `contract.schema_mismatch` | validation | `Contract schema validation failed.` |
+| `contract.unsupported_version` | compatibility | `Unsupported contract version.` |
+
+Materialization failures may use details `{ path, reason }`, where `path` is an RFC 6901 JSON Pointer and `reason` is a package-owned closed vocabulary. Schema failures use `{ issues: [{ path, rule }] }`; `rule` is a small package-owned semantic vocabulary rather than a raw Ajv keyword. Issues are deduplicated and sorted by path and then rule. Raw values, Ajv messages, schema paths, stacks, and library-specific params are never exposed. Empty details are omitted rather than emitted as `null`.
+
+Public schema constants use PascalCase with a `Schema` suffix, their derived value types use the same base name without the suffix, and exact version values use uppercase constants. Public B.1 symbols include `JsonValueSchema`, `JsonObjectSchema`, `ContractDecodeResult`, `decodeContract`, the ID schemas/types above, separate schema/version constants, `CanonicalTimestampSchema`, and `ContractErrorEnvelopeSchema`. Private helper filenames do not define additional public API.
 
 ## 7. Brick contracts
 
@@ -246,7 +283,7 @@ ACK references the original message ID. Duplicate message IDs are defined as ide
 
 Phase 0B adds only the already selected, exact versions:
 
-- runtime: TypeBox `0.34.49`, Ajv `8.20.0`, `ajv-formats` `3.0.1`, and `canonicalize` `3.0.0`;
+- runtime: `typebox` `1.3.6`, Ajv `8.20.0`, `ajv-formats` `3.0.1`, and `canonicalize` `3.0.0`;
 - test/development: Vitest `4.1.10` and fast-check `4.8.0`.
 
 The existing exact Node, pnpm, TypeScript, and `@types/node` baseline remains unchanged. Lockfile changes are expected and frozen installation must remain reproducible.
@@ -267,6 +304,7 @@ The deterministic Contract suite must cover:
 10. round-trip JSON compatibility fixtures consumed through the package root by each application;
 11. TypeScript 7.0.2 build and Node 24 runtime verification;
 12. Package dependency and project-reference boundaries without introducing a handwritten JavaScript/TypeScript import parser.
+13. compile-and-runtime compatibility of every exported TypeBox schema with the selected Ajv main-export dialect.
 
 Vendored RFC fixture material must include source and Apache-2.0 attribution. The 100-million-number corpus is not committed or run in the default suite; a small high-value deterministic subset is sufficient for Phase 0B.
 

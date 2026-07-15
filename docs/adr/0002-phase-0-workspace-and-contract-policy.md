@@ -29,13 +29,15 @@ The delegated compatibility report selected this exact baseline:
 - pnpm `11.10.0`
 - TypeScript `7.0.2`
 - `@types/node` `24.13.3`
-- `@sinclair/typebox` `0.34.49`
+- `typebox` `1.3.6`
 - Ajv `8.20.0`
 - `ajv-formats` `3.0.1`
 - Vitest `4.1.10`
 - fast-check `4.8.0`
 
 Production workers do not choose unpinned “latest” dependencies. Phase 0A installs only workspace/toolchain dependencies. Runtime-schema and test dependencies enter in Phase 0B. A maintained RFC 8785 implementation still requires a separate delegated decision before Phase 0B Package hashing begins.
+
+The original `@sinclair/typebox` `0.34.49` selection was replaced before implementation by the evidence in `RC-val-001`: TypeBox 0.x has no official TypeScript 7 support statement, while exact `typebox` `1.3.6` is developed against the TypeScript 7 native compiler. Phase 0B uses Ajv `8.20.0` through its main Draft-07-compatible mode and limits TypeBox builders to schemas proven compatible by the Contract suite. Draft 2020-12 mode is not implied by the TypeBox package version and requires a separate schema-by-schema decision.
 
 ## Contract representation
 

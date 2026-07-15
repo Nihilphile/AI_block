@@ -36,3 +36,9 @@ No product, dependency, lockfile, ADR, design, plan, or Task edit is authorized.
 - The recommended exact version has direct evidence for TypeScript 7 and Node 24/ESM compatibility, or the Report clearly explains why only empirical support is available.
 - Differences from TypeBox `0.34.49` that affect the approved Runtime Contracts design are listed.
 - Remaining compatibility risks and the required local verification gate are concise and actionable.
+
+## Controller decision — 2026-07-16
+
+Accepted `typebox@1.3.6` as the Phase 0B schema-builder dependency. The fallback `@sinclair/typebox@0.34.49` is rejected because it has no official TypeScript 7 support statement.
+
+Phase 0B initially uses the Ajv 8.20.0 main export and only the JSON Schema Draft-07-compatible subset emitted by the approved TypeBox builders. Every public schema must pass a Node 24, TypeScript 7.0.2, NodeNext compile-and-runtime compatibility gate. Draft 2020-12-specific Ajv mode is not enabled by default. Recursive Brick schemas are a B.2 delta decision and must prove their emitted schema against the selected Ajv mode before implementation proceeds.

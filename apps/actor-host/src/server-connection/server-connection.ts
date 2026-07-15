@@ -39,8 +39,14 @@ export interface HostTimestampProvider {
   now(): CanonicalTimestamp;
 }
 
+export interface HostTransportFailure {
+  readonly code: "transport_failed";
+  readonly message: string;
+}
+
 export interface HostTransportPort {
   send(message: HostToServerMessage): void;
+  onFailure(listener: (failure: HostTransportFailure) => void): () => void;
 }
 
 export type ServerConnectionState = "not_started" | "live" | "failed";
@@ -75,11 +81,15 @@ export class ServerConnection implements HostOutboundPayloadSink {
   private nextOutboundSequence = 0;
   private nextInboundSequence = 0;
   private readonly processor: ActorHostCommandProcessor;
+  private readonly unsubscribeTransportFailure: () => void;
 
   public constructor(private readonly options: ServerConnectionOptions) {
     if (!Number.isSafeInteger(options.connectionGeneration) || options.connectionGeneration < 1) {
       throw new Error("ServerConnection requires a positive safe connection generation.");
     }
+    this.unsubscribeTransportFailure = options.transport.onFailure(() => {
+      this.failConnection();
+    });
     this.processor = new ActorHostCommandProcessor(options.supervisor, this);
   }
 
@@ -169,10 +179,15 @@ export class ServerConnection implements HostOutboundPayloadSink {
   }
 
   private fail(message: string): { kind: "transport_failed"; error: HostOutboundSendError } {
-    this.stateValue = "failed";
+    this.failConnection();
     return {
       kind: "transport_failed",
       error: { code: "transport_failed", message },
     };
+  }
+
+  private failConnection(): void {
+    if (this.stateValue === "failed") return;
+    this.stateValue = "failed";
   }
 }

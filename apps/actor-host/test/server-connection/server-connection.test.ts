@@ -93,6 +93,12 @@ class DeterministicTimestamps implements HostTimestampProvider {
 class InMemoryTransport implements HostTransportPort {
   public readonly sent: HostToServerMessage[] = [];
   public failNext = false;
+  private readonly failureListeners = new Set<Parameters<HostTransportPort["onFailure"]>[0]>();
+
+  public onFailure(listener: Parameters<HostTransportPort["onFailure"]>[0]): () => void {
+    this.failureListeners.add(listener);
+    return () => this.failureListeners.delete(listener);
+  }
 
   public send(message: HostToServerMessage): void {
     if (this.failNext) {

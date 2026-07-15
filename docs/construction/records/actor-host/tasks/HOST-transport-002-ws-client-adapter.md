@@ -93,3 +93,21 @@ Do not edit until exact `IMPLEMENTATION_AUTHORIZED` is returned.
 - Root `pnpm verify` passes and cleans generated output/listeners.
 - The Coder Report records API refinements, state/error model, exact option evidence, RED/GREEN tests, dependency/lock audit, verification, Serena use/fallbacks, and deviations.
 - Commit only authorized paths with message `feat: add actor host websocket transport`.
+
+## Controller clarification after preflight
+
+The following adapter/API decisions are frozen before implementation:
+
+- The opaque bearer token is 1–4096 UTF-8 bytes and must match the Bearer-safe ASCII token alphabet `A-Z a-z 0-9 - . _ ~ + /` with optional trailing `=` padding. Reject whitespace, Unicode, control characters, CR/LF, and other header syntax. Validation errors never echo the token.
+- Refine the ws-free `HostTransportPort` with an idempotent asynchronous failure subscription such as `onFailure(listener) -> unsubscribe`. Do not expose `ws` EventEmitter, Error subclasses, RawData, ready-state constants, or socket instances through the core port.
+- ServerConnection subscribes before transport use. A pre-open, open, asynchronous send, socket error, or unexpected close failure can move it from `not_started` or `live` to terminal `failed` exactly once.
+- Synchronous `send` failure is still caught through the existing send path. Asynchronous `ws.send` callback errors and socket failures notify through the failure hook. Neither path creates HostFault or an unhandled rejection.
+- The concrete client provides an awaitable typed `connect()` result. It reports success only after WebSocket `open` and successful `ServerConnection.start()`/HostHello send. Expected config, lifecycle, handshake, and connection failures are typed local results rather than secret-bearing generic errors.
+- Client lifecycle distinguishes explicit close from failure. An explicit close performs terminal cleanup and ends `closed` without inventing a transport fault; an unexpected close before/after open is `failed`. Duplicate error/close/send-failure events are idempotently suppressed.
+- Any parsed inbound value is delivered once to `ServerConnection.receive`. If the core returns a decode, direction, version, generation, stale-sequence, or gap rejection, the adapter terminates the real socket and records terminal protocol failure. A valid inbound ACK/`not_command` is not a rejection and does not fail or loop.
+- Malformed JSON, binary input, and application-observed payload over 4 MiB fail in the adapter before core delivery. The configured `ws maxPayload` remains the lower transport defense for fragmented/aggregate input.
+- Use only options present in the pinned runtime API and `@types/ws@8.18.1`: explicit headers, `followRedirects: false`, `perMessageDeflate: false`, `handshakeTimeout: 5000`, and `maxPayload: 4 MiB`. Do not cast in `closeTimeout`, `maxBufferedChunks`, `maxFragments`, or another undocumented/type-missing option.
+- Outbound bytes are computed from the exact UTF-8 JSON text. Reject before send when `textBytes + socket.bufferedAmount` would exceed 8 MiB. There is no application queue; a boundary-equal send is allowed.
+- Socket factory/test abstractions may use project-owned ws-free event/data types, but only the concrete production factory imports `ws`.
+- Unit cleanup uses explicit fake lifecycle; loopback cleanup is always performed in `finally`, terminates remaining clients, awaits close, and then awaits `WebSocketServer.close()`. Tests use no fixed sleeps or external endpoint.
+- Add only `ws@8.21.1`, `@types/ws@8.18.1`, and their exact lockfile importer/package entries. Optional native addons remain absent.

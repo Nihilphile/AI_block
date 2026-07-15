@@ -1,4 +1,5 @@
 node_modules/
+.serena/
 .pnpm-store/
 dist/
 coverage/

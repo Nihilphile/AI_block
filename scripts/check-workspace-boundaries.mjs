@@ -139,7 +139,8 @@
         clean: "tsc -b tsconfig.json --clean",
         "check:types": "tsc -b tsconfig.json --pretty false",
         "check:boundaries": "node scripts/check-workspace-boundaries.mjs",
-        verify: "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
+        "test:contracts": "pnpm --filter @ai-block/runtime-contracts test",
+        verify: "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm test:contracts && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
       },
       devDependencies: { "@types/node": "24.13.3", typescript: "7.0.2" }
     };
@@ -161,6 +162,12 @@
       version: "0.0.0",
       private: true,
       type: "module",
+      scripts: {
+        test: "vitest run && pnpm run test:types",
+        "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts --pretty false"
+      },
+      dependencies: { ajv: "8.20.0", "ajv-formats": "3.0.1", typebox: "1.3.6" },
+      devDependencies: { vitest: "4.1.10" },
       types: "./dist/index.d.ts",
       exports: { ".": { types: "./dist/index.d.ts", import: "./dist/index.js" } }
     };
@@ -177,12 +184,40 @@
       [apps[2], "main.ts"]
     ]);
     for (const unit of units) {
+      const expectedOwned = unit.kind === "contracts" ? ["src", "test"] : ["src"];
       const owned = directories(unit.dir).filter((name) => name !== "dist" && name !== "node_modules");
-      check(same(owned, ["src"]), `${unit.dir}: unexpected owned directory`);
+      check(same(owned, expectedOwned), `${unit.dir}: unexpected owned directory`);
       const sourceRoot = join(unit.dir, "src");
       const entries = existsSync(sourceRoot) ? readdirSync(sourceRoot, { withFileTypes: true }) : [];
-      const expectedFile = authorizedSourceFiles.get(unit);
-      check(entries.length === 1 && entries[0].isFile() && entries[0].name === expectedFile, `${sourceRoot} must contain exactly ${expectedFile} and no subdirectory`);
+      if (unit.kind === "app") {
+        const expectedFile = authorizedSourceFiles.get(unit);
+        check(entries.length === 1 && entries[0].isFile() && entries[0].name === expectedFile, `${sourceRoot} must contain exactly ${expectedFile} and no subdirectory`);
+      } else {
+        check(same(entries.map((entry) => entry.name).sort(), ["error", "identity", "index.ts", "validation"]), `${sourceRoot}: B.1 source topology mismatch`);
+        check(entries.find((entry) => entry.name === "index.ts")?.isFile() === true, `${sourceRoot}/index.ts is missing`);
+        const expectedSubdirectories = new Map([
+          ["validation", ["decode.ts", "schemas.ts"]],
+          ["identity", ["identity.ts"]],
+          ["error", ["error.ts"]]
+        ]);
+        for (const [directory, files] of expectedSubdirectories) {
+          const directoryPath = join(sourceRoot, directory);
+          check(same(readdirSync(directoryPath, { withFileTypes: true }).map((entry) => entry.name).sort(), files), `${directoryPath}: B.1 source files mismatch`);
+        }
+      }
+      if (unit.kind === "contracts") {
+        const testRoot = join(unit.dir, "test");
+        check(same(directories(testRoot), ["error", "identity", "validation"]), `${testRoot}: B.1 test topology mismatch`);
+        const expectedTests = new Map([
+          ["validation", ["contract-kernel.test.ts"]],
+          ["identity", ["identity.test.ts"]],
+          ["error", ["error-envelope.test.ts"]]
+        ]);
+        for (const [directory, files] of expectedTests) {
+          const directoryPath = join(testRoot, directory);
+          check(same(readdirSync(directoryPath, { withFileTypes: true }).map((entry) => entry.name).sort(), files), `${directoryPath}: B.1 test files mismatch`);
+        }
+      }
     }
     const forbiddenCatchAll = new Set(["common", "shared", "core", "utils"]);
     for (const tree of [join(root, "apps"), join(root, "packages"), join(root, "scripts")]) {
@@ -224,10 +259,13 @@
 
   function checkSources() {
     const expected = "export {};\n";
-    for (const unit of units) {
-      const entry = join(unit.dir, "src", unit.kind === "app" ? "main.ts" : "index.ts");
+    for (const app of apps) {
+      const entry = join(app.dir, "src", "main.ts");
       check(readText(entry) === expected, `${entry}: source is not the exact empty ESM module`);
     }
+    const contractEntry = join(contracts.dir, "src", "index.ts");
+    const contractSource = readText(contractEntry);
+    check(contractSource.length > 0 && contractSource !== expected, `${contractEntry}: real Runtime Contracts source is missing`);
   }
 
   function outputText(value) {

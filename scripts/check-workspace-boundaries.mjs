@@ -67,6 +67,81 @@
     "@ai-block/actor-host",
     "@ai-block/runtime-cli"
   ];
+  const expectedRuntimeExports = [
+    "AckPayloadSchema",
+    "ActorConfigSnapshotIdSchema",
+    "ActorIdSchema",
+    "ActorLaunchSpecSchema",
+    "ActorTemplateIdSchema",
+    "BackendAdapterIdSchema",
+    "BackendAdapterLaunchConfigSchema",
+    "BackendSessionIdSchema",
+    "BrickPromptSchema",
+    "BrickSysPromptSchema",
+    "CanonicalTimestampSchema",
+    "ClientPrincipalIdSchema",
+    "CompositeBrickPromptSchema",
+    "CONTRACT_SCHEMA_VERSION",
+    "CompletionRequestPayloadSchema",
+    "ContractErrorEnvelopeSchema",
+    "ContractSchemaVersionSchema",
+    "CreateSessionDirectiveSchema",
+    "ContentHashSchema",
+    "DeliveryIdSchema",
+    "DeliverySchema",
+    "DeliveryStateSchema",
+    "ExitedProcessFactSchema",
+    "GraphIdSchema",
+    "HeartbeatPayloadSchema",
+    "HostFaultPayloadSchema",
+    "HostHelloPayloadSchema",
+    "HostInstanceIdSchema",
+    "HostMessageIdSchema",
+    "HostProtocolVersionSchema",
+    "HostReadyPayloadSchema",
+    "HostToServerMessageSchema",
+    "HostToServerPayloadSchema",
+    "InitializeActorHostPayloadSchema",
+    "InvocationIdSchema",
+    "InvocationProcessFactSchema",
+    "InvocationResultPayloadSchema",
+    "InvocationResultSchema",
+    "InvocationSpecSchema",
+    "JsonObjectSchema",
+    "JsonValueSchema",
+    "LaunchFailedProcessFactSchema",
+    "PackageCreatorSchema",
+    "PackageHashMaterialSchema",
+    "PackageHeadSchema",
+    "PackageIdSchema",
+    "PackagePublishRequestPayloadSchema",
+    "PackageProvenanceSchema",
+    "PackageRefSchema",
+    "PackageSchema",
+    "PackageSchemaVersionSchema",
+    "PackageTypeSchema",
+    "PACKAGE_SCHEMA_VERSION",
+    "ProjectIdSchema",
+    "ResumeSessionDirectiveSchema",
+    "RunIdSchema",
+    "ServerToHostMessageSchema",
+    "ServerToHostPayloadSchema",
+    "SessionDirectiveSchema",
+    "SessionReportPayloadSchema",
+    "ShutdownHostPayloadSchema",
+    "SignaledProcessFactSchema",
+    "StartInvocationPayloadSchema",
+    "StopInvocationPayloadSchema",
+    "StoppedProcessFactSchema",
+    "TextBrickPromptSchema",
+    "ToolProviderIdSchema",
+    "ToolProviderLaunchConfigSchema",
+    "computePackageContentHash",
+    "decodeContract",
+    "derivePackageHashMaterial",
+    "verifyPackageContentHash",
+    "HOST_PROTOCOL_VERSION"
+  ].sort();
   const contracts = {
     kind: "contracts",
     name: contractName,
@@ -164,7 +239,7 @@
       type: "module",
       scripts: {
         test: "vitest run && pnpm run test:types",
-        "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts test/actor/actor.test.ts test/host/host.test.ts --pretty false"
+        "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts test/actor/actor.test.ts test/host/host.test.ts test/compatibility/compatibility.test.ts --pretty false"
       },
       dependencies: { ajv: "8.20.0", "ajv-formats": "3.0.1", canonicalize: "3.0.0", typebox: "1.3.6" },
       devDependencies: { "fast-check": "4.8.0", vitest: "4.1.10" },
@@ -211,10 +286,11 @@
       }
       if (unit.kind === "contracts") {
         const testRoot = join(unit.dir, "test");
-        check(same(directories(testRoot), ["actor", "brick", "error", "fixtures", "host", "identity", "package", "validation"]), `${testRoot}: B.3 test topology mismatch`);
+        check(same(directories(testRoot), ["actor", "brick", "compatibility", "error", "fixtures", "host", "identity", "package", "validation"]), `${testRoot}: B.4 test topology mismatch`);
         const expectedTests = new Map([
           ["actor", ["actor.test.ts"]],
           ["brick", ["brick.test.ts"]],
+          ["compatibility", ["compatibility.test.ts", "fixtures.ts"]],
           ["validation", ["contract-kernel.test.ts"]],
           ["identity", ["identity.test.ts"]],
           ["error", ["error-envelope.test.ts"]],
@@ -269,14 +345,33 @@
   }
 
   function checkSources() {
-    const expected = "export {};\n";
+    const expectedConsumer = `import type {
+  ActorLaunchSpec,
+  HostToServerMessage,
+  Package,
+} from "@ai-block/runtime-contracts";
+
+export type RuntimeContractsConsumerFixture = ActorLaunchSpec | HostToServerMessage | Package;
+`;
     for (const app of apps) {
       const entry = join(app.dir, "src", "main.ts");
-      check(readText(entry) === expected, `${entry}: source is not the exact empty ESM module`);
+      check(readText(entry).replaceAll("\r\n", "\n") === expectedConsumer, `${entry}: source must be the exact type-only package-root consumer fixture`);
     }
     const contractEntry = join(contracts.dir, "src", "index.ts");
     const contractSource = readText(contractEntry);
-    check(contractSource.length > 0 && contractSource !== expected, `${contractEntry}: real Runtime Contracts source is missing`);
+    check(contractSource.length > 0, `${contractEntry}: Runtime Contracts source is missing`);
+  }
+
+  function checkDocumentation() {
+    const readme = readText(join(contracts.dir, "README.md"));
+    check(readme.includes("@ai-block/runtime-contracts"), "Runtime Contracts README is missing the package identity");
+    check(readme.includes("decodeContract"), "Runtime Contracts README is missing root decoder usage");
+    check(readme.includes("deep import"), "Runtime Contracts README is missing the deep-import boundary rule");
+
+    const guide = readText(join(root, "docs", "construction", "serena-lsp-worker-guide.md"));
+    for (const phrase of ["stateless", "no-memory", "Git/tests-authoritative", "Windows", "fallback"]) {
+      check(guide.includes(phrase), `Serena guide is missing required topic: ${phrase}`);
+    }
   }
 
   function outputText(value) {
@@ -448,8 +543,10 @@
       for (const app of apps) {
         const dir = mkdtempSync(join(join(app.dir, "node_modules"), ".ai-block-boundaries-"));
         temporary.push(dir);
-        check(runTscProbe(`root-${app.name.split("/").pop()}`, dir, `import ${JSON.stringify(contractName)};\n`, { success: true }) !== undefined, `${app.name}: package-root TypeScript probe failed`);
-        check(runNodeProbe(join(dir, "root.mjs"), `import ${JSON.stringify(contractName)};\n`, { status: 0, stdout: "", stderr: "" }) !== undefined, `${app.name}: package-root runtime import failed`);
+        const rootTypeSource = `import type { ActorLaunchSpec, HostToServerMessage, Package } from ${JSON.stringify(contractName)};\ntype ConsumerFixture = ActorLaunchSpec | HostToServerMessage | Package;\nconst fixture: ConsumerFixture | undefined = undefined;\nvoid fixture;\n`;
+        const rootRuntimeSource = `import * as contracts from ${JSON.stringify(contractName)};\nconst expected = ${JSON.stringify(expectedRuntimeExports)};\nif (JSON.stringify(Object.keys(contracts).sort()) !== JSON.stringify(expected)) process.exit(1);\n`;
+        check(runTscProbe(`root-${app.name.split("/").pop()}`, dir, rootTypeSource, { success: true }) !== undefined, `${app.name}: package-root TypeScript probe failed`);
+        check(runNodeProbe(join(dir, "root.mjs"), rootRuntimeSource, { status: 0, stdout: "", stderr: "" }) !== undefined, `${app.name}: package-root runtime/export probe failed`);
       }
 
       const appDir = temporary[0];
@@ -510,6 +607,7 @@
     checkDirectories();
     checkTsGraph();
     checkSources();
+    checkDocumentation();
     checkArtifacts();
     runBoundaryProbes();
   }

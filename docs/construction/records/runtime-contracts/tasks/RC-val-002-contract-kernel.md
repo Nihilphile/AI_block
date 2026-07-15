@@ -28,6 +28,7 @@ packages/runtime-contracts/test/error/**
 scripts/check-workspace-boundaries.mjs
 package.json
 pnpm-lock.yaml
+.gitignore
 docs/construction/records/runtime-contracts/reports/RC-val-002-contract-kernel.coder.md
 ```
 
@@ -40,6 +41,7 @@ Generated `dist/` output is never committed. No application, Brick, Package, Act
 - Use the Ajv main export and only the approved Draft-07-compatible TypeBox subset. Every exported schema needs a Node 24 + TypeScript 7.0.2 + NodeNext compile-and-runtime test.
 - Follow strict test-first RED → GREEN → REFACTOR. Record the observed RED and final verification in the Coder Report.
 - Update the Phase 0A boundary checker only enough to recognize the approved domain topology, exact dependency policy, root-only exports, and real source. Do not write a JavaScript/TypeScript import parser.
+- Add only the `.serena/` directory entry to `.gitignore` so construction-tool state is not treated as product output. Do not inspect, edit, delete, stage, or otherwise special-case files inside `.serena/`; the checker must continue rejecting other unexpected untracked files.
 - Repository-wide verification must remain green at the accepted commit. A known-red intermediate slice is not acceptable.
 - Treat hostile in-process Proxy behavior according to the approved trust caveat; do not claim an impossible side-effect-free Proxy security boundary.
 - Begin with a delta preflight and wait for exact `IMPLEMENTATION_AUTHORIZED` before any write, dependency installation, generated output, or test execution that mutates the workspace.
@@ -54,3 +56,7 @@ Generated `dist/` output is never committed. No application, Brick, Package, Act
 - All B.1 schema compatibility tests, focused tests, TypeScript build, frozen install, workspace boundary verification, and repository-wide verification pass deterministically.
 - Installation and verification leave no unexpected tracked or untracked files; `.serena/` is pre-existing user-owned state and remains untouched.
 - The Coder commits only the authorized implementation files and its own Report with `subject commit: same-as-report`.
+
+## Controller clarification — 2026-07-16
+
+The approved design now freezes the exact `ContractDecodeResult` discriminator and generic API, the B.1 Contract-only version exports, the materialization `reason` and schema `rule` vocabularies, Ajv mapping behavior, and timestamp treatment of year `0000` and leap seconds. No external Research remains open. `.gitignore` is added to the write scope solely for `.serena/`; a checker-only hidden allowlist is not authorized.

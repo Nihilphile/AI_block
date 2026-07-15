@@ -88,7 +88,29 @@ JavaScript provides no reliable, side-effect-free Proxy detection: even reflecti
 
 Duplicate object keys and lexical distinctions in raw JSON, including whether a source token was written as `-0`, cannot be recovered from an already parsed value. Detecting those properties belongs to a future transport parser and is outside Phase 0B.
 
-The public decoding entry is named `decodeContract(schema, input)` and returns `ContractDecodeResult<T>`, a discriminated success/failure result. The failure branch carries the stable error envelope. TypeBox schemas and their derived value types are public; Ajv instances, raw Ajv errors, materialization helpers, normalizers, and freeze helpers are private. Phase 0B does not add a throwing assertion API.
+The public decoding entry is named `decodeContract(schema, input)`. Its exact public shape is:
+
+```ts
+type ContractValue<T> =
+  T extends null | string | number | boolean
+    ? T
+    : T extends readonly unknown[]
+      ? { readonly [K in keyof T]: ContractValue<T[K]> }
+      : T extends object
+        ? { readonly [K in keyof T]: ContractValue<T[K]> }
+        : never;
+
+type ContractDecodeResult<T> =
+  | Readonly<{ ok: true; value: ContractValue<T> }>
+  | Readonly<{ ok: false; error: ContractErrorEnvelope }>;
+
+function decodeContract<TSchema extends Type.TSchema>(
+  schema: TSchema,
+  input: unknown,
+): ContractDecodeResult<Type.Static<TSchema>>;
+```
+
+`ContractValue<T>` is exported and reflects recursive runtime immutability for primitives, arrays, and object properties. The implementation may cache compiled validators privately but may not expose Ajv instances, raw Ajv errors, materialization helpers, normalizers, or freeze helpers. Phase 0B does not add a throwing assertion API. If exact TypeBox 1.3.6 namespace names differ from this signature during the required compile gate, implementation stops for a Controller clarification rather than changing the public behavior.
 
 ## 5. Identity, version, and time
 
@@ -123,7 +145,15 @@ Timestamps use UTC RFC 3339 with exactly millisecond precision:
 YYYY-MM-DDTHH:mm:ss.SSSZ
 ```
 
-Decoders validate both lexical form and calendar validity.
+Decoders validate both lexical form and calendar validity. Canonical timestamps accept years `0001` through `9999`, uppercase `T` and `Z`, hours `00` through `23`, and seconds `00` through `59`. Year `0000`, leap-second `60`, offsets, lowercase separators, `24:00`, missing fractions, and fractions other than exactly three digits are rejected.
+
+B.1 exports only the Contract version family:
+
+- `CONTRACT_SCHEMA_VERSION` with exact value `1.0.0`;
+- `ContractSchemaVersionSchema`;
+- derived type `ContractSchemaVersion`.
+
+`PACKAGE_SCHEMA_VERSION` and its schema/type are introduced in B.2; `HOST_PROTOCOL_VERSION` and its schema/type are introduced in B.3. All remain distinct concepts even while their first values are equal.
 
 ## 6. Stable error envelope
 
@@ -149,7 +179,37 @@ B.1 freezes these initial codes and fixed public messages:
 | `contract.schema_mismatch` | validation | `Contract schema validation failed.` |
 | `contract.unsupported_version` | compatibility | `Unsupported contract version.` |
 
-Materialization failures may use details `{ path, reason }`, where `path` is an RFC 6901 JSON Pointer and `reason` is a package-owned closed vocabulary. Schema failures use `{ issues: [{ path, rule }] }`; `rule` is a small package-owned semantic vocabulary rather than a raw Ajv keyword. Issues are deduplicated and sorted by path and then rule. Raw values, Ajv messages, schema paths, stacks, and library-specific params are never exposed. Empty details are omitted rather than emitted as `null`.
+Materialization failures use details `{ path, reason }`, where `path` is an RFC 6901 JSON Pointer and `reason` is one of:
+
+```text
+accessor_property
+custom_prototype
+symbol_key
+sparse_array
+array_extra_property
+cyclic_reference
+unsupported_type
+non_finite_number
+lone_surrogate
+reflection_failed
+```
+
+Schema failures use `{ issues: [{ path, rule }] }`, where `rule` is one of:
+
+```text
+required
+additional_property
+type
+literal
+format
+range
+structure
+reference
+```
+
+Ajv `required` and `additionalProperties` failures point at the affected child JSON Pointer. `const` and `enum` map to `literal`; lexical patterns map to `format`; numeric/string/array bounds map to `range`; composition and collection-shape keywords map to `structure`; references map to `reference`. Issues are deduplicated and sorted by path and then rule. Raw values, Ajv messages, schema paths, stacks, and library-specific params are never exposed. Empty details are omitted rather than emitted as `null`.
+
+Generic `decodeContract` returns `contract.invalid_json_value` for materialization failure and `contract.schema_mismatch` for schema failure. `contract.unsupported_version` is reserved for version-aware top-level decoders introduced with their owning Package or Host contracts; a generic literal mismatch is not guessed to be a version error.
 
 Public schema constants use PascalCase with a `Schema` suffix, their derived value types use the same base name without the suffix, and exact version values use uppercase constants. Public B.1 symbols include `JsonValueSchema`, `JsonObjectSchema`, `ContractDecodeResult`, `decodeContract`, the ID schemas/types above, separate schema/version constants, `CanonicalTimestampSchema`, and `ContractErrorEnvelopeSchema`. Private helper filenames do not define additional public API.
 

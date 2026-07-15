@@ -21,7 +21,7 @@ The Coder may modify only:
 
 ## Frozen implementation
 
-- Accept the ActorHost manifest's exact `pretest` value `pnpm --filter @ai-block/runtime-contracts build`.
+- Accept the ActorHost manifest's exact `pretest` value `pnpm --filter @ai-block/runtime-contracts exec tsc -b`.
 - Preserve exact checking of the existing ActorHost `test` script and all manifest/dependency/topology rules.
 - Do not generalize the checker to accept arbitrary lifecycle scripts, arbitrary package builds, shell chaining, or another workspace dependency.
 - Add or retain a deterministic negative probe showing an altered/unexpected ActorHost `pretest` is rejected, if the checker currently has a natural manifest-probe location.
@@ -34,3 +34,7 @@ The Coder may modify only:
 - An absent, altered, broadened, or unexpected `pretest` value is rejected according to the checker's exact manifest policy.
 - `pnpm verify` passes at the committed state and leaves the worktree clean.
 - Commit only authorized paths with message `test: allow exact actor host pretest boundary`.
+
+## Controller clarification before implementation
+
+The earlier `build` wording was incorrect because Runtime Contracts intentionally has no package-local `build` script. The already committed HOST-test-001 manifest correctly invokes the pinned workspace compiler with `pnpm --filter @ai-block/runtime-contracts exec tsc -b`. That exact command is the only value authorized for the boundary checker.

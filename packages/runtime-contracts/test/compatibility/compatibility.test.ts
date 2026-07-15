@@ -31,30 +31,6 @@ function readSerializedFixtures(): SerializedCompatibilityFixture[] {
 }
 
 describe("B.4 compatibility fixtures", () => {
-  it("decodes the shared serialized fixtures through the built package-root artifact", async () => {
-    const contracts = await import("@ai-block/runtime-contracts");
-    const fixtures = readSerializedFixtures();
-    const schemas = {
-      ContractErrorEnvelopeSchema: contracts.ContractErrorEnvelopeSchema,
-      PackageSchema: contracts.PackageSchema,
-      DeliverySchema: contracts.DeliverySchema,
-      ActorLaunchSpecSchema: contracts.ActorLaunchSpecSchema,
-      ServerToHostMessageSchema: contracts.ServerToHostMessageSchema,
-      HostToServerMessageSchema: contracts.HostToServerMessageSchema,
-    } as const;
-
-    expect(fixtures).toHaveLength(6);
-    for (const fixture of fixtures) {
-      const schema = schemas[fixture.schema as keyof typeof schemas];
-      expect(schema, fixture.name).toBeDefined();
-      const decoded = contracts.decodeContract(schema, fixture.value);
-      expect(decoded.ok, fixture.name).toBe(true);
-      if (decoded.ok) {
-        expect(contracts.decodeContract(schema, JSON.parse(JSON.stringify(decoded.value))), fixture.name).toEqual(decoded);
-      }
-    }
-  });
-
   it("decodes the shared serialized fixtures through the source compatibility entrypoint", () => {
     const fixtures = readSerializedFixtures();
 

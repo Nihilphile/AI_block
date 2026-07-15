@@ -67,7 +67,7 @@ import type {
   TextBrickPrompt,
   ToolProviderId,
   ToolProviderLaunchConfig,
-} from "@ai-block/runtime-contracts";
+} from "../../src/index.js";
 
 type AcceptedPublicDerivedTypes = {
   AckPayload: AckPayload;

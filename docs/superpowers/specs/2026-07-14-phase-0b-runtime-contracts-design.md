@@ -217,12 +217,14 @@ Public schema constants use PascalCase with a `Schema` suffix, their derived val
 
 `BrickPrompt` is ordinary model input and is a recursive discriminated union:
 
-- text prompt: non-empty text content;
-- composite prompt: a non-empty ordered list of child `BrickPrompt` values.
+- `TextBrickPrompt`: `{ kind: "text", text: string }`, with non-empty text;
+- `CompositeBrickPrompt`: `{ kind: "composite", parts: BrickPrompt[] }`, with a non-empty ordered child list.
 
 This gives every Package exactly one root Body while allowing the Actor Module to compose several accepted Packages into one ordered invocation prompt.
 
-`BrickSysPrompt` is a separate, non-interchangeable contract for non-empty system-instruction text. Package Body schemas accept only `BrickPrompt`; no decoder or conversion helper may reinterpret a Package Body as `BrickSysPrompt`.
+`BrickSysPrompt` is the separate shape `{ kind: "system_text", text: string }` with non-empty system-instruction text. Package Body schemas accept only `BrickPrompt`; no decoder or conversion helper may reinterpret a Package Body as `BrickSysPrompt`. Text is not trimmed or normalized by the Contract layer; a non-empty whitespace-only string is structurally valid.
+
+Public B.2 Brick symbols are `TextBrickPromptSchema`, `TextBrickPrompt`, `CompositeBrickPromptSchema`, `CompositeBrickPrompt`, `BrickPromptSchema`, `BrickPrompt`, `BrickSysPromptSchema`, and `BrickSysPrompt`. Every object branch rejects unknown fields.
 
 Backend and Tool bricks are not frozen as public domain schemas in Phase 0B. Their cross-process launch representation is the controlled adapter extension described below; ActorTemplate compilation remains a later Actor Module responsibility.
 
@@ -248,11 +250,65 @@ The Head contains immutable identity and provenance only:
 
 The initial Package type vocabulary is `task`, `request`, `artifact`, `report`, `summary`, `result`, `error`, and `state_patch`.
 
-Creator identity is a discriminated union for Client, Actor, or Runtime creation. Actor creation includes authoritative Actor and Invocation identity. Runtime creation is explicit rather than represented by a missing creator.
+Creator identity is a discriminated union for Client, Actor, or Runtime creation. It identifies the creating principal; authoritative Run and Invocation context belongs to provenance. Runtime creation is explicit rather than represented by a missing creator.
+
+The exact B.2 creator shapes are:
+
+```text
+{ kind: "client", client_id: ClientPrincipalId }
+{ kind: "actor", actor_id: ActorId }
+{ kind: "runtime" }
+```
+
+Creator identifies the creating principal only. Authoritative Run and Invocation context belongs to provenance rather than being duplicated inside the Actor creator branch.
+
+`PackageProvenance` always contains the ordered `parent_refs` array, which may be empty. It has exactly three strict variants:
+
+```text
+{ parent_refs }
+{ parent_refs, run_id }
+{ parent_refs, run_id, invocation_id }
+```
+
+An Invocation origin therefore always has a Run origin. Relationship rules between creator kind and provenance are enforced later by the Package Module when it creates a Package; the cross-process structural schema does not guess workflow authority.
 
 `PackageRef` always carries both `package_id` and `content_hash`. This allows a consumer to detect a mismatched immutable record instead of treating an ID alone as sufficient content identity.
 
-Mutable route state is excluded from Package. A minimal `Delivery` snapshot references a PackageRef and carries Project, Run, target Actor, creation time, and a small delivery-state enum. Delivery transition behavior remains in the future Package Module.
+`ContentHash` has exact form `sha256:` followed by 64 lowercase hexadecimal characters.
+
+The exact Package wire shape is:
+
+```text
+Package
+├── head
+│   ├── package_id
+│   ├── package_type
+│   ├── schema_version
+│   ├── project_id
+│   ├── created_by
+│   ├── created_at
+│   ├── content_hash
+│   └── provenance
+└── body: BrickPrompt
+```
+
+Mutable route state is excluded from Package. The exact minimal `Delivery` snapshot is:
+
+```text
+{
+  delivery_id,
+  package_ref,
+  project_id,
+  run_id,
+  target_actor_id,
+  state,
+  created_at
+}
+```
+
+`DeliveryState` is exactly `pending | delivered | acknowledged | failed`. Delivery transition behavior and update timestamps remain in the future Package Module.
+
+B.2 exports `PACKAGE_SCHEMA_VERSION` with value `1.0.0` plus `PackageSchemaVersionSchema` and `PackageSchemaVersion`. It also exports schema/type pairs named `PackageType`, `ContentHash`, `PackageRef`, `PackageCreator`, `PackageProvenance`, `PackageHead`, `Package`, `PackageHashMaterial`, `DeliveryState`, and `Delivery`, using the usual `Schema` suffix for each schema constant.
 
 ### 8.1 Canonicalization decision
 
@@ -271,6 +327,26 @@ sha256:<64 lowercase hexadecimal characters>
 Object key order is non-semantic, array order is semantic, and `-0` and `0` have the same canonical value.
 
 Package creation remains a future Package Module operation. Runtime Contracts exports the pure hash-material, compute, and verify primitives needed to enforce the cross-process identity rule; it does not allocate IDs, persist records, or publish Packages.
+
+The exact B.2 hashing API is:
+
+```ts
+function derivePackageHashMaterial(
+  input: unknown,
+): ContractDecodeResult<PackageHashMaterial>;
+
+function computePackageContentHash(
+  input: unknown,
+): ContractDecodeResult<ContentHash>;
+
+function verifyPackageContentHash(
+  input: unknown,
+): ContractDecodeResult<boolean>;
+```
+
+`derivePackageHashMaterial` accepts a full Package, validates it, and returns the frozen `{ head, body }` value with only `head.content_hash` omitted. `computePackageContentHash` accepts and validates a PackageHashMaterial value. `verifyPackageContentHash` accepts and validates a full Package; a structurally valid Package with a mismatched digest returns `{ ok: true, value: false }`, while malformed input returns the normal decode failure.
+
+An unexpected canonicalizer failure after successful validation returns code `contract.canonicalization_failed`, category `internal`, fixed message `Package canonicalization failed.`, `retryable: false`, and no library-specific details. Canonicalization never throws a dependency-owned error across the public API.
 
 ## 9. Actor execution contracts
 

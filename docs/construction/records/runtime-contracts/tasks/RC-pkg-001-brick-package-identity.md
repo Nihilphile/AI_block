@@ -42,6 +42,7 @@ No application, Actor execution, Host protocol, Graph, persistence, transport, r
 - Hash material is the complete immutable Package with only `head.content_hash` omitted. Routing and Delivery state never participate.
 - Only inert, validated I-JSON reaches `canonicalize`. Use its default API only, hash canonical UTF-8 bytes with Node SHA-256, and serialize lowercase `sha256:` digests.
 - Retain a small attributed RFC/Cyberphone vector subset and add deterministic fast-check properties; do not vendor or run the 100-million-number corpus.
+- Construction-tool trial: if Serena MCP capabilities are exposed in the Coder environment, use them where genuinely useful for B.2 navigation or editing. Do not manually modify or stage `.serena/`; ignored Serena-generated construction metadata is not product output. Serena availability or absence does not change product scope and is not a product blocker.
 - Follow strict RED → GREEN → REFACTOR and record observed RED plus final verification in the Coder Report.
 - Update the boundary checker only for approved B.2 topology/dependencies/exports; do not create a JS/TS parser.
 - `pnpm verify` must remain green. Escalate recursive TypeBox/Ajv incompatibility rather than switching dialect or weakening schema strictness.
@@ -54,4 +55,9 @@ No application, Actor execution, Host protocol, Graph, persistence, transport, r
 - Hash verification is invariant to object-key order, sensitive to array order and every immutable field except `content_hash`, and handles `-0` according to JCS.
 - Non-I-JSON and behavioral JavaScript values fail before canonicalization.
 - Attributed official vectors, property tests, TypeScript/Node compatibility, frozen installation, build, boundary checks, clean checks, and repository-wide verification pass.
+- The Coder Report includes a short Serena construction-tool evaluation: availability, operations attempted, concrete convenience or friction, and a recommendation for later Runtime Contracts Tasks. If unavailable, it records that fact without further investigation.
 - The Coder commits only authorized files and its own Report with `subject commit: same-as-report`.
+
+## Controller clarification — 2026-07-16
+
+The approved Phase 0B design now freezes all preflight gaps: exact Brick discriminators and fields, creator and provenance variants, Package/PackageRef/Delivery fields, Delivery states, Package-version and schema/type export names, ContentHash format, and the three hashing function signatures and failure semantics. Creator identifies only the principal; authoritative Run/Invocation context is represented by provenance. No external Research remains open. Implementation must stop if the recursive TypeBox schema or canonicalize default ESM API fails the required local compatibility gate.

@@ -164,7 +164,7 @@
       type: "module",
       scripts: {
         test: "vitest run && pnpm run test:types",
-        "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts --pretty false"
+        "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts test/actor/actor.test.ts test/host/host.test.ts --pretty false"
       },
       dependencies: { ajv: "8.20.0", "ajv-formats": "3.0.1", canonicalize: "3.0.0", typebox: "1.3.6" },
       devDependencies: { "fast-check": "4.8.0", vitest: "4.1.10" },
@@ -193,13 +193,15 @@
         const expectedFile = authorizedSourceFiles.get(unit);
         check(entries.length === 1 && entries[0].isFile() && entries[0].name === expectedFile, `${sourceRoot} must contain exactly ${expectedFile} and no subdirectory`);
       } else {
-        check(same(entries.map((entry) => entry.name).sort(), ["brick", "error", "identity", "index.ts", "package", "validation"]), `${sourceRoot}: B.2 source topology mismatch`);
+        check(same(entries.map((entry) => entry.name).sort(), ["actor", "brick", "error", "host", "identity", "index.ts", "package", "validation"]), `${sourceRoot}: B.3 source topology mismatch`);
         check(entries.find((entry) => entry.name === "index.ts")?.isFile() === true, `${sourceRoot}/index.ts is missing`);
         const expectedSubdirectories = new Map([
+          ["actor", ["index.ts", "schemas.ts"]],
           ["brick", ["index.ts", "schemas.ts"]],
           ["validation", ["decode.ts", "schemas.ts"]],
           ["identity", ["identity.ts"]],
           ["error", ["error.ts"]],
+          ["host", ["index.ts", "schemas.ts"]],
           ["package", ["hash.ts", "index.ts", "node-crypto.d.ts", "schemas.ts"]]
         ]);
         for (const [directory, files] of expectedSubdirectories) {
@@ -209,12 +211,14 @@
       }
       if (unit.kind === "contracts") {
         const testRoot = join(unit.dir, "test");
-        check(same(directories(testRoot), ["brick", "error", "fixtures", "identity", "package", "validation"]), `${testRoot}: B.2 test topology mismatch`);
+        check(same(directories(testRoot), ["actor", "brick", "error", "fixtures", "host", "identity", "package", "validation"]), `${testRoot}: B.3 test topology mismatch`);
         const expectedTests = new Map([
+          ["actor", ["actor.test.ts"]],
           ["brick", ["brick.test.ts"]],
           ["validation", ["contract-kernel.test.ts"]],
           ["identity", ["identity.test.ts"]],
           ["error", ["error-envelope.test.ts"]],
+          ["host", ["host.test.ts"]],
           ["package", ["hash.test.ts", "package.test.ts"]]
         ]);
         for (const [directory, files] of expectedTests) {

@@ -40,3 +40,45 @@ export { decodeContract } from "./validation/decode.js";
 export type { ContractDecodeResult, ContractValue } from "./validation/decode.js";
 export { ContractErrorEnvelopeSchema } from "./error/error.js";
 export type { ContractErrorEnvelope } from "./error/error.js";
+export {
+  BrickPromptSchema,
+  BrickSysPromptSchema,
+  CompositeBrickPromptSchema,
+  TextBrickPromptSchema,
+} from "./brick/index.js";
+export type {
+  BrickPrompt,
+  BrickSysPrompt,
+  CompositeBrickPrompt,
+  TextBrickPrompt,
+} from "./brick/index.js";
+export {
+  ContentHashSchema,
+  DeliverySchema,
+  DeliveryStateSchema,
+  PackageCreatorSchema,
+  PackageHashMaterialSchema,
+  PackageHeadSchema,
+  PackageProvenanceSchema,
+  PackageRefSchema,
+  PackageSchema,
+  PackageSchemaVersionSchema,
+  PackageTypeSchema,
+  PACKAGE_SCHEMA_VERSION,
+  computePackageContentHash,
+  derivePackageHashMaterial,
+  verifyPackageContentHash,
+} from "./package/index.js";
+export type {
+  ContentHash,
+  Delivery,
+  DeliveryState,
+  Package,
+  PackageCreator,
+  PackageHashMaterial,
+  PackageHead,
+  PackageProvenance,
+  PackageRef,
+  PackageSchemaVersion,
+  PackageType,
+} from "./package/index.js";

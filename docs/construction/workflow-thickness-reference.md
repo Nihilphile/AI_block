@@ -23,6 +23,7 @@ It does not ask an LLM to assign an intuition-based numeric risk score.
 This document is authoritative for construction workflow levels, add-on gates, and Reviewer placement.
 
 - `docs/construction/task-report-audit.md` is authoritative for Task IDs, Task/Report ownership, and Git-tracked audit records.
+- `docs/construction/superpowers-temporary-authorization.md` is authoritative for temporary role-scoped use of Superpowers workflow skills.
 - `development-orchestration-runbook-v0.1.md` remains authoritative for Worker roles, model selection, context control, and communication mechanics.
 - approved product architecture, designs, and ADRs remain authoritative for product decisions.
 

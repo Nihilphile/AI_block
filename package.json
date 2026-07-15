@@ -15,7 +15,8 @@
     "check:boundaries": "node scripts/check-workspace-boundaries.mjs",
     "test:contracts": "pnpm --filter @ai-block/runtime-contracts test",
     "test:actor-host": "pnpm --filter @ai-block/actor-host test",
-    "verify": "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm test:contracts && pnpm test:actor-host && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
+    "test:runtime-server": "pnpm --filter @ai-block/runtime-server test",
+    "verify": "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm test:contracts && pnpm test:actor-host && pnpm test:runtime-server && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

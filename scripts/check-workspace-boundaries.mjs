@@ -287,14 +287,29 @@
         "check:boundaries": "node scripts/check-workspace-boundaries.mjs",
         "test:contracts": "pnpm --filter @ai-block/runtime-contracts test",
         "test:actor-host": "pnpm --filter @ai-block/actor-host test",
-        verify: "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm test:contracts && pnpm test:actor-host && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
+        "test:runtime-server": "pnpm --filter @ai-block/runtime-server test",
+        verify: "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm test:contracts && pnpm test:actor-host && pnpm test:runtime-server && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
       },
       devDependencies: { "@types/node": "24.13.3", typescript: "7.0.2" }
     };
     check(same(readJson(join(root, "package.json")), expectedRoot), "root package manifest has extra, missing, or altered fields");
 
     for (const app of apps) {
-      const expected = app === apps[1]
+      const expected = app === apps[0]
+        ? {
+          name: app.name,
+          version: "0.0.0",
+          private: true,
+          type: "module",
+          scripts: {
+            pretest: "pnpm --filter @ai-block/runtime-contracts exec tsc -b",
+            test: "vitest run && pnpm run test:types",
+            "test:types": "tsc --project tsconfig.test.json --noEmit --pretty false"
+          },
+          dependencies: { [contractName]: "workspace:*" },
+          devDependencies: { vitest: "4.1.10" }
+        }
+        : app === apps[1]
         ? {
           name: app.name,
           version: "0.0.0",
@@ -346,7 +361,7 @@
     for (const unit of units) {
       const expectedOwned = unit.kind === "contracts"
         ? ["src", "test"]
-        : unit === apps[1]
+        : unit === apps[0] || unit === apps[1]
           ? ["src", "test"]
           : ["src"];
       const owned = directories(unit.dir).filter((name) => name !== "dist" && name !== "node_modules");
@@ -354,7 +369,12 @@
       const sourceRoot = join(unit.dir, "src");
       const entries = existsSync(sourceRoot) ? readdirSync(sourceRoot, { withFileTypes: true }) : [];
       if (unit.kind === "app") {
-        if (unit === apps[1]) {
+        if (unit === apps[0]) {
+          check(same(entries.map((entry) => entry.name).sort(), ["main.ts", "modules"]), `${sourceRoot}: Runtime Server source topology mismatch`);
+          const modulesRoot = join(sourceRoot, "modules");
+          check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway"]), `${modulesRoot}: Runtime Server module topology mismatch`);
+          check(same(readdirSync(join(modulesRoot, "host-gateway"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway.ts", "ports.ts"]), `${modulesRoot}/host-gateway: Runtime Server Host Gateway source files mismatch`);
+        } else if (unit === apps[1]) {
           check(same(entries.map((entry) => entry.name).sort(), ["backend", "main.ts", "server-connection"]), `${sourceRoot}: ActorHost source topology mismatch`);
           const backendRoot = join(sourceRoot, "backend");
           check(same(readdirSync(backendRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["adapter.ts", "fake-backend.ts", "supervisor.ts"]), `${backendRoot}: ActorHost backend topology mismatch`);
@@ -409,6 +429,13 @@
         check(same(readdirSync(join(testRoot, "backend"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["backend-supervisor.test.ts"]), `${testRoot}/backend: ActorHost test files mismatch`);
         check(same(readdirSync(join(testRoot, "server-connection"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["command-processor.test.ts", "server-connection.test.ts", "ws-client.test.ts"]), `${testRoot}/server-connection: ActorHost test files mismatch`);
       }
+      if (unit === apps[0]) {
+        const testRoot = join(unit.dir, "test");
+        check(same(directories(testRoot), ["modules"]), `${testRoot}: Runtime Server test topology mismatch`);
+        const modulesRoot = join(testRoot, "modules");
+        check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway"]), `${modulesRoot}: Runtime Server test module topology mismatch`);
+        check(same(readdirSync(join(modulesRoot, "host-gateway"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway.test.ts"]), `${modulesRoot}/host-gateway: Runtime Server Host Gateway test files mismatch`);
+      }
     }
     const forbiddenCatchAll = new Set(["common", "shared", "core", "utils"]);
     for (const tree of [join(root, "apps"), join(root, "packages"), join(root, "scripts")]) {
@@ -451,6 +478,11 @@
       compilerOptions: { noEmit: true, rootDir: ".", types: ["node"] },
       include: ["src/**/*.ts", "test/**/*.ts"]
     }), `${apps[1].dir}: complete ActorHost test TypeScript project mismatch`);
+    check(same(readJson(join(apps[0].dir, "tsconfig.test.json")), {
+      extends: "../../tsconfig.base.json",
+      compilerOptions: { noEmit: true, rootDir: ".", types: ["node"] },
+      include: ["src/**/*.ts", "test/**/*.ts"]
+    }), `${apps[0].dir}: complete Runtime Server test TypeScript project mismatch`);
   }
 
   function checkSources() {

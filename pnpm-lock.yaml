@@ -8,12 +8,18 @@ importers:
 
   .:
     devDependencies:
+      '@ai-block/runtime-contracts':
+        specifier: workspace:*
+        version: link:packages/runtime-contracts
       '@types/node':
         specifier: 24.13.3
         version: 24.13.3
       typescript:
         specifier: 7.0.2
         version: 7.0.2
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@24.13.3)(vite@8.1.4(@types/node@24.13.3))
 
   apps/actor-host:
     dependencies:

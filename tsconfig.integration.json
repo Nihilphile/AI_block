@@ -3,11 +3,7 @@
   "compilerOptions": {
     "noEmit": true,
     "rootDir": ".",
-    "types": ["node"],
-    "paths": {
-      "@ai-block/runtime-contracts": ["./packages/runtime-contracts/dist/index.d.ts"],
-      "vitest": ["./apps/actor-host/node_modules/vitest/dist/index.d.ts"]
-    }
+    "types": ["node"]
   },
   "include": ["tests/integration/host-walking-skeleton/host-walking-skeleton.test.ts"]
 }

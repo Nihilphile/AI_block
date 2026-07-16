@@ -288,7 +288,11 @@
         "test:contracts": "pnpm --filter @ai-block/runtime-contracts test",
         "test:actor-host": "pnpm --filter @ai-block/actor-host test",
         "test:runtime-server": "pnpm --filter @ai-block/runtime-server test",
-        verify: "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm test:contracts && pnpm test:actor-host && pnpm test:runtime-server && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
+        "test:integration:build": "pnpm build",
+        "test:integration:types": "pnpm exec tsc --project tsconfig.integration.json --noEmit --pretty false",
+        "test:integration:focused": "pnpm --filter @ai-block/actor-host exec vitest run --root ../.. tests/integration/host-walking-skeleton/host-walking-skeleton.test.ts",
+        "test:integration": "pnpm run test:integration:build && pnpm run test:integration:types && pnpm run test:integration:focused",
+        verify: "pnpm install --frozen-lockfile && git diff --exit-code && pnpm build && pnpm test:contracts && pnpm test:actor-host && pnpm test:runtime-server && pnpm test:integration && pnpm check:boundaries && pnpm clean && pnpm check:boundaries -- --git-clean && git diff --exit-code"
       },
       devDependencies: { "@types/node": "24.13.3", typescript: "7.0.2" }
     };
@@ -353,6 +357,14 @@
   function checkDirectories() {
     check(same(directories(join(root, "apps")), ["actor-host", "runtime-cli", "runtime-server"]), "apps directory policy mismatch");
     check(same(directories(join(root, "packages")), ["runtime-contracts"]), "packages directory policy mismatch");
+    const integrationRoot = join(root, "tests", "integration", "host-walking-skeleton");
+    check(same(directories(join(root, "tests")), ["integration"]), "root test directory policy mismatch");
+    check(same(directories(join(root, "tests", "integration")), ["host-walking-skeleton"]), "root integration directory policy mismatch");
+    check(
+      existsSync(integrationRoot)
+        && same(readdirSync(integrationRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-walking-skeleton.test.ts"]),
+      `${integrationRoot}: integration test topology mismatch`
+    );
     const authorizedSourceFiles = new Map([
       [contracts, "index.ts"],
       [apps[0], "main.ts"],
@@ -489,6 +501,19 @@
       compilerOptions: { noEmit: true, rootDir: ".", types: ["node"] },
       include: ["src/**/*.ts", "test/**/*.ts"]
     }), `${apps[0].dir}: complete Runtime Server test TypeScript project mismatch`);
+    check(same(readJson(join(root, "tsconfig.integration.json")), {
+      extends: "./tsconfig.base.json",
+      compilerOptions: {
+        noEmit: true,
+        rootDir: ".",
+        types: ["node"],
+        paths: {
+          "@ai-block/runtime-contracts": ["./packages/runtime-contracts/dist/index.d.ts"],
+          vitest: ["./apps/actor-host/node_modules/vitest/dist/index.d.ts"]
+        }
+      },
+      include: ["tests/integration/host-walking-skeleton/host-walking-skeleton.test.ts"]
+    }), "root integration TypeScript project mismatch");
   }
 
   function checkSources() {

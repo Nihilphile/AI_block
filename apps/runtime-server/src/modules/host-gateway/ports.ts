@@ -26,6 +26,20 @@ export interface AuthenticatedHostContext {
   readonly hostInstanceId: HostInstanceId;
 }
 
+export type HostCredentialVerificationResult =
+  | {
+      readonly kind: "accepted";
+      readonly identity: AuthenticatedHostContext;
+    }
+  | {
+      readonly kind: "rejected";
+      readonly reason: "invalid" | "unavailable";
+    };
+
+export interface HostCredentialVerifier {
+  verify(token: string): Promise<HostCredentialVerificationResult>;
+}
+
 export interface HostMessageIdProvider {
   nextMessageId(): HostMessageId;
 }

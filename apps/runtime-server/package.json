@@ -9,9 +9,11 @@
     "test:types": "tsc --project tsconfig.test.json --noEmit --pretty false"
   },
   "dependencies": {
-    "@ai-block/runtime-contracts": "workspace:*"
+    "@ai-block/runtime-contracts": "workspace:*",
+    "ws": "8.21.1"
   },
   "devDependencies": {
+    "@types/ws": "8.18.1",
     "vitest": "4.1.10"
   }
 }

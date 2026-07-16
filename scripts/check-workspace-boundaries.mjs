@@ -306,8 +306,8 @@
             test: "vitest run && pnpm run test:types",
             "test:types": "tsc --project tsconfig.test.json --noEmit --pretty false"
           },
-          dependencies: { [contractName]: "workspace:*" },
-          devDependencies: { vitest: "4.1.10" }
+          dependencies: { [contractName]: "workspace:*", ws: "8.21.1" },
+          devDependencies: { "@types/ws": "8.18.1", vitest: "4.1.10" }
         }
         : app === apps[1]
         ? {
@@ -370,7 +370,10 @@
       const entries = existsSync(sourceRoot) ? readdirSync(sourceRoot, { withFileTypes: true }) : [];
       if (unit.kind === "app") {
         if (unit === apps[0]) {
-          check(same(entries.map((entry) => entry.name).sort(), ["main.ts", "modules"]), `${sourceRoot}: Runtime Server source topology mismatch`);
+          check(same(entries.map((entry) => entry.name).sort(), ["infrastructure", "main.ts", "modules"]), `${sourceRoot}: Runtime Server source topology mismatch`);
+          const infrastructureRoot = join(sourceRoot, "infrastructure");
+          check(same(readdirSync(infrastructureRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor-host-websocket"]), `${infrastructureRoot}: Runtime Server infrastructure topology mismatch`);
+          check(same(readdirSync(join(infrastructureRoot, "actor-host-websocket"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway-websocket-adapter.ts"]), `${infrastructureRoot}/actor-host-websocket: Runtime Server infrastructure files mismatch`);
           const modulesRoot = join(sourceRoot, "modules");
           check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway"]), `${modulesRoot}: Runtime Server module topology mismatch`);
           check(same(readdirSync(join(modulesRoot, "host-gateway"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway.ts", "ports.ts"]), `${modulesRoot}/host-gateway: Runtime Server Host Gateway source files mismatch`);
@@ -431,7 +434,10 @@
       }
       if (unit === apps[0]) {
         const testRoot = join(unit.dir, "test");
-        check(same(directories(testRoot), ["modules"]), `${testRoot}: Runtime Server test topology mismatch`);
+        check(same(directories(testRoot), ["infrastructure", "modules"]), `${testRoot}: Runtime Server test topology mismatch`);
+        const infrastructureTestRoot = join(testRoot, "infrastructure");
+        check(same(readdirSync(infrastructureTestRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor-host-websocket"]), `${infrastructureTestRoot}: Runtime Server infrastructure test topology mismatch`);
+        check(same(readdirSync(join(infrastructureTestRoot, "actor-host-websocket"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway-websocket-adapter.test.ts"]), `${infrastructureTestRoot}/actor-host-websocket: Runtime Server infrastructure test files mismatch`);
         const modulesRoot = join(testRoot, "modules");
         check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway"]), `${modulesRoot}: Runtime Server test module topology mismatch`);
         check(same(readdirSync(join(modulesRoot, "host-gateway"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway.test.ts"]), `${modulesRoot}/host-gateway: Runtime Server Host Gateway test files mismatch`);

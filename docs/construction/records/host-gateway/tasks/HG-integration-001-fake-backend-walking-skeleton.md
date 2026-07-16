@@ -112,3 +112,20 @@ Do not edit until exact `IMPLEMENTATION_AUTHORIZED` is returned.
 - No dependency or lockfile change occurs.
 - Coder Report records composition APIs, event/ACK ordering, RED/GREEN evidence, root/checker changes, verification, Serena use/fallbacks, and deviations.
 - Commit only authorized paths with message `test: add fake backend host walking skeleton`.
+
+## Controller clarification after preflight
+
+The following test-composition and observation decisions are frozen before implementation:
+
+- Existing product APIs are sufficient. This Task may not modify either app; no owner-specific follow-up is required before implementation.
+- Runtime execution imports the built JavaScript/declaration artifacts under each app's ignored `dist` tree after `pnpm build`. Do not run the integration through Node experimental TypeScript stripping and do not import another app from product source.
+- `tsconfig.integration.json` is a separate no-emit NodeNext test project rooted at the repository and includes only the exact integration test. It is not added to production solution references.
+- Use the repository's already pinned root Vitest runner. Add exact root scripts for integration build prerequisite, no-emit check, focused run, and aggregate integration command. Add no dependency and make no lockfile change.
+- The direct aggregate integration command is clean-state self-sufficient by invoking the existing root build before type/run phases. Root `verify` invokes it after Runtime Server tests and before boundaries; redundant build work is accepted for deterministic direct invocation in this milestone.
+- The integration composition may wrap only public methods: decorate `HostGateway.openConnection()` and the returned public connection `receive()` to record local results. It must delegate unchanged to the real methods and may not inspect/mutate private registry, indexes, pending maps, sequences, or transport internals.
+- Live registration/unregistration is observed only through public `connectionForActor(actorId)`. Pending command clearance is proven by the recorded public `acknowledged` receive result with the exact command message ID, not by reading pending state.
+- Fact ordering is observed through the public HostFactSink plus recorded complete Server envelopes/results. Install event waiters before each trigger; each waiter unregisters itself on resolution/rejection to avoid listener accumulation.
+- Use Vitest's bounded per-test timeout only as a failure guard. Test logic uses event-driven promises and FakeBackend controls, never fixed delay or polling.
+- Use one test-local harness factory with `finally` cleanup. Cleanup order is: settle/stop any pending fake execution, explicitly close ActorHost client, shutdown Gateway adapter, await HTTP server close, and remove all waiter listeners. Cleanup is idempotent when setup fails partway.
+- Identity mismatch uses a separate harness and never reaches initialize/backend execution. Busy and launch-failure scenarios may use separate fresh harnesses to keep FakeBackend scripts and sequence assertions deterministic.
+- Boundary policy grants only this exact root integration test/config access to built app artifacts. Existing production app-to-app package/source/deep-import prohibitions remain unchanged and retain negative probes.

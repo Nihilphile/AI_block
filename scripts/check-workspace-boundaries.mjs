@@ -532,9 +532,16 @@ export type RuntimeContractsConsumerFixture = ActorLaunchSpec | HostToServerMess
     check(readme.includes("decodeContract"), "Runtime Contracts README is missing root decoder usage");
     check(readme.includes("deep import"), "Runtime Contracts README is missing the deep-import boundary rule");
 
-    const guide = readText(join(root, "docs", "construction", "serena-lsp-worker-guide.md"));
-    for (const phrase of ["stateless", "no-memory", "Git/tests-authoritative", "Windows", "fallback"]) {
-      check(guide.includes(phrase), `Serena guide is missing required topic: ${phrase}`);
+    const policy = readText(join(root, "docs", "construction", "runbook", "policies", "serena.md"));
+    const requiredPolicyAssertions = [
+      ["no-memory rule", "The no-memory policy is mandatory."],
+      ["Git/tests authority", "Git diff, TypeScript, tests, boundary probes, and the final worktree remain authoritative."],
+      ["allowed non-memory operation boundary", "## Allowed non-memory capabilities"],
+      ["Windows guidance", "Windows paths may be returned with backslashes;"],
+      ["fallback guidance", "fallbacks"]
+    ];
+    for (const [topic, phrase] of requiredPolicyAssertions) {
+      check(policy.includes(phrase), `Serena Runbook policy is missing required topic: ${topic}`);
     }
   }
 

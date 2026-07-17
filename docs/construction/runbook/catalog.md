@@ -41,6 +41,7 @@ All procedure paths are relative to that role's `procedures/` directory.
 | `procedures/subject-identity.md` | dispatch | Separate implementation subject from later orchestration records |
 | `procedures/scope-escalation.md` | dispatch | Stop and request exact scope expansion without unauthorized edits |
 | `procedures/clean-worktree.md` | dispatch | Preserve unrelated work and provide clean-state evidence |
+| `procedures/controlled-probe.md` | dispatch | Execute explicitly authorized stateful or real-service probes within fixed budgets and cleanup boundaries |
 
 ## Policies
 

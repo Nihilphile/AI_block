@@ -559,7 +559,18 @@ describe("Host Gateway fake backend walking skeleton", () => {
       const startAck = await startCommandWithAck.acknowledgement;
       expect(startAck).toEqual({ kind: "acknowledged", acknowledgedMessageId: startCommandWithAck.message.message_id });
       const result = invocationResult(await resultFact);
-      expect(result.process).toEqual({ status: "launch_failed", error: launchFailure() });
+      expect(result.process).toEqual({
+        status: "launch_failed",
+        error: {
+          schema_version: "1.0.0",
+          code: "backend.launch_failed",
+          category: "backend",
+          message: "Backend process launch failed.",
+          retryable: false,
+        },
+      });
+      expect(JSON.stringify(result)).not.toContain("synthetic launch failure");
+      expect(result.process).not.toHaveProperty("error.details");
       expect(harness.observations.facts.some((fact) => fact.message.payload.kind === "host_fault")).toBe(false);
       expect(harness.fake.startCalls).toHaveLength(1);
       expect(harness.fake.sessionBindings).toEqual([]);

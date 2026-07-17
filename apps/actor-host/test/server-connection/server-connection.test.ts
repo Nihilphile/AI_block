@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type {
   ActorLaunchSpec,
   CanonicalTimestamp,
+  ContractErrorEnvelope,
   HostInstanceId,
   HostMessageId,
   HostToServerMessage,
@@ -9,6 +10,7 @@ import type {
   ProjectId,
   ServerToHostPayload,
 } from "@ai-block/runtime-contracts";
+import type { BackendAdapter, BackendAdapterStartResult } from "../../src/backend/adapter.js";
 import {
   decodeContract,
   HostToServerMessageSchema,
@@ -33,6 +35,7 @@ const packageRef = {
   package_id: `package_${UUID}`,
   content_hash: `sha256:${"a".repeat(64)}`,
 };
+const SECRET_MARKER = "token=tok_secret credential=cred_secret workspace=C:\\secret-workspace command=claude --api-key secret stderr=provider denied";
 const launchSpec = {
   schema_version: "1.0.0",
   project_id: projectId,
@@ -109,6 +112,18 @@ class InMemoryTransport implements HostTransportPort {
   }
 }
 
+class RejectingInitializeAdapter implements BackendAdapter {
+  public readonly adapterId = "fake.backend" as const;
+
+  public initialize(): Promise<void> {
+    return Promise.reject(new Error(SECRET_MARKER));
+  }
+
+  public start(_invocation: InvocationSpec): BackendAdapterStartResult {
+    throw new Error("RejectingInitializeAdapter does not start Invocations.");
+  }
+}
+
 function invocation(
   invocationId: string,
   session: InvocationSpec["session"] = { mode: "create" },
@@ -149,14 +164,14 @@ function startInput(senderSequence: number, invocationId = `invocation_${"aaaaaa
   return inbound({ kind: "start_invocation", invocation_spec: invocation(invocationId) }, senderSequence);
 }
 
-function createConnection(fake: FakeBackend, transport = new InMemoryTransport()): { connection: ServerConnection; transport: InMemoryTransport; } {
+function createConnection(adapter: BackendAdapter, transport = new InMemoryTransport()): { connection: ServerConnection; transport: InMemoryTransport; } {
   const connection = new ServerConnection({
     identity,
     connectionGeneration: 1,
     messageIds: new DeterministicIds(),
     timestamps: new DeterministicTimestamps(),
     transport,
-    supervisor: new BackendSupervisor(fake),
+    supervisor: new BackendSupervisor(adapter),
   });
   return { connection, transport };
 }
@@ -271,6 +286,162 @@ describe("ActorHost ServerConnection", () => {
       invocation_id: mismatchedInvocation.invocation_id,
       error: { code: "actor_host.identity_mismatch" },
     });
+  });
+
+  it("redacts initialization diagnostics from the serialized HostFault envelope", async () => {
+    const { connection, transport } = createConnection(new RejectingInitializeAdapter());
+    connection.start();
+    transport.sent.length = 0;
+
+    expect(connection.receive(initializeInput(0))).toMatchObject({
+      kind: "accepted",
+      disposition: { kind: "handled" },
+    });
+    await flushMicrotasks();
+
+    expect(transport.sent.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expect(transport.sent[1]?.payload).toMatchObject({
+      kind: "host_fault",
+      error: {
+        code: "actor_host.initialization_failed",
+        message: "Backend adapter initialization failed.",
+      },
+    });
+    expect(JSON.stringify(transport.sent)).not.toContain(SECRET_MARKER);
+  });
+
+  it("redacts session rejection diagnostics from the serialized HostFault envelope", async () => {
+    const fake = new FakeBackend([{ kind: "session_rejected", message: SECRET_MARKER }]);
+    const { connection, transport } = createConnection(fake);
+    connection.start();
+    connection.receive(initializeInput(0));
+    await flushMicrotasks();
+    transport.sent.length = 0;
+
+    connection.receive(startInput(1));
+    await flushMicrotasks();
+
+    expect(transport.sent.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expect(transport.sent[1]?.payload).toMatchObject({
+      kind: "host_fault",
+      error: {
+        code: "actor_host.session_observation_failed",
+        message: "Backend session observation failed.",
+      },
+    });
+    expect(JSON.stringify(transport.sent)).not.toContain(SECRET_MARKER);
+  });
+
+  it("redacts completion rejection diagnostics from the serialized HostFault envelope", async () => {
+    const fake = new FakeBackend([{
+      kind: "completion_rejected",
+      sessionId: "fake-session-completion-redaction",
+      message: SECRET_MARKER,
+    }]);
+    const { connection, transport } = createConnection(fake);
+    connection.start();
+    connection.receive(initializeInput(0));
+    await flushMicrotasks();
+    transport.sent.length = 0;
+
+    connection.receive(startInput(1));
+    await flushMicrotasks();
+
+    expect(transport.sent.map(({ payload }) => payload.kind)).toEqual(["ack", "session_report", "host_fault"]);
+    expect(transport.sent[2]?.payload).toMatchObject({
+      kind: "host_fault",
+      error: {
+        code: "actor_host.completion_observation_failed",
+        message: "Backend completion observation failed.",
+      },
+    });
+    expect(JSON.stringify(transport.sent)).not.toContain(SECRET_MARKER);
+    expect(transport.sent.some(({ payload }) => payload.kind === "invocation_result")).toBe(false);
+  });
+
+  it("redacts stop rejection diagnostics from the serialized HostFault envelope", async () => {
+    const invocationId = `invocation_${"dddddddd-dddd-4ddd-8ddd-dddddddddddd"}`;
+    const fake = new FakeBackend([{
+      kind: "stop_rejected",
+      sessionId: "fake-session-stop-redaction",
+      message: SECRET_MARKER,
+    }]);
+    const { connection, transport } = createConnection(fake);
+    connection.start();
+    connection.receive(initializeInput(0));
+    await flushMicrotasks();
+    transport.sent.length = 0;
+
+    connection.receive(inbound({
+      kind: "start_invocation",
+      invocation_spec: invocation(invocationId),
+    }, 1));
+    await flushMicrotasks();
+    transport.sent.length = 0;
+
+    connection.receive(inbound({
+      kind: "stop_invocation",
+      invocation_id: invocationId,
+      reason: "redaction test",
+    }, 2));
+    await flushMicrotasks();
+
+    expect(transport.sent.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expect(transport.sent[1]?.payload).toMatchObject({
+      kind: "host_fault",
+      error: {
+        code: "actor_host.adapter_stop_failed",
+        message: "Backend adapter stop failed.",
+      },
+    });
+    expect(JSON.stringify(transport.sent)).not.toContain(SECRET_MARKER);
+    expect(transport.sent.some(({ payload }) => payload.kind === "invocation_result")).toBe(false);
+  });
+
+  it("redacts launch failure diagnostics without changing its process error code", async () => {
+    const launchFailure = {
+      schema_version: "1.0.0",
+      code: "backend.launch_failed",
+      category: "backend",
+      message: SECRET_MARKER,
+      retryable: false,
+      details: { diagnostic: SECRET_MARKER },
+    } as unknown as ContractErrorEnvelope;
+    const fake = new FakeBackend([{ kind: "launch_failed", error: launchFailure }]);
+    const { connection, transport } = createConnection(fake);
+    connection.start();
+    connection.receive(initializeInput(0));
+    await flushMicrotasks();
+    transport.sent.length = 0;
+
+    connection.receive(startInput(1));
+
+    expect(transport.sent.map(({ payload }) => payload.kind)).toEqual(["ack", "invocation_result"]);
+    expect(transport.sent[1]?.payload).toMatchObject({
+      kind: "invocation_result",
+      result: {
+        process: {
+          status: "launch_failed",
+          error: {
+            code: "backend.launch_failed",
+            message: "Backend process launch failed.",
+          },
+        },
+      },
+    });
+    if (transport.sent[1]?.payload.kind === "invocation_result") {
+      expect(transport.sent[1].payload.result.process).toEqual({
+        status: "launch_failed",
+        error: {
+          schema_version: "1.0.0",
+          code: "backend.launch_failed",
+          category: "backend",
+          message: "Backend process launch failed.",
+          retryable: false,
+        },
+      });
+    }
+    expect(JSON.stringify(transport.sent)).not.toContain(SECRET_MARKER);
   });
 
   it("preserves command session/result ordering and causal correlation without payload envelope fields", async () => {

@@ -178,10 +178,10 @@ export class BackendSupervisor {
         if (sessionId !== undefined && this.active === active) this.sessionId = sessionId;
         return sessionId;
       },
-      (error: unknown) => {
+      () => {
         this.fail(active, {
           code: "session_observation_failed",
-          message: errorMessage(error, "Backend session observation failed."),
+          message: "Backend session observation failed.",
         });
         return undefined;
       },
@@ -208,11 +208,11 @@ export class BackendSupervisor {
         this.finish(active);
         return invocationResult;
       },
-      (error: unknown) => {
+      () => {
         active.completionSettled = true;
         this.fail(active, {
           code: "completion_observation_failed",
-          message: errorMessage(error, "Backend completion observation failed."),
+          message: "Backend completion observation failed.",
         });
         return undefined;
       },
@@ -259,18 +259,18 @@ export class BackendSupervisor {
       this.state = "stopping";
       void active.execution.stop().then(
         () => undefined,
-        (error: unknown) => {
+        () => {
           this.fail(active, {
             code: "adapter_stop_failed",
-            message: errorMessage(error, "Backend adapter stop failed."),
+            message: "Backend adapter stop failed.",
           });
         },
       );
       return { kind: "accepted", invocationId };
-    } catch (error) {
+    } catch {
       this.fail(active, {
         code: "adapter_stop_failed",
-        message: errorMessage(error, "Backend adapter stop failed."),
+        message: "Backend adapter stop failed.",
       });
       return { kind: "accepted", invocationId };
     }
@@ -301,9 +301,9 @@ export class BackendSupervisor {
   ): Promise<void> {
     try {
       await this.adapter.initialize(reservation.launchSpec);
-    } catch (error) {
+    } catch {
       if (this.initialization === reservation) this.initialization = undefined;
-      resolve(rejected("initialization_failed", errorMessage(error, "Backend adapter initialization failed.")));
+      resolve(rejected("initialization_failed", "Backend adapter initialization failed."));
       return;
     }
 
@@ -336,9 +336,6 @@ export class BackendSupervisor {
   }
 }
 
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
-}
 
 function sameJsonValue(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) return true;

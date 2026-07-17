@@ -91,10 +91,10 @@ export class ActorHostCommandProcessor {
         }
         this.emitFault(causalMessageId, result.error);
       },
-      (error: unknown) => {
+      () => {
         this.emitFault(causalMessageId, {
           code: "initialization_failed",
-          message: error instanceof Error ? error.message : "Backend adapter initialization failed.",
+          message: "Backend adapter initialization failed.",
         });
       },
     );
@@ -151,7 +151,7 @@ export class ActorHostCommandProcessor {
 
   private emit(payload: HostToServerPayload, causalMessageId: HostMessageId): HostOutboundSendResult {
     try {
-      return this.outbound.send({ payload, causalMessageId });
+      return this.outbound.send({ payload: this.redactOutboundPayload(payload), causalMessageId });
     } catch (error) {
       return {
         kind: "transport_failed",
@@ -161,6 +161,47 @@ export class ActorHostCommandProcessor {
         },
       };
     }
+  }
+
+  private redactOutboundPayload(payload: HostToServerPayload): HostToServerPayload {
+    if (payload.kind === "host_fault") {
+      return {
+        ...payload,
+        error: this.redactContractError(payload.error),
+      };
+    }
+
+    if (payload.kind === "invocation_result" && payload.result.process.status === "launch_failed") {
+      const error = payload.result.process.error;
+      const safeError: ContractErrorEnvelope = {
+        schema_version: error.schema_version,
+        code: error.code,
+        category: error.category,
+        message: "Backend process launch failed.",
+        retryable: error.retryable,
+        ...(error.correlation_id === undefined ? {} : { correlation_id: error.correlation_id }),
+      };
+      return {
+        ...payload,
+        result: {
+          ...payload.result,
+          process: { status: "launch_failed", error: safeError },
+        },
+      };
+    }
+
+    return payload;
+  }
+
+  private redactContractError(error: HostFaultPayload["error"]): HostFaultPayload["error"] {
+    return {
+      schema_version: error.schema_version,
+      code: error.code,
+      category: error.category,
+      message: fixedHostFaultMessage(error.code),
+      retryable: error.retryable,
+      ...(error.correlation_id === undefined ? {} : { correlation_id: error.correlation_id }),
+    };
   }
 
   private emitFault(
@@ -187,8 +228,39 @@ export class ActorHostCommandProcessor {
         || error.code === "quarantined"
         ? "backend"
         : "conflict",
-      message: error.message,
+      message: fixedHostFaultMessage(`actor_host.${error.code}`),
       retryable: false,
     } as ContractErrorEnvelope;
+  }
+}
+
+function fixedHostFaultMessage(code: string): string {
+  switch (code) {
+    case "actor_host.not_initialized":
+      return "BackendSupervisor is not initialized.";
+    case "actor_host.busy":
+      return "BackendSupervisor already has an active Invocation.";
+    case "actor_host.no_active_invocation":
+      return "BackendSupervisor has no active Invocation.";
+    case "actor_host.invocation_mismatch":
+      return "Stop targeted a different Invocation.";
+    case "actor_host.already_initialized":
+      return "ActorHost is already initialized.";
+    case "actor_host.adapter_mismatch":
+      return "Backend adapter does not match the ActorHost launch configuration.";
+    case "actor_host.identity_mismatch":
+      return "ActorHost identity does not match the authenticated Host identity.";
+    case "actor_host.initialization_failed":
+      return "Backend adapter initialization failed.";
+    case "actor_host.adapter_stop_failed":
+      return "Backend adapter stop failed.";
+    case "actor_host.session_observation_failed":
+      return "Backend session observation failed.";
+    case "actor_host.completion_observation_failed":
+      return "Backend completion observation failed.";
+    case "actor_host.quarantined":
+      return "BackendSupervisor is quarantined after an Invocation failure.";
+    default:
+      return "ActorHost operation failed.";
   }
 }

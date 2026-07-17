@@ -277,13 +277,13 @@ describe("BackendSupervisor with FakeBackend", () => {
     const second = supervisor.initialize(launchSpec);
     fake.reject();
 
-    await expect(first).resolves.toMatchObject({
+    await expect(first).resolves.toEqual({
       kind: "rejected",
-      error: { code: "initialization_failed" },
+      error: { code: "initialization_failed", message: "Backend adapter initialization failed." },
     });
-    await expect(second).resolves.toMatchObject({
+    await expect(second).resolves.toEqual({
       kind: "rejected",
-      error: { code: "initialization_failed" },
+      error: { code: "initialization_failed", message: "Backend adapter initialization failed." },
     });
     expect(fake.initializeCalls).toBe(1);
     expect(supervisor.snapshot()).toEqual({ state: "uninitialized" });
@@ -297,7 +297,10 @@ describe("BackendSupervisor with FakeBackend", () => {
 
     const handle = startedResult(supervisor.start(invocation(invocationId)));
     await expect(handle.session).resolves.toBeUndefined();
-    await expect(handle.failure).resolves.toMatchObject({ code: "session_observation_failed" });
+    await expect(handle.failure).resolves.toEqual({
+      code: "session_observation_failed",
+      message: "Backend session observation failed.",
+    });
     await expect(handle.result).resolves.toBeUndefined();
     expect(supervisor.snapshot()).toEqual({ state: "faulted" });
     expect(supervisor.start(invocation(`invocation_${"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}`))).toMatchObject({
@@ -319,7 +322,10 @@ describe("BackendSupervisor with FakeBackend", () => {
 
     const handle = startedResult(supervisor.start(invocation(invocationId)));
     await expect(handle.session).resolves.toBe("fake-session-rejected-completion");
-    await expect(handle.failure).resolves.toMatchObject({ code: "completion_observation_failed" });
+    await expect(handle.failure).resolves.toEqual({
+      code: "completion_observation_failed",
+      message: "Backend completion observation failed.",
+    });
     await expect(handle.result).resolves.toBeUndefined();
     expect(supervisor.snapshot()).toEqual({ state: "faulted", sessionId: "fake-session-rejected-completion" });
   });
@@ -337,7 +343,10 @@ describe("BackendSupervisor with FakeBackend", () => {
     const handle = startedResult(supervisor.start(invocation(invocationId)));
     await expect(handle.session).resolves.toBe("fake-session-stop-rejected");
     expect(supervisor.stop(invocationId)).toEqual({ kind: "accepted", invocationId });
-    await expect(handle.failure).resolves.toMatchObject({ code: "adapter_stop_failed" });
+    await expect(handle.failure).resolves.toEqual({
+      code: "adapter_stop_failed",
+      message: "Backend adapter stop failed.",
+    });
     expect(supervisor.snapshot()).toEqual({ state: "faulted", sessionId: "fake-session-stop-rejected" });
     expect(fake.stopCalls).toBe(1);
   });
@@ -352,7 +361,10 @@ describe("BackendSupervisor with FakeBackend", () => {
     await initialize(supervisor);
 
     const handle = startedResult(supervisor.start(invocation(invocationId)));
-    await expect(handle.failure).resolves.toMatchObject({ code: "session_observation_failed" });
+    await expect(handle.failure).resolves.toEqual({
+      code: "session_observation_failed",
+      message: "Backend session observation failed.",
+    });
     await expect(handle.session).resolves.toBeUndefined();
     await expect(handle.result).resolves.toBeUndefined();
     expect(supervisor.snapshot()).toEqual({ state: "faulted" });

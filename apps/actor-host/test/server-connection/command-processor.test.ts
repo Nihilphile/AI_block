@@ -26,6 +26,7 @@ const packageRef = {
   package_id: `package_${UUID}`,
   content_hash: `sha256:${"a".repeat(64)}`,
 };
+const SECRET_MARKER = "token=tok_secret credential=cred_secret workspace=C:\\secret-workspace command=claude --api-key secret stderr=provider denied";
 
 const launchSpec = {
   schema_version: "1.0.0",
@@ -81,6 +82,13 @@ function faultCode(intent: HostOutboundIntent): string | undefined {
   return intent.payload.kind === "host_fault" ? intent.payload.error.code : undefined;
 }
 
+function expectFault(intent: HostOutboundIntent, code: string, message: string): void {
+  expect(intent.payload.kind).toBe("host_fault");
+  if (intent.payload.kind !== "host_fault") throw new Error("expected HostFault");
+  expect(intent.payload.error.code).toBe(code);
+  expect(intent.payload.error.message).toBe(message);
+}
+
 class RecordingSink implements HostOutboundPayloadSink {
   public readonly intents: HostOutboundIntent[] = [];
 
@@ -99,10 +107,12 @@ class DeferredInitializeAdapter implements BackendAdapter {
   public initializeCalls = 0;
   private readonly initializePromise: Promise<void>;
   private resolveInitialize!: () => void;
+  private rejectInitialize!: (error: Error) => void;
 
   public constructor() {
-    this.initializePromise = new Promise<void>((resolve) => {
+    this.initializePromise = new Promise<void>((resolve, reject) => {
       this.resolveInitialize = resolve;
+      this.rejectInitialize = reject;
     });
   }
 
@@ -117,6 +127,10 @@ class DeferredInitializeAdapter implements BackendAdapter {
 
   public resolve(): void {
     this.resolveInitialize();
+  }
+
+  public reject(error = new Error(SECRET_MARKER)): void {
+    this.rejectInitialize(error);
   }
 }
 
@@ -255,7 +269,7 @@ describe("ActorHost command processor", () => {
 
   it("maps session rejection to one terminal HostFault and quarantines the supervisor", async () => {
     const invocationId = `invocation_${"12121212-1212-4121-8121-121212121212"}`;
-    const fake = new FakeBackend([{ kind: "session_rejected", message: "session rejected" }]);
+    const fake = new FakeBackend([{ kind: "session_rejected", message: SECRET_MARKER }]);
     const { processor, sink, supervisor } = createProcessor(fake);
 
     processor.process(initializeMessage("initialize-1"));
@@ -265,7 +279,8 @@ describe("ActorHost command processor", () => {
     await flushMicrotasks();
 
     expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
-    expect(faultCode(sink.intents[1]!)).toBe("actor_host.session_observation_failed");
+    expectFault(sink.intents[1]!, "actor_host.session_observation_failed", "Backend session observation failed.");
+    expect(JSON.stringify(sink.intents)).not.toContain(SECRET_MARKER);
     expect(sink.intents[1]!.causalMessageId).toBe(messageId("start-session-rejected"));
     if (sink.intents[1]!.payload.kind === "host_fault") {
       expect(sink.intents[1]!.payload.invocation_id).toBe(invocationId);
@@ -275,7 +290,7 @@ describe("ActorHost command processor", () => {
     sink.intents.length = 0;
     processor.process(startMessage("start-after-quarantine", invocation(`invocation_${"16161616-1616-4161-8161-161616161616"}`), 2));
     expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
-    expect(faultCode(sink.intents[1]!)).toBe("actor_host.quarantined");
+    expectFault(sink.intents[1]!, "actor_host.quarantined", "BackendSupervisor is quarantined after an Invocation failure.");
   });
 
   it("maps completion rejection without emitting an InvocationResult", async () => {
@@ -283,7 +298,7 @@ describe("ActorHost command processor", () => {
     const fake = new FakeBackend([{
       kind: "completion_rejected",
       sessionId: "fake-session-completion-rejected",
-      message: "completion rejected",
+      message: SECRET_MARKER,
     }]);
     const { processor, sink } = createProcessor(fake);
 
@@ -294,7 +309,8 @@ describe("ActorHost command processor", () => {
     await flushMicrotasks();
 
     expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "session_report", "host_fault"]);
-    expect(faultCode(sink.intents[2]!)).toBe("actor_host.completion_observation_failed");
+    expectFault(sink.intents[2]!, "actor_host.completion_observation_failed", "Backend completion observation failed.");
+    expect(JSON.stringify(sink.intents)).not.toContain(SECRET_MARKER);
     expect(sink.intents.some(({ payload }) => payload.kind === "invocation_result")).toBe(false);
   });
 
@@ -303,7 +319,7 @@ describe("ActorHost command processor", () => {
     const fake = new FakeBackend([{
       kind: "stop_rejected",
       sessionId: "fake-session-stop-rejected",
-      message: "stop rejected",
+      message: SECRET_MARKER,
     }]);
     const { processor, sink } = createProcessor(fake);
 
@@ -322,7 +338,8 @@ describe("ActorHost command processor", () => {
     expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack"]);
     await flushMicrotasks();
     expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
-    expect(faultCode(sink.intents[1]!)).toBe("actor_host.adapter_stop_failed");
+    expectFault(sink.intents[1]!, "actor_host.adapter_stop_failed", "Backend adapter stop failed.");
+    expect(JSON.stringify(sink.intents)).not.toContain(SECRET_MARKER);
     expect(sink.intents.some(({ payload }) => payload.kind === "invocation_result")).toBe(false);
     expect(fake.stopCalls).toBe(1);
   });
@@ -330,7 +347,7 @@ describe("ActorHost command processor", () => {
   it("suppresses duplicate faults when session and completion reject together", async () => {
     const fake = new FakeBackend([{
       kind: "session_and_completion_rejected",
-      message: "both observations rejected",
+      message: SECRET_MARKER,
     }]);
     const { processor, sink } = createProcessor(fake);
 
@@ -341,7 +358,47 @@ describe("ActorHost command processor", () => {
     await flushMicrotasks();
 
     expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
-    expect(faultCode(sink.intents[1]!)).toBe("actor_host.session_observation_failed");
+    expectFault(sink.intents[1]!, "actor_host.session_observation_failed", "Backend session observation failed.");
+    expect(JSON.stringify(sink.intents)).not.toContain(SECRET_MARKER);
+  });
+
+  it("maps initialization rejection to a fixed HostFault message", async () => {
+    const adapter = new DeferredInitializeAdapter();
+    const { processor, sink } = createProcessor(adapter);
+
+    processor.process(initializeMessage("initialize-rejected"));
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack"]);
+
+    adapter.reject();
+    await flushMicrotasks();
+
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expectFault(sink.intents[1]!, "actor_host.initialization_failed", "Backend adapter initialization failed.");
+    expect(JSON.stringify(sink.intents)).not.toContain(SECRET_MARKER);
+  });
+
+  it("uses a generic fixed message for an unexpected future lifecycle code", async () => {
+    const sink = new RecordingSink();
+    const futureSupervisor = {
+      initialize: async () => ({
+        kind: "rejected",
+        error: { code: "future_adapter_code", message: SECRET_MARKER },
+      }),
+      start: () => ({ kind: "rejected", error: { code: "future_adapter_code", message: SECRET_MARKER } }),
+      stop: () => ({ kind: "rejected", error: { code: "future_adapter_code", message: SECRET_MARKER } }),
+    } as unknown as BackendSupervisor;
+    const processor = new ActorHostCommandProcessor(
+      futureSupervisor,
+      { projectId, actorId, hostInstanceId: `host_${UUID}` },
+      sink,
+    );
+
+    processor.process(initializeMessage("initialize-future-code"));
+    await flushMicrotasks();
+
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expectFault(sink.intents[1]!, "actor_host.future_adapter_code", "ActorHost operation failed.");
+    expect(JSON.stringify(sink.intents)).not.toContain(SECRET_MARKER);
   });
 
   it("forwards create and resume starts with session before final result", async () => {
@@ -393,9 +450,17 @@ describe("ActorHost command processor", () => {
       schema_version: "1.0.0",
       code: "backend.launch_failed",
       category: "backend",
-      message: "Fake backend launch failed.",
+      message: SECRET_MARKER,
       retryable: false,
-    } as ContractErrorEnvelope;
+      details: { diagnostic: SECRET_MARKER },
+    } as unknown as ContractErrorEnvelope;
+    const safeLaunchFailure = {
+      schema_version: "1.0.0",
+      code: "backend.launch_failed",
+      category: "backend",
+      message: "Backend process launch failed.",
+      retryable: false,
+    };
     const failedInvocationId = `invocation_${"33333333-3333-4333-8333-333333333333"}`;
     const completedInvocationId = `invocation_${"44444444-4444-4444-8444-444444444444"}`;
     const fake = new FakeBackend([
@@ -412,8 +477,9 @@ describe("ActorHost command processor", () => {
     expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "invocation_result"]);
     expect(sink.intents[1]!.causalMessageId).toBe(messageId("start-failed"));
     if (sink.intents[1]!.payload.kind === "invocation_result") {
-      expect(sink.intents[1]!.payload.result.process).toEqual({ status: "launch_failed", error: launchFailure });
+      expect(sink.intents[1]!.payload.result.process).toEqual({ status: "launch_failed", error: safeLaunchFailure });
     }
+    expect(JSON.stringify(sink.intents)).not.toContain(SECRET_MARKER);
 
     sink.intents.length = 0;
     processor.process(startMessage("start-completed", invocation(completedInvocationId), 2));

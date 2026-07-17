@@ -10,7 +10,7 @@ import type {
   BackendInvocationExecution,
 } from "./adapter.js";
 
-export type SupervisorState = "uninitialized" | "ready" | "running" | "stopping";
+export type SupervisorState = "uninitialized" | "ready" | "running" | "stopping" | "faulted";
 
 export type SupervisorErrorCode =
   | "not_initialized"
@@ -21,7 +21,10 @@ export type SupervisorErrorCode =
   | "adapter_mismatch"
   | "identity_mismatch"
   | "initialization_failed"
-  | "adapter_stop_failed";
+  | "adapter_stop_failed"
+  | "session_observation_failed"
+  | "completion_observation_failed"
+  | "quarantined";
 
 export interface SupervisorLifecycleError {
   readonly code: SupervisorErrorCode;
@@ -36,7 +39,8 @@ export type SupervisorInitializeResult =
 export interface SupervisedInvocation {
   readonly invocationId: InvocationId;
   readonly session: Promise<BackendSessionId | undefined>;
-  readonly result: Promise<InvocationResult>;
+  readonly result: Promise<InvocationResult | undefined>;
+  readonly failure: Promise<SupervisorLifecycleError>;
 }
 
 export type SupervisorStartResult =
@@ -59,10 +63,17 @@ interface ActiveInvocation {
   readonly spec: InvocationSpec;
   readonly execution: BackendInvocationExecution;
   session: Promise<BackendSessionId | undefined>;
-  result: Promise<InvocationResult>;
+  result: Promise<InvocationResult | undefined>;
+  failure: Promise<SupervisorLifecycleError>;
+  resolveFailure: (error: SupervisorLifecycleError) => void;
   handle: SupervisedInvocation;
   completionSettled: boolean;
   settled: boolean;
+}
+
+interface InitializationReservation {
+  readonly launchSpec: ActorLaunchSpec;
+  readonly promise: Promise<SupervisorInitializeResult>;
 }
 
 function rejected(code: SupervisorErrorCode, message: string): SupervisorStartResult & SupervisorStopResult & SupervisorInitializeResult {
@@ -72,6 +83,7 @@ function rejected(code: SupervisorErrorCode, message: string): SupervisorStartRe
 export class BackendSupervisor {
   private state: SupervisorState = "uninitialized";
   private launchSpec?: ActorLaunchSpec;
+  private initialization?: InitializationReservation;
   private active?: ActiveInvocation;
   private sessionId?: BackendSessionId;
 
@@ -85,29 +97,40 @@ export class BackendSupervisor {
       );
     }
 
+    if (this.state === "faulted") {
+      return rejected("quarantined", "BackendSupervisor is quarantined after an Invocation failure.");
+    }
+
     if (this.launchSpec !== undefined) {
-      if (!this.sameIdentity(this.launchSpec, launchSpec)) {
-        return rejected("identity_mismatch", "ActorHost initialization identity does not match the existing supervisor.");
+      if (!this.sameConfiguration(this.launchSpec, launchSpec)) {
+        return rejected("identity_mismatch", "ActorHost initialization configuration does not match the existing supervisor.");
       }
       return { kind: "already_initialized" };
     }
 
-    try {
-      await this.adapter.initialize(launchSpec);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Backend adapter initialization failed.";
-      return rejected("initialization_failed", message);
+    if (this.initialization !== undefined) {
+      if (!this.sameConfiguration(this.initialization.launchSpec, launchSpec)) {
+        return rejected("identity_mismatch", "ActorHost initialization configuration does not match the in-flight supervisor reservation.");
+      }
+      return this.initialization.promise;
     }
 
-    this.launchSpec = launchSpec;
-    this.sessionId = undefined;
-    this.state = "ready";
-    return { kind: "initialized" };
+    let resolveInitialization!: (result: SupervisorInitializeResult) => void;
+    const promise = new Promise<SupervisorInitializeResult>((resolve) => {
+      resolveInitialization = resolve;
+    });
+    const reservation: InitializationReservation = { launchSpec, promise };
+    this.initialization = reservation;
+    void this.runInitialization(reservation, resolveInitialization);
+    return promise;
   }
 
   public start(invocation: InvocationSpec): SupervisorStartResult {
     if (this.state === "uninitialized" || this.launchSpec === undefined) {
       return rejected("not_initialized", "BackendSupervisor is not initialized.");
+    }
+    if (this.state === "faulted") {
+      return rejected("quarantined", "BackendSupervisor is quarantined after an Invocation failure.");
     }
     if (this.state === "running" || this.state === "stopping") {
       return rejected("busy", "BackendSupervisor already has an active Invocation.");
@@ -139,41 +162,75 @@ export class BackendSupervisor {
       execution: adapterStart.execution,
       session: Promise.resolve(undefined),
       result: Promise.resolve(undefined as never),
+      failure: Promise.resolve(undefined as never),
+      resolveFailure: undefined as never,
       handle: undefined as never,
       completionSettled: false,
       settled: false,
     };
-    const session = adapterStart.execution.session.then((sessionId) => {
-      if (sessionId !== undefined && this.active === active) this.sessionId = sessionId;
-      return sessionId;
+    let resolveFailure!: (error: SupervisorLifecycleError) => void;
+    const failure = new Promise<SupervisorLifecycleError>((resolve) => {
+      resolveFailure = resolve;
     });
-    const result = adapterStart.execution.completion.then(async (completion) => {
-      active.completionSettled = true;
-      const discoveredSessionId = await session;
-      const resolvedSessionId = discoveredSessionId ?? completion.sessionId;
-      if (resolvedSessionId !== undefined) this.sessionId = resolvedSessionId;
+    const session = adapterStart.execution.session.then(
+      (sessionId) => {
+        if (active.settled) return undefined;
+        if (sessionId !== undefined && this.active === active) this.sessionId = sessionId;
+        return sessionId;
+      },
+      (error: unknown) => {
+        this.fail(active, {
+          code: "session_observation_failed",
+          message: errorMessage(error, "Backend session observation failed."),
+        });
+        return undefined;
+      },
+    );
+    const completionResult = adapterStart.execution.completion.then(
+      async (completion) => {
+        active.completionSettled = true;
+        const discoveredSessionId = await session;
+        if (active.settled) return undefined;
+        const resolvedSessionId = discoveredSessionId ?? completion.sessionId;
+        if (resolvedSessionId !== undefined) this.sessionId = resolvedSessionId;
 
-      const invocationResult: InvocationResult = {
-        schema_version: active.spec.schema_version,
-        project_id: active.spec.project_id,
-        run_id: active.spec.run_id,
-        actor_id: active.spec.actor_id,
-        invocation_id: active.spec.invocation_id,
-        ...(resolvedSessionId === undefined ? {} : { session_id: resolvedSessionId }),
-        process: completion.process,
-        emitted_package_refs: [],
-        completion_requested: false,
-      };
-      this.finish(active);
-      return invocationResult;
-    });
+        const invocationResult: InvocationResult = {
+          schema_version: active.spec.schema_version,
+          project_id: active.spec.project_id,
+          run_id: active.spec.run_id,
+          actor_id: active.spec.actor_id,
+          invocation_id: active.spec.invocation_id,
+          ...(resolvedSessionId === undefined ? {} : { session_id: resolvedSessionId }),
+          process: completion.process,
+          emitted_package_refs: [],
+          completion_requested: false,
+        };
+        this.finish(active);
+        return invocationResult;
+      },
+      (error: unknown) => {
+        active.completionSettled = true;
+        this.fail(active, {
+          code: "completion_observation_failed",
+          message: errorMessage(error, "Backend completion observation failed."),
+        });
+        return undefined;
+      },
+    );
+    const result = Promise.race([
+      completionResult,
+      failure.then(() => undefined),
+    ]);
 
     active.session = session;
     active.result = result;
+    active.failure = failure;
+    active.resolveFailure = resolveFailure;
     active.handle = Object.freeze({
       invocationId: invocation.invocation_id,
       session,
       result,
+      failure,
     });
     this.active = active;
     this.state = "running";
@@ -197,14 +254,25 @@ export class BackendSupervisor {
       return { kind: "accepted", invocationId };
     }
 
+    const active = this.active;
     try {
       this.state = "stopping";
-      void this.active.execution.stop().catch(() => undefined);
+      void active.execution.stop().then(
+        () => undefined,
+        (error: unknown) => {
+          this.fail(active, {
+            code: "adapter_stop_failed",
+            message: errorMessage(error, "Backend adapter stop failed."),
+          });
+        },
+      );
       return { kind: "accepted", invocationId };
     } catch (error) {
-      this.state = "running";
-      const message = error instanceof Error ? error.message : "Backend adapter stop failed.";
-      return rejected("adapter_stop_failed", message);
+      this.fail(active, {
+        code: "adapter_stop_failed",
+        message: errorMessage(error, "Backend adapter stop failed."),
+      });
+      return { kind: "accepted", invocationId };
     }
   }
 
@@ -223,10 +291,69 @@ export class BackendSupervisor {
       && left.actor_config_snapshot_id === right.actor_config_snapshot_id;
   }
 
+  private sameConfiguration(left: ActorLaunchSpec, right: ActorLaunchSpec): boolean {
+    return this.sameIdentity(left, right) && sameJsonValue(left, right);
+  }
+
+  private async runInitialization(
+    reservation: InitializationReservation,
+    resolve: (result: SupervisorInitializeResult) => void,
+  ): Promise<void> {
+    try {
+      await this.adapter.initialize(reservation.launchSpec);
+    } catch (error) {
+      if (this.initialization === reservation) this.initialization = undefined;
+      resolve(rejected("initialization_failed", errorMessage(error, "Backend adapter initialization failed.")));
+      return;
+    }
+
+    if (this.initialization !== reservation) {
+      resolve(rejected("initialization_failed", "Backend adapter initialization reservation was lost."));
+      return;
+    }
+
+    this.initialization = undefined;
+    this.launchSpec = reservation.launchSpec;
+    this.sessionId = undefined;
+    this.state = "ready";
+    resolve({ kind: "initialized" });
+  }
+
+  private fail(active: ActiveInvocation, error: SupervisorLifecycleError): void {
+    if (this.active !== active || active.settled) return;
+    active.settled = true;
+    active.completionSettled = true;
+    this.active = undefined;
+    this.state = "faulted";
+    active.resolveFailure(error);
+  }
+
   private finish(active: ActiveInvocation): void {
     if (this.active !== active || active.settled) return;
     active.settled = true;
     this.active = undefined;
     this.state = "ready";
   }
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function sameJsonValue(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (typeof left !== "object" || left === null || typeof right !== "object" || right === null) return false;
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+    return left.every((value, index) => sameJsonValue(value, right[index]));
+  }
+
+  const leftRecord = left as Record<string, unknown>;
+  const rightRecord = right as Record<string, unknown>;
+  const leftKeys = Object.keys(leftRecord);
+  const rightKeys = Object.keys(rightRecord);
+  if (leftKeys.length !== rightKeys.length) return false;
+  return leftKeys.every((key) => Object.prototype.hasOwnProperty.call(rightRecord, key)
+    && sameJsonValue(leftRecord[key], rightRecord[key]));
 }

@@ -228,6 +228,51 @@ describe("ActorHost ServerConnection", () => {
     });
   });
 
+  it("enforces authenticated identity before initialization and start backend calls", async () => {
+    const fake = new FakeBackend([{ kind: "pending", sessionId: "fake-session-identity-boundary" }]);
+    const { connection, transport } = createConnection(fake);
+    connection.start();
+
+    const mismatchedLaunch = { ...launchSpec, project_id: `project_${"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}` };
+    expect(connection.receive(inbound({ kind: "initialize_actor_host", launch_spec: mismatchedLaunch }, 0))).toMatchObject({
+      kind: "accepted",
+      disposition: { kind: "handled" },
+    });
+    await flushMicrotasks();
+    expect(fake.initializeCalls).toBe(0);
+    expect(transport.sent.map(({ payload }) => payload.kind)).toEqual(["host_hello", "ack", "host_fault"]);
+    expect(transport.sent[2]?.payload).toMatchObject({
+      kind: "host_fault",
+      error: { code: "actor_host.identity_mismatch" },
+    });
+
+    transport.sent.length = 0;
+    expect(connection.receive(initializeInput(1))).toMatchObject({
+      kind: "accepted",
+      disposition: { kind: "handled" },
+    });
+    await flushMicrotasks();
+    expect(fake.initializeCalls).toBe(1);
+    transport.sent.length = 0;
+
+    const mismatchedInvocation = {
+      ...invocation(`invocation_${"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"}`),
+      actor_id: `actor_${"cccccccc-cccc-4ccc-8ccc-cccccccccccc"}`,
+    };
+    expect(connection.receive(inbound({ kind: "start_invocation", invocation_spec: mismatchedInvocation }, 2))).toMatchObject({
+      kind: "accepted",
+      disposition: { kind: "handled" },
+    });
+    await flushMicrotasks();
+    expect(fake.startCalls).toHaveLength(0);
+    expect(transport.sent.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expect(transport.sent[1]?.payload).toMatchObject({
+      kind: "host_fault",
+      invocation_id: mismatchedInvocation.invocation_id,
+      error: { code: "actor_host.identity_mismatch" },
+    });
+  });
+
   it("preserves command session/result ordering and causal correlation without payload envelope fields", async () => {
     const invocationId = `invocation_${"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"}`;
     const fake = new FakeBackend([{ kind: "pending", sessionId: "fake-session-1" }]);

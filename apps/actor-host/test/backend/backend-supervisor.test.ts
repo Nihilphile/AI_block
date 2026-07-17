@@ -6,6 +6,7 @@ import type {
   ExitedProcessFact,
   InvocationSpec,
 } from "@ai-block/runtime-contracts";
+import type { BackendAdapter, BackendAdapterStartResult } from "../../src/backend/adapter.js";
 import { FakeBackend } from "../../src/backend/fake-backend.js";
 import {
   BackendSupervisor,
@@ -64,6 +65,38 @@ function startedResult(result: SupervisorStartResult) {
 
 async function initialize(supervisor: BackendSupervisor) {
   await expect(supervisor.initialize(launchSpec)).resolves.toEqual({ kind: "initialized" });
+}
+
+class DeferredInitializeBackend implements BackendAdapter {
+  public readonly adapterId = "fake.backend" as const;
+  public initializeCalls = 0;
+  private readonly initializePromise: Promise<void>;
+  private resolveInitialize!: () => void;
+  private rejectInitialize!: (error: Error) => void;
+
+  public constructor() {
+    this.initializePromise = new Promise<void>((resolve, reject) => {
+      this.resolveInitialize = resolve;
+      this.rejectInitialize = reject;
+    });
+  }
+
+  public initialize(): Promise<void> {
+    this.initializeCalls += 1;
+    return this.initializePromise;
+  }
+
+  public start(_invocation: InvocationSpec): BackendAdapterStartResult {
+    throw new Error("DeferredInitializeBackend does not start Invocations.");
+  }
+
+  public resolve(): void {
+    this.resolveInitialize();
+  }
+
+  public reject(error = new Error("deferred initialization failed")): void {
+    this.rejectInitialize(error);
+  }
 }
 
 describe("BackendSupervisor with FakeBackend", () => {
@@ -203,5 +236,125 @@ describe("BackendSupervisor with FakeBackend", () => {
       kind: "rejected",
       error: { code: "no_active_invocation" },
     });
+  });
+
+  it("serializes same-config initialization and rejects a conflicting reservation", async () => {
+    const fake = new DeferredInitializeBackend();
+    const supervisor = new BackendSupervisor(fake);
+
+    const first = supervisor.initialize(launchSpec);
+    const second = supervisor.initialize(launchSpec);
+    const conflicting = supervisor.initialize({
+      ...launchSpec,
+      actor_id: `actor_${"88888888-8888-4888-8888-888888888888"}`,
+    });
+    const conflictingConfiguration = supervisor.initialize({
+      ...launchSpec,
+      backend: { adapter_id: "fake.backend", config: { changed: true } },
+    });
+
+    await expect(conflicting).resolves.toMatchObject({
+      kind: "rejected",
+      error: { code: "identity_mismatch" },
+    });
+    await expect(conflictingConfiguration).resolves.toMatchObject({
+      kind: "rejected",
+      error: { code: "identity_mismatch" },
+    });
+    expect(fake.initializeCalls).toBe(1);
+
+    fake.resolve();
+    await expect(first).resolves.toEqual({ kind: "initialized" });
+    await expect(second).resolves.toEqual({ kind: "initialized" });
+    expect(supervisor.snapshot()).toEqual({ state: "ready" });
+  });
+
+  it("clears a failed shared initialization reservation for a later retry", async () => {
+    const fake = new DeferredInitializeBackend();
+    const supervisor = new BackendSupervisor(fake);
+
+    const first = supervisor.initialize(launchSpec);
+    const second = supervisor.initialize(launchSpec);
+    fake.reject();
+
+    await expect(first).resolves.toMatchObject({
+      kind: "rejected",
+      error: { code: "initialization_failed" },
+    });
+    await expect(second).resolves.toMatchObject({
+      kind: "rejected",
+      error: { code: "initialization_failed" },
+    });
+    expect(fake.initializeCalls).toBe(1);
+    expect(supervisor.snapshot()).toEqual({ state: "uninitialized" });
+  });
+
+  it("quarantines a rejected session observation and blocks later starts", async () => {
+    const invocationId = `invocation_${"99999999-9999-4999-8999-999999999999"}`;
+    const fake = new FakeBackend([{ kind: "session_rejected", message: "session discovery failed" }]);
+    const supervisor = new BackendSupervisor(fake);
+    await initialize(supervisor);
+
+    const handle = startedResult(supervisor.start(invocation(invocationId)));
+    await expect(handle.session).resolves.toBeUndefined();
+    await expect(handle.failure).resolves.toMatchObject({ code: "session_observation_failed" });
+    await expect(handle.result).resolves.toBeUndefined();
+    expect(supervisor.snapshot()).toEqual({ state: "faulted" });
+    expect(supervisor.start(invocation(`invocation_${"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}`))).toMatchObject({
+      kind: "rejected",
+      error: { code: "quarantined" },
+    });
+    expect(fake.startCalls).toHaveLength(1);
+  });
+
+  it("quarantines a rejected completion observation without an InvocationResult", async () => {
+    const invocationId = `invocation_${"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"}`;
+    const fake = new FakeBackend([{
+      kind: "completion_rejected",
+      sessionId: "fake-session-rejected-completion",
+      message: "completion observation failed",
+    }]);
+    const supervisor = new BackendSupervisor(fake);
+    await initialize(supervisor);
+
+    const handle = startedResult(supervisor.start(invocation(invocationId)));
+    await expect(handle.session).resolves.toBe("fake-session-rejected-completion");
+    await expect(handle.failure).resolves.toMatchObject({ code: "completion_observation_failed" });
+    await expect(handle.result).resolves.toBeUndefined();
+    expect(supervisor.snapshot()).toEqual({ state: "faulted", sessionId: "fake-session-rejected-completion" });
+  });
+
+  it("quarantines an asynchronous stop rejection without claiming stopped", async () => {
+    const invocationId = `invocation_${"cccccccc-cccc-4ccc-8ccc-cccccccccccc"}`;
+    const fake = new FakeBackend([{
+      kind: "stop_rejected",
+      sessionId: "fake-session-stop-rejected",
+      message: "stop rejected",
+    }]);
+    const supervisor = new BackendSupervisor(fake);
+    await initialize(supervisor);
+
+    const handle = startedResult(supervisor.start(invocation(invocationId)));
+    await expect(handle.session).resolves.toBe("fake-session-stop-rejected");
+    expect(supervisor.stop(invocationId)).toEqual({ kind: "accepted", invocationId });
+    await expect(handle.failure).resolves.toMatchObject({ code: "adapter_stop_failed" });
+    expect(supervisor.snapshot()).toEqual({ state: "faulted", sessionId: "fake-session-stop-rejected" });
+    expect(fake.stopCalls).toBe(1);
+  });
+
+  it("emits one terminal failure when session and completion reject together", async () => {
+    const invocationId = `invocation_${"dddddddd-dddd-4ddd-8ddd-dddddddddddd"}`;
+    const fake = new FakeBackend([{
+      kind: "session_and_completion_rejected",
+      message: "session and completion observation failed",
+    }]);
+    const supervisor = new BackendSupervisor(fake);
+    await initialize(supervisor);
+
+    const handle = startedResult(supervisor.start(invocation(invocationId)));
+    await expect(handle.failure).resolves.toMatchObject({ code: "session_observation_failed" });
+    await expect(handle.session).resolves.toBeUndefined();
+    await expect(handle.result).resolves.toBeUndefined();
+    expect(supervisor.snapshot()).toEqual({ state: "faulted" });
   });
 });

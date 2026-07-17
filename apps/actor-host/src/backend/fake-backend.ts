@@ -16,7 +16,11 @@ import type {
 export type FakeBackendStep =
   | { readonly kind: "launch_failed"; readonly error: ContractErrorEnvelope }
   | { readonly kind: "pending"; readonly sessionId: BackendSessionId }
-  | { readonly kind: "completed"; readonly sessionId: BackendSessionId; readonly process: BackendProcessFact };
+  | { readonly kind: "completed"; readonly sessionId: BackendSessionId; readonly process: BackendProcessFact }
+  | { readonly kind: "session_rejected"; readonly message: string }
+  | { readonly kind: "session_and_completion_rejected"; readonly message: string }
+  | { readonly kind: "completion_rejected"; readonly sessionId: BackendSessionId; readonly message: string }
+  | { readonly kind: "stop_rejected"; readonly sessionId: BackendSessionId; readonly message: string };
 
 export interface FakeBackendStartCall {
   readonly invocationId: string;
@@ -48,18 +52,23 @@ class FakeExecution implements BackendInvocationExecution {
   private settled = false;
 
   public constructor(
-    sessionId: BackendSessionId,
-    step: Extract<FakeBackendStep, { kind: "pending" | "completed" }>,
+    step: Exclude<FakeBackendStep, { kind: "launch_failed" }>,
     private readonly onStop: () => void,
   ) {
-    this.session = Promise.resolve(sessionId);
-    if (step.kind === "pending") {
+    this.session = step.kind === "session_rejected" || step.kind === "session_and_completion_rejected"
+      ? Promise.reject(new Error(step.message))
+      : Promise.resolve(step.sessionId);
+    if (step.kind === "pending" || step.kind === "stop_rejected" || step.kind === "session_rejected") {
       this.pendingCompletion = new Deferred<BackendInvocationCompletion>();
       this.completion = this.pendingCompletion.promise;
+    } else if (step.kind === "completion_rejected" || step.kind === "session_and_completion_rejected") {
+      this.settled = true;
+      this.completion = Promise.reject(new Error(step.message));
     } else {
       this.settled = true;
-      this.completion = Promise.resolve({ sessionId, process: step.process });
+      this.completion = Promise.resolve({ sessionId: step.sessionId, process: step.process });
     }
+    this.stopError = step.kind === "stop_rejected" ? new Error(step.message) : undefined;
   }
 
   public complete(process: BackendProcessFact): void {
@@ -69,6 +78,10 @@ class FakeExecution implements BackendInvocationExecution {
   }
 
   public stop(): Promise<void> {
+    if (this.stopError !== undefined) {
+      this.onStop();
+      return Promise.reject(this.stopError);
+    }
     if (this.pendingCompletion !== undefined && !this.settled) {
       this.onStop();
       this.settled = true;
@@ -76,6 +89,8 @@ class FakeExecution implements BackendInvocationExecution {
     }
     return Promise.resolve();
   }
+
+  private readonly stopError?: Error;
 }
 
 export class FakeBackend implements BackendAdapter {
@@ -102,11 +117,19 @@ export class FakeBackend implements BackendAdapter {
       return { kind: "launch_failed", fact: { status: "launch_failed", error: step.error } };
     }
 
+    if (step.kind === "session_rejected" || step.kind === "session_and_completion_rejected") {
+      const execution = new FakeExecution(step, () => {
+        this.stopCalls += 1;
+      });
+      this.executions.set(invocation.invocation_id, execution);
+      return { kind: "started", execution };
+    }
+
     if (invocation.session.mode === "resume" && invocation.session.session_id !== step.sessionId) {
       throw new Error(`FakeBackend expected resume session ${step.sessionId}.`);
     }
     this.sessionBindings.push(step.sessionId);
-    const execution = new FakeExecution(step.sessionId, step, () => {
+    const execution = new FakeExecution(step, () => {
       this.stopCalls += 1;
     });
     this.executions.set(invocation.invocation_id, execution);

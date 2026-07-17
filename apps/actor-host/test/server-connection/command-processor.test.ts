@@ -7,6 +7,7 @@ import type {
   ServerToHostMessage,
   ServerToHostPayload,
 } from "@ai-block/runtime-contracts";
+import type { BackendAdapter, BackendAdapterStartResult } from "../../src/backend/adapter.js";
 import { FakeBackend } from "../../src/backend/fake-backend.js";
 import { BackendSupervisor } from "../../src/backend/supervisor.js";
 import {
@@ -93,10 +94,44 @@ async function flushMicrotasks(): Promise<void> {
   for (let turn = 0; turn < 8; turn += 1) await Promise.resolve();
 }
 
-function createProcessor(fake: FakeBackend) {
+class DeferredInitializeAdapter implements BackendAdapter {
+  public readonly adapterId = "fake.backend" as const;
+  public initializeCalls = 0;
+  private readonly initializePromise: Promise<void>;
+  private resolveInitialize!: () => void;
+
+  public constructor() {
+    this.initializePromise = new Promise<void>((resolve) => {
+      this.resolveInitialize = resolve;
+    });
+  }
+
+  public initialize(): Promise<void> {
+    this.initializeCalls += 1;
+    return this.initializePromise;
+  }
+
+  public start(_invocation: InvocationSpec): BackendAdapterStartResult {
+    throw new Error("DeferredInitializeAdapter does not start Invocations.");
+  }
+
+  public resolve(): void {
+    this.resolveInitialize();
+  }
+}
+
+function createProcessor(
+  adapter: BackendAdapter,
+  authenticatedIdentity = {
+    projectId,
+    actorId,
+    hostInstanceId: `host_${UUID}`,
+  },
+) {
   const sink = new RecordingSink();
-  const processor = new ActorHostCommandProcessor(new BackendSupervisor(fake), sink);
-  return { processor, sink };
+  const supervisor = new BackendSupervisor(adapter);
+  const processor = new ActorHostCommandProcessor(supervisor, authenticatedIdentity, sink);
+  return { processor, sink, supervisor };
 }
 
 function expectAck(intent: HostOutboundIntent, message: string): void {
@@ -152,6 +187,161 @@ describe("ActorHost command processor", () => {
     if (sink.intents[1]!.payload.kind === "host_fault") {
       expect(sink.intents[1]!.payload.error.correlation_id).toBeUndefined();
     }
+  });
+
+  it("binds initialize and start to the authenticated identity before backend work", async () => {
+    const fake = new FakeBackend([{ kind: "pending", sessionId: "fake-session-identity" }]);
+    const { processor, sink } = createProcessor(fake);
+    const mismatchedLaunch = { ...launchSpec, actor_id: `actor_${"eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"}` };
+
+    processor.process(inbound("initialize-mismatch", {
+      kind: "initialize_actor_host",
+      launch_spec: mismatchedLaunch,
+    }));
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expect(faultCode(sink.intents[1]!)).toBe("actor_host.identity_mismatch");
+    expect(fake.initializeCalls).toBe(0);
+
+    sink.intents.length = 0;
+    processor.process(initializeMessage("initialize-valid"));
+    await flushMicrotasks();
+    sink.intents.length = 0;
+
+    processor.process(startMessage("start-mismatch", {
+      ...invocation(`invocation_${"ffffffff-ffff-4fff-8fff-ffffffffffff"}`),
+      project_id: `project_${"11111111-1111-4111-8111-111111111111"}`,
+    }, 1));
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expect(faultCode(sink.intents[1]!)).toBe("actor_host.identity_mismatch");
+    expect(fake.startCalls).toHaveLength(0);
+  });
+
+  it("serializes concurrent initialization and preserves ACK-before-fact ordering", async () => {
+    const adapter = new DeferredInitializeAdapter();
+    const { processor, sink } = createProcessor(adapter);
+    const conflictingLaunch = {
+      ...launchSpec,
+      actor_id: `actor_${"22222222-2222-4222-8222-222222222222"}`,
+    };
+
+    processor.process(initializeMessage("initialize-first"));
+    processor.process(initializeMessage("initialize-second", 1));
+    processor.process(inbound("initialize-conflict", {
+      kind: "initialize_actor_host",
+      launch_spec: conflictingLaunch,
+    }, 2));
+
+    expect(sink.intents.slice(0, 3).map(({ payload }) => payload.kind)).toEqual(["ack", "ack", "ack"]);
+    expect(adapter.initializeCalls).toBe(1);
+
+    await flushMicrotasks();
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "ack", "ack", "host_fault"]);
+    expect(faultCode(sink.intents[3]!)).toBe("actor_host.identity_mismatch");
+    expect(sink.intents[3]!.causalMessageId).toBe(messageId("initialize-conflict"));
+
+    adapter.resolve();
+    await flushMicrotasks();
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual([
+      "ack",
+      "ack",
+      "ack",
+      "host_fault",
+      "host_ready",
+      "host_ready",
+    ]);
+    expect(sink.intents[4]!.causalMessageId).toBe(messageId("initialize-first"));
+    expect(sink.intents[5]!.causalMessageId).toBe(messageId("initialize-second"));
+  });
+
+  it("maps session rejection to one terminal HostFault and quarantines the supervisor", async () => {
+    const invocationId = `invocation_${"12121212-1212-4121-8121-121212121212"}`;
+    const fake = new FakeBackend([{ kind: "session_rejected", message: "session rejected" }]);
+    const { processor, sink, supervisor } = createProcessor(fake);
+
+    processor.process(initializeMessage("initialize-1"));
+    await flushMicrotasks();
+    sink.intents.length = 0;
+    processor.process(startMessage("start-session-rejected", invocation(invocationId), 1));
+    await flushMicrotasks();
+
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expect(faultCode(sink.intents[1]!)).toBe("actor_host.session_observation_failed");
+    expect(sink.intents[1]!.causalMessageId).toBe(messageId("start-session-rejected"));
+    if (sink.intents[1]!.payload.kind === "host_fault") {
+      expect(sink.intents[1]!.payload.invocation_id).toBe(invocationId);
+    }
+    expect(fake.startCalls).toHaveLength(1);
+    expect(supervisor.snapshot()).toEqual({ state: "faulted" });
+    sink.intents.length = 0;
+    processor.process(startMessage("start-after-quarantine", invocation(`invocation_${"16161616-1616-4161-8161-161616161616"}`), 2));
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expect(faultCode(sink.intents[1]!)).toBe("actor_host.quarantined");
+  });
+
+  it("maps completion rejection without emitting an InvocationResult", async () => {
+    const invocationId = `invocation_${"13131313-1313-4131-8131-131313131313"}`;
+    const fake = new FakeBackend([{
+      kind: "completion_rejected",
+      sessionId: "fake-session-completion-rejected",
+      message: "completion rejected",
+    }]);
+    const { processor, sink } = createProcessor(fake);
+
+    processor.process(initializeMessage("initialize-1"));
+    await flushMicrotasks();
+    sink.intents.length = 0;
+    processor.process(startMessage("start-completion-rejected", invocation(invocationId), 1));
+    await flushMicrotasks();
+
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "session_report", "host_fault"]);
+    expect(faultCode(sink.intents[2]!)).toBe("actor_host.completion_observation_failed");
+    expect(sink.intents.some(({ payload }) => payload.kind === "invocation_result")).toBe(false);
+  });
+
+  it("maps asynchronous stop rejection once and does not claim stopped", async () => {
+    const invocationId = `invocation_${"14141414-1414-4141-8141-141414141414"}`;
+    const fake = new FakeBackend([{
+      kind: "stop_rejected",
+      sessionId: "fake-session-stop-rejected",
+      message: "stop rejected",
+    }]);
+    const { processor, sink } = createProcessor(fake);
+
+    processor.process(initializeMessage("initialize-1"));
+    await flushMicrotasks();
+    sink.intents.length = 0;
+    processor.process(startMessage("start-stop-rejected", invocation(invocationId), 1));
+    await flushMicrotasks();
+    sink.intents.length = 0;
+
+    processor.process(inbound("stop-rejected", {
+      kind: "stop_invocation",
+      invocation_id: invocationId,
+      reason: "test rejection",
+    }, 2));
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack"]);
+    await flushMicrotasks();
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expect(faultCode(sink.intents[1]!)).toBe("actor_host.adapter_stop_failed");
+    expect(sink.intents.some(({ payload }) => payload.kind === "invocation_result")).toBe(false);
+    expect(fake.stopCalls).toBe(1);
+  });
+
+  it("suppresses duplicate faults when session and completion reject together", async () => {
+    const fake = new FakeBackend([{
+      kind: "session_and_completion_rejected",
+      message: "both observations rejected",
+    }]);
+    const { processor, sink } = createProcessor(fake);
+
+    processor.process(initializeMessage("initialize-1"));
+    await flushMicrotasks();
+    sink.intents.length = 0;
+    processor.process(startMessage("start-both-rejected", invocation(`invocation_${"15151515-1515-4151-8151-151515151515"}`), 1));
+    await flushMicrotasks();
+
+    expect(sink.intents.map(({ payload }) => payload.kind)).toEqual(["ack", "host_fault"]);
+    expect(faultCode(sink.intents[1]!)).toBe("actor_host.session_observation_failed");
   });
 
   it("forwards create and resume starts with session before final result", async () => {

@@ -90,7 +90,7 @@ export class ServerConnection implements HostOutboundPayloadSink {
     this.unsubscribeTransportFailure = options.transport.onFailure(() => {
       this.failConnection();
     });
-    this.processor = new ActorHostCommandProcessor(options.supervisor, this);
+    this.processor = new ActorHostCommandProcessor(options.supervisor, options.identity, this);
   }
 
   public state(): ServerConnectionState {

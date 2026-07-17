@@ -12,6 +12,7 @@ import {
   BackendSupervisor,
   type SupervisorLifecycleError,
 } from "../backend/supervisor.js";
+import type { HostIdentity } from "./server-connection.js";
 
 export interface HostOutboundIntent {
   readonly payload: HostToServerPayload;
@@ -40,6 +41,7 @@ export type CommandDisposition =
 export class ActorHostCommandProcessor {
   public constructor(
     private readonly supervisor: BackendSupervisor,
+    private readonly identity: HostIdentity,
     private readonly outbound: HostOutboundPayloadSink,
   ) {}
 
@@ -73,6 +75,14 @@ export class ActorHostCommandProcessor {
   }
 
   private initialize(causalMessageId: HostMessageId, launchSpec: ActorLaunchSpec): void {
+    if (launchSpec.project_id !== this.identity.projectId || launchSpec.actor_id !== this.identity.actorId) {
+      this.emitFault(causalMessageId, {
+        code: "identity_mismatch",
+        message: "ActorHost initialization identity does not match the authenticated Host identity.",
+      });
+      return;
+    }
+
     void this.supervisor.initialize(launchSpec).then(
       (result) => {
         if (result.kind === "initialized" || result.kind === "already_initialized") {
@@ -91,6 +101,14 @@ export class ActorHostCommandProcessor {
   }
 
   private start(causalMessageId: HostMessageId, invocation: InvocationSpec): void {
+    if (invocation.project_id !== this.identity.projectId || invocation.actor_id !== this.identity.actorId) {
+      this.emitFault(causalMessageId, {
+        code: "identity_mismatch",
+        message: "Invocation identity does not match the authenticated Host identity.",
+      }, invocation.invocation_id);
+      return;
+    }
+
     const result = this.supervisor.start(invocation);
     if (result.kind === "launch_failed") {
       this.emit({ kind: "invocation_result", result: result.result }, causalMessageId);
@@ -115,10 +133,13 @@ export class ActorHostCommandProcessor {
     );
     void handle.result.then(
       (invocationResult) => {
+        if (invocationResult === undefined) return;
         this.emit({ kind: "invocation_result", result: invocationResult }, causalMessageId);
       },
-      () => undefined,
     );
+    void handle.failure.then((error) => {
+      this.emitFault(causalMessageId, error, handle.invocationId);
+    });
   }
 
   private stop(causalMessageId: HostMessageId, invocationId: InvocationId): void {
@@ -159,7 +180,13 @@ export class ActorHostCommandProcessor {
     return {
       schema_version: "1.0.0",
       code: `actor_host.${error.code}`,
-      category: error.code === "initialization_failed" || error.code === "adapter_stop_failed" ? "backend" : "conflict",
+      category: error.code === "initialization_failed"
+        || error.code === "adapter_stop_failed"
+        || error.code === "session_observation_failed"
+        || error.code === "completion_observation_failed"
+        || error.code === "quarantined"
+        ? "backend"
+        : "conflict",
       message: error.message,
       retryable: false,
     } as ContractErrorEnvelope;

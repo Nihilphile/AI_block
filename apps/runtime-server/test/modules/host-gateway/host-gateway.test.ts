@@ -19,11 +19,13 @@ import {
   type HostFactPayload,
   type HostGatewayTransport,
   type HostFact,
+  type HostTransportFailure,
 } from "../../../src/modules/host-gateway/host-gateway.js";
 
 const UUID = "00000000-0000-4000-8000-000000000000";
 const OTHER_UUID = "11111111-1111-4111-8111-111111111111";
 const projectId = `project_${UUID}` as ProjectId;
+const otherProjectId = `project_${OTHER_UUID}` as ProjectId;
 const actorId = `actor_${UUID}` as ActorId;
 const otherActorId = `actor_${OTHER_UUID}` as ActorId;
 const hostInstanceId = `host_${UUID}` as HostInstanceId;
@@ -74,7 +76,10 @@ const invocationResult = {
 class RecordingTransport implements HostGatewayTransport {
   public readonly sent: ServerToHostMessage[] = [];
   public readonly events: string[] = [];
+  public readonly failures: HostTransportFailure[] = [];
+  public failCalls = 0;
   public failNextSend = false;
+  public throwOnFail = false;
   private readonly failureListeners = new Set<(failure: { code: "transport_failed"; message: string }) => void>();
 
   public send(message: ServerToHostMessage): void {
@@ -91,8 +96,11 @@ class RecordingTransport implements HostGatewayTransport {
     return () => this.failureListeners.delete(listener);
   }
 
-  public fail(message = "transport failed"): void {
-    for (const listener of this.failureListeners) listener({ code: "transport_failed", message });
+  public fail(failure: HostTransportFailure): void {
+    this.failCalls += 1;
+    if (this.throwOnFail) throw new Error("transport termination failed");
+    this.failures.push(failure);
+    for (const listener of [...this.failureListeners]) listener(failure);
   }
 }
 
@@ -106,20 +114,37 @@ class RecordingFactSink {
   }
 }
 
-function createGateway(sink = new RecordingFactSink()) {
+function createGateway(
+  sink = new RecordingFactSink(),
+  options: {
+    readonly nextMessageId?: () => HostMessageId;
+    readonly now?: () => CanonicalTimestamp;
+    readonly outboundEnvelopeValidator?: (message: ServerToHostMessage) => boolean;
+  } = {},
+) {
   let messageCounter = 0;
+  let messageIdCalls = 0;
+  let timestampCalls = 0;
   const transport = new RecordingTransport();
   const gateway = new HostGateway({
     factSink: sink,
     messageIds: {
       nextMessageId: () => {
+        messageIdCalls += 1;
+        if (options.nextMessageId !== undefined) return options.nextMessageId();
         messageCounter += 1;
         return `message_${String(messageCounter).padStart(8, "0")}-0000-4000-8000-000000000000` as HostMessageId;
       },
     },
-    timestamps: { now: () => timestamp },
+    timestamps: {
+      now: () => {
+        timestampCalls += 1;
+        return options.now === undefined ? timestamp : options.now();
+      },
+    },
+    outboundEnvelopeValidator: options.outboundEnvelopeValidator,
   });
-  return { gateway, sink, transport };
+  return { gateway, sink, transport, messageIdCalls: () => messageIdCalls, timestampCalls: () => timestampCalls };
 }
 
 function open(gateway: HostGateway, transport: RecordingTransport, context = identity): HostGatewayConnection {
@@ -254,6 +279,127 @@ describe("Runtime Server Host Gateway core", () => {
     ]);
   });
 
+  it("rejects mismatched Initialize and Start commands before outbound allocation and keeps the connection live", () => {
+    const { gateway, transport, messageIdCalls, timestampCalls } = createGateway();
+    const connection = open(gateway, transport);
+    register(connection, transport);
+    const messageIdsBefore = messageIdCalls();
+    const timestampsBefore = timestampCalls();
+    const sentBefore = transport.sent.length;
+
+    expect(gateway.sendCommand(actorId, {
+      kind: "initialize_actor_host",
+      launch_spec: { ...launchSpec, project_id: otherProjectId },
+    })).toEqual({ kind: "rejected", reason: "identity_mismatch" });
+    expect(gateway.sendCommand(actorId, {
+      kind: "start_invocation",
+      invocation_spec: { ...invocationSpec, actor_id: otherActorId },
+    })).toEqual({ kind: "rejected", reason: "identity_mismatch" });
+
+    expect(connection.state()).toBe("live");
+    expect(messageIdCalls()).toBe(messageIdsBefore);
+    expect(timestampCalls()).toBe(timestampsBefore);
+    expect(transport.sent).toHaveLength(sentBefore);
+    expect(transport.failCalls).toBe(0);
+
+    const valid = gateway.sendCommand(actorId, { kind: "shutdown_host", reason: "valid-after-mismatch" });
+    expect(valid.kind).toBe("sent");
+    if (valid.kind !== "sent") throw new Error("expected valid command send");
+    expect(valid.message.sender_sequence).toBe(1);
+    expect(connection.receive(hostMessage({
+      kind: "ack",
+      acknowledged_message_id: valid.message.message_id,
+    }, 1, causalMessageId))).toEqual({ kind: "acknowledged", acknowledgedMessageId: valid.message.message_id });
+  });
+
+  it("terminally closes on message-ID provider failure and still cleans up when transport termination throws", () => {
+    let failNext = false;
+    let counter = 0;
+    const result = createGateway(undefined, {
+      nextMessageId: () => {
+        if (failNext) {
+          failNext = false;
+          throw new Error("secret message provider failure");
+        }
+        counter += 1;
+        return `message_${String(counter).padStart(8, "0")}-0000-4000-8000-000000000000` as HostMessageId;
+      },
+    });
+    const connection = open(result.gateway, result.transport);
+    register(connection, result.transport);
+    failNext = true;
+    result.transport.throwOnFail = true;
+
+    expect(result.gateway.sendCommand(actorId, { kind: "shutdown_host", reason: "provider-fails" })).toMatchObject({
+      kind: "transport_failed",
+    });
+    expect(connection.state()).toBe("failed");
+    expect(result.gateway.connectionForActor(actorId)).toBeUndefined();
+    expect(result.transport.failCalls).toBe(1);
+    expect(result.transport.sent).toHaveLength(1);
+
+    const retryTransport = new RecordingTransport();
+    const retry = result.gateway.openConnection(identity, retryTransport);
+    expect(retry.kind).toBe("accepted");
+    if (retry.kind !== "accepted") throw new Error("expected fresh connection");
+    expect(retry.connection.receive(hello())).toMatchObject({ kind: "hello_registered" });
+  });
+
+  it("terminally closes on timestamp provider failure and permits fresh registration", () => {
+    let failNext = false;
+    const result = createGateway(undefined, {
+      now: () => {
+        if (failNext) {
+          failNext = false;
+          throw new Error("secret timestamp provider failure");
+        }
+        return timestamp;
+      },
+    });
+    const connection = open(result.gateway, result.transport);
+    register(connection, result.transport);
+    failNext = true;
+
+    expect(result.gateway.sendCommand(actorId, { kind: "shutdown_host", reason: "timestamp-fails" })).toMatchObject({
+      kind: "transport_failed",
+    });
+    expect(connection.state()).toBe("failed");
+    expect(result.gateway.connectionForActor(actorId)).toBeUndefined();
+    expect(result.transport.failCalls).toBe(1);
+    expect(result.transport.sent).toHaveLength(1);
+
+    const retryTransport = new RecordingTransport();
+    const retry = result.gateway.openConnection(identity, retryTransport);
+    expect(retry.kind).toBe("accepted");
+    if (retry.kind !== "accepted") throw new Error("expected fresh connection");
+    expect(retry.connection.receive(hello())).toMatchObject({ kind: "hello_registered" });
+  });
+
+  it("terminally closes on injected generated-envelope validation failure without a pending leak", () => {
+    let validations = 0;
+    const result = createGateway(undefined, {
+      outboundEnvelopeValidator: () => {
+        validations += 1;
+        return validations === 1;
+      },
+    });
+    const connection = open(result.gateway, result.transport);
+    register(connection, result.transport);
+
+    expect(result.gateway.sendCommand(actorId, { kind: "shutdown_host", reason: "envelope-fails" })).toMatchObject({
+      kind: "transport_failed",
+    });
+    expect(validations).toBe(2);
+    expect(connection.state()).toBe("failed");
+    expect(result.gateway.connectionForActor(actorId)).toBeUndefined();
+    expect(result.transport.failCalls).toBe(1);
+    expect(result.transport.sent).toHaveLength(1);
+
+    const retryTransport = new RecordingTransport();
+    const retry = result.gateway.openConnection(identity, retryTransport);
+    expect(retry.kind).toBe("accepted");
+  });
+
   it("ACKs every valid Host fact before consuming sequence and delivering the lossless typed fact", () => {
     const { gateway, transport, sink } = createGateway();
     const connection = open(gateway, transport);
@@ -379,7 +525,7 @@ describe("Runtime Server Host Gateway core", () => {
     const transportConnection = open(transportFailure.gateway, transportFailure.transport);
     register(transportConnection, transportFailure.transport);
     expect(transportFailure.gateway.sendCommand(actorId, { kind: "shutdown_host", reason: "test" }).kind).toBe("sent");
-    transportFailure.transport.fail();
+    transportFailure.transport.fail({ code: "transport_failed", message: "transport failed" });
     expect(transportConnection.state()).toBe("failed");
     expect(transportFailure.gateway.openConnection(identity, transportFailure.transport).kind).toBe("accepted");
   });

@@ -56,6 +56,7 @@ export interface HostTransportFailure {
 export interface HostGatewayTransport {
   send(message: ServerToHostMessage): void;
   onFailure(listener: (failure: HostTransportFailure) => void): () => void;
+  fail?(failure: HostTransportFailure): void;
 }
 
 export interface HostFact {
@@ -71,6 +72,7 @@ export interface HostGatewayOptions {
   readonly factSink: HostFactSink;
   readonly messageIds: HostMessageIdProvider;
   readonly timestamps: HostTimestampProvider;
+  readonly outboundEnvelopeValidator?: (message: ServerToHostMessage) => boolean;
 }
 
 export type HostConnectionState = "pending" | "live" | "failed";
@@ -96,7 +98,7 @@ export type HostGatewaySendResult =
     }
   | {
       readonly kind: "rejected";
-      readonly reason: "not_live" | "failed";
+      readonly reason: "not_live" | "failed" | "identity_mismatch";
     }
   | {
       readonly kind: "transport_failed";

@@ -54,24 +54,24 @@ class HostGatewayWebSocketTransport implements HostGatewayTransport {
       text = JSON.stringify(message);
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Host message serialization failed.";
-      this.failSynchronously(messageText);
+      this.failSynchronously({ code: "transport_failed", message: messageText });
     }
 
     const frameBytes = Buffer.byteLength(text!, "utf8");
     if (frameBytes + this.socket.bufferedAmount > HOST_WEBSOCKET_MAX_OUTBOUND_BUFFERED_BYTES) {
-      this.failSynchronously("Host transport outbound buffer limit exceeded.");
+      this.failSynchronously({ code: "transport_failed", message: "Host transport outbound buffer limit exceeded." });
     }
     if (this.socket.readyState !== OPEN_READY_STATE) {
-      this.failSynchronously("Host WebSocket is not open.");
+      this.failSynchronously({ code: "transport_failed", message: "Host WebSocket is not open." });
     }
 
     try {
       this.socket.send(text!, { binary: false, compress: false }, (error?: Error | null) => {
-        if (error != null) this.notifyFailure(error.message || "Host WebSocket send failed.");
+        if (error != null) this.notifyFailure({ code: "transport_failed", message: error.message || "Host WebSocket send failed." });
       });
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Host WebSocket send failed.";
-      this.notifyFailure(messageText);
+      this.notifyFailure({ code: "transport_failed", message: messageText });
       throw error instanceof Error ? error : new Error(messageText);
     }
   }
@@ -81,24 +81,29 @@ class HostGatewayWebSocketTransport implements HostGatewayTransport {
     return () => this.failureListeners.delete(listener);
   }
 
-  public fail(message: string): void {
-    this.notifyFailure(message);
+  public fail(failure: HostTransportFailure): void {
+    this.notifyFailure(failure);
   }
 
   public dispose(): void {
     this.failureListeners.clear();
   }
 
-  private failSynchronously(message: string): never {
-    this.notifyFailure(message);
-    throw new Error(message);
+  private failSynchronously(failure: HostTransportFailure): never {
+    this.notifyFailure(failure);
+    throw new Error(failure.message);
   }
 
-  private notifyFailure(message: string): void {
+  private notifyFailure(failure: HostTransportFailure): void {
     if (this.failureNotified) return;
     this.failureNotified = true;
-    const failure: HostTransportFailure = { code: "transport_failed", message };
-    for (const listener of this.failureListeners) listener(failure);
+    for (const listener of [...this.failureListeners]) {
+      try {
+        listener(failure);
+      } catch {
+        // One failure observer must not prevent other observers from terminating the boundary.
+      }
+    }
   }
 }
 
@@ -110,6 +115,7 @@ class HostGatewayWebSocketSession {
   private adapterTerminal = false;
   private coreTerminal = false;
   private closed = false;
+  private socketTerminationRequested = false;
   private lifecycleListenersAttached = false;
 
   public constructor(
@@ -146,7 +152,9 @@ class HostGatewayWebSocketSession {
   public shutdown(): void {
     if (this.closed) return;
     this.adapterTerminal = true;
-    if (!this.coreTerminal) this.transport.fail("Host Gateway WebSocket adapter shut down.");
+    if (!this.coreTerminal) {
+      this.transport.fail({ code: "transport_failed", message: "Host Gateway WebSocket adapter shut down." });
+    }
     this.terminateSocket();
     if (this.socket.readyState === WebSocket.CLOSED) this.finishClosed();
   }
@@ -214,15 +222,16 @@ class HostGatewayWebSocketSession {
   private failTransport(message: string): void {
     if (this.coreTerminal || this.adapterTerminal) return;
     this.adapterTerminal = true;
-    this.transport.fail(message);
+    this.transport.fail({ code: "transport_failed", message });
     this.terminateSocket();
   }
 
   private terminateSocket(): void {
+    if (this.socketTerminationRequested) return;
+    if (this.socket.readyState !== OPEN_READY_STATE && this.socket.readyState !== CONNECTING_READY_STATE) return;
+    this.socketTerminationRequested = true;
     try {
-      if (this.socket.readyState === OPEN_READY_STATE || this.socket.readyState === CONNECTING_READY_STATE) {
-        this.socket.terminate();
-      }
+      this.socket.terminate();
     } catch {
       // The transport failure latch has already made this terminal.
     }

@@ -24,6 +24,7 @@ import type {
   HostGatewayOptions,
   HostGatewaySendResult,
   HostGatewayTransport,
+  HostTransportFailure,
 } from "./ports.js";
 import type { HostMessageId } from "@ai-block/runtime-contracts";
 
@@ -33,6 +34,13 @@ type ConnectionCallbacks = {
   readonly commitLive: (connection: GatewayConnection) => void;
   readonly remove: (connection: GatewayConnection) => void;
 };
+
+type TerminalOrigin = "core" | "transport";
+
+const DEFAULT_TERMINAL_FAILURE: HostTransportFailure = {
+  code: "transport_failed",
+  message: "Host Gateway connection terminated.",
+} as const;
 
 export class HostGateway {
   private readonly pendingByActor = new Map<string, GatewayConnection>();
@@ -66,7 +74,10 @@ export class HostGateway {
     try {
       connection.observeTransportFailures();
     } catch (error) {
-      connection.failConnection();
+      connection.failConnection("core", {
+        code: "transport_failed",
+        message: error instanceof Error ? error.message : "Host transport failure observer failed.",
+      });
       return {
         kind: "transport_failed",
         error: {
@@ -106,7 +117,7 @@ export class HostGateway {
       || this.liveByActor.has(connection.identity.actorId)
       || this.liveByHost.has(connection.identity.hostInstanceId)
     ) {
-      connection.failConnection();
+      connection.failConnection("core");
       return;
     }
 
@@ -153,7 +164,7 @@ class GatewayConnection implements HostGatewayConnection {
 
   public observeTransportFailures(): void {
     this.unsubscribeTransportFailure = this.transport.onFailure(() => {
-      this.failConnection();
+      this.failConnection("transport");
     });
   }
 
@@ -161,7 +172,7 @@ class GatewayConnection implements HostGatewayConnection {
     if (this.stateValue === "pending") this.stateValue = "live";
   }
 
-  public failConnection(): void {
+  public failConnection(origin: TerminalOrigin, failure = DEFAULT_TERMINAL_FAILURE): void {
     if (this.stateValue === "failed") return;
     this.stateValue = "failed";
     const unsubscribe = this.unsubscribeTransportFailure;
@@ -169,6 +180,15 @@ class GatewayConnection implements HostGatewayConnection {
     if (unsubscribe !== undefined) unsubscribe();
     this.pendingCommands.clear();
     this.callbacks.remove(this);
+    if (origin === "core") {
+      const failTransport = this.transport.fail;
+      if (failTransport === undefined) return;
+      try {
+        failTransport.call(this.transport, failure);
+      } catch {
+        // Logical cleanup is complete even when the transport cannot notify its adapter.
+      }
+    }
   }
 
   public receive(input: unknown): HostGatewayInboundResult {
@@ -193,6 +213,7 @@ class GatewayConnection implements HostGatewayConnection {
   public send(payload: HostCommandPayload, causalMessageId?: HostMessageId): HostGatewaySendResult {
     if (this.stateValue === "failed") return { kind: "rejected", reason: "failed" };
     if (this.stateValue !== "live") return { kind: "rejected", reason: "not_live" };
+    if (!this.matchesOutboundIdentity(payload)) return { kind: "rejected", reason: "identity_mismatch" };
     return this.write(payload, causalMessageId, true);
   }
 
@@ -246,7 +267,10 @@ class GatewayConnection implements HostGatewayConnection {
     try {
       this.options.factSink.accept(fact);
     } catch (error) {
-      this.failConnection();
+      this.failConnection("core", {
+        code: "transport_failed",
+        message: error instanceof Error ? error.message : "Host Gateway fact sink failed.",
+      });
       return {
         kind: "fact_sink_failed",
         error: {
@@ -289,11 +313,24 @@ class GatewayConnection implements HostGatewayConnection {
     }
   }
 
+  private matchesOutboundIdentity(payload: HostCommandPayload): boolean {
+    switch (payload.kind) {
+      case "initialize_actor_host":
+        return payload.launch_spec.project_id === this.identity.projectId
+          && payload.launch_spec.actor_id === this.identity.actorId;
+      case "start_invocation":
+        return payload.invocation_spec.project_id === this.identity.projectId
+          && payload.invocation_spec.actor_id === this.identity.actorId;
+      default:
+        return true;
+    }
+  }
+
   private reject(
     reason: Extract<HostGatewayInboundResult, { kind: "rejected" }>["reason"],
     error?: ContractErrorEnvelope,
   ): HostGatewayInboundResult {
-    this.failConnection();
+    this.failConnection("core");
     return error === undefined ? { kind: "rejected", reason } : { kind: "rejected", reason, error };
   }
 
@@ -325,6 +362,13 @@ class GatewayConnection implements HostGatewayConnection {
     };
     const validation = decodeContract(ServerToHostMessageSchema, message);
     if (!validation.ok) return this.transportFailure("Generated Host envelope failed Runtime Contract validation.");
+    try {
+      if (this.options.outboundEnvelopeValidator !== undefined && !this.options.outboundEnvelopeValidator(message)) {
+        return this.transportFailure("Generated Host envelope failed Runtime Contract validation.");
+      }
+    } catch {
+      return this.transportFailure("Generated Host envelope validation failed.");
+    }
 
     try {
       this.transport.send(message);
@@ -336,7 +380,7 @@ class GatewayConnection implements HostGatewayConnection {
   }
 
   private transportFailure(message: string): { kind: "transport_failed"; error: HostGatewayLocalError } {
-    this.failConnection();
+    this.failConnection("core", { code: "transport_failed", message });
     return { kind: "transport_failed", error: { code: "transport_failed", message } };
   }
 

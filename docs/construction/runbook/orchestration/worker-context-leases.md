@@ -1,53 +1,88 @@
+---
+kind: policy
+scope: orchestrator
+audience: orchestrator
+authority: constraint-only
+---
+
 # Worker Context Leases
 
 ## Model
 
-A Worker is a temporary execution instance, not a permanent role identity. Its context is leased for a coherent body of work.
+A Worker is a temporary execution instance whose context is leased for one coherent role/state-owner episode. Reuse avoids reloading stable context; it does not create permanent identity or trust.
 
-The Orchestrator may reuse the same Worker across related Tasks in one module when prior context improves continuity. The Worker is retired when that context becomes stale, misleading, excessively broad, or unrelated to the next Task.
+```text
+Lease context      loaded once per epoch
+Dispatch context   selected for the current Task/phase
+Task delta         current authority and decisions
+```
 
-## Lease inputs
+## Lease manifest
 
-The Orchestrator defines:
+The Orchestrator records:
 
-- assigned work type or types;
-- objective and acceptance;
-- readable context and writable scope;
-- frozen decisions and local discretion;
-- permitted tools and external actions;
-- whether delegation or additional Workers are allowed;
-- stop and escalation conditions;
-- expected Report.
+- lease ID and epoch;
+- role and state owner;
+- exact lease-scoped Brick paths and versions/commit;
+- allowed delegation/external-action ceiling;
+- current accepted subject and material open decisions.
 
-None of these permissions are implied by a work guide.
+The Worker reads only the explicit `lease.load_once` list. A role directory is never a load target.
 
-## Default lease shapes
+## Dispatch manifest
 
-| Work | Typical lease |
+Each assignment provides:
+
+- lease ID and expected epoch;
+- exact dispatch `load` list;
+- action;
+- Task-specific decision/scope delta when needed.
+
+References inside a loaded file are inert unless the Orchestrator adds them to a later load list. Missing normative context returns `LOAD_REQUEST`.
+
+## Typical lease shapes
+
+| Role | Typical coherent lease |
 |---|---|
-| coding | Several tightly related Tasks in one coherent module episode |
-| debugging | One failure investigation, optionally followed by an explicitly authorized repair |
-| exploring | One bounded repository question or evidence package |
-| researching | One external factual uncertainty or decision brief |
-| testing | One committed subject and its stated acceptance surface |
-| reviewing | One module/boundary acceptance package or focused re-review |
+| Coder | Several related Tasks in one module/state-owner episode |
+| Debugger | One failure investigation, optionally an authorized repair |
+| Explorer | One bounded repository decision package |
+| Researcher | One external uncertainty or compatible follow-up |
+| Tester | One committed acceptance surface and focused retests |
+| Reviewer | One module/boundary review and focused re-review |
 
-These are defaults, not identities. The same underlying model may receive a different lease later with fresh boundaries.
+## Retain
 
-## Retain the Worker when
+Retain when the role, state owner, architectural frame, and loaded lease policies remain aligned; prior context materially improves the next assignment; and context uncertainty is low.
 
-- the state owner and architectural frame remain the same;
-- new work depends materially on knowledge gained in the current episode;
-- earlier Reports show the context is aligned and manageable;
-- handoff cost would exceed context-staleness risk.
+## Reload or increment epoch
 
-## Retire or reset the Worker when
+Reload lease Bricks and increment epoch when:
 
-- work crosses into an unrelated module or decision domain;
-- assumptions have materially changed;
-- repeated corrections reveal a wrong mental model;
-- context volume begins to obscure the active Task;
-- independent evidence is required;
-- the Orchestrator needs a fresh implementation approach.
+- lease policy or role profile materially changes;
+- the Worker reports uncertain semantic continuity;
+- assumptions or accepted subject changed incompatibly;
+- context compaction may have lost required ceilings/decisions;
+- repeated corrections reveal a stale mental model.
 
-Worker reuse is a context-management decision, not a reward or permanent trust status.
+## Retire or replace
+
+Retire when work crosses state owners, independent evidence is required, the agent is unavailable/not found, context has become broad or misleading, or a fresh approach is needed.
+
+## Lease integrity check
+
+Exact context-window tokens and compaction counters are not reliably exposed. Before reuse, require a small semantic check:
+
+```yaml
+lease_continuity: confirmed | uncertain | reset
+lease_id: <id>
+epoch: <integer>
+role_state_owner: <value>
+last_accepted_subject: <commit/artifact>
+material_open_decisions: <short list>
+compaction_observed: yes | no | unknown
+```
+
+`confirmed` permits dispatch-only loading. `uncertain` returns `LEASE_RELOAD_REQUIRED`. Remembering an ID alone is insufficient proof; conversely, observed compaction does not require reload when semantic lease integrity is confirmed.
+
+Worker reuse is context management, not a reward or permanent trust status.

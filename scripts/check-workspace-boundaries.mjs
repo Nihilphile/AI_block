@@ -532,16 +532,33 @@ export type RuntimeContractsConsumerFixture = ActorLaunchSpec | HostToServerMess
     check(readme.includes("decodeContract"), "Runtime Contracts README is missing root decoder usage");
     check(readme.includes("deep import"), "Runtime Contracts README is missing the deep-import boundary rule");
 
-    const policy = readText(join(root, "docs", "construction", "runbook", "policies", "serena.md"));
-    const requiredPolicyAssertions = [
-      ["no-memory rule", "The no-memory policy is mandatory."],
-      ["Git/tests authority", "Git diff, TypeScript, tests, boundary probes, and the final worktree remain authoritative."],
-      ["allowed non-memory operation boundary", "## Allowed non-memory capabilities"],
-      ["Windows guidance", "Windows paths may be returned with backslashes;"],
-      ["fallback guidance", "fallbacks"]
+    const runbook = readText(join(root, "docs", "construction", "runbook", "README.md"));
+    const serenaSafety = readText(join(root, "docs", "construction", "runbook", "policies", "serena-safety.md"));
+    const serenaOperations = readText(join(root, "docs", "construction", "runbook", "policies", "serena-operations.md"));
+    const requiredRunbookAssertions = [
+      ["explicit no-directory loading", "no directory-wide loading;"],
+      ["lease-scoped load manifest", "lease.load_once"],
+      ["References are not load directives", "Task `References` are audit pointers, not load directives."]
     ];
-    for (const [topic, phrase] of requiredPolicyAssertions) {
-      check(policy.includes(phrase), `Serena Runbook policy is missing required topic: ${topic}`);
+    const requiredSerenaSafetyAssertions = [
+      ["no-memory rule", "The no-memory policy is mandatory:"],
+      ["Git/tests authority", "Git diff, TypeScript, tests, boundary probes, and the final worktree remain authoritative."],
+      ["no onboarding", "never run onboarding"],
+      ["no .serena access", "never inspect, edit, stage, traverse, or rely on `.serena/`;" ]
+    ];
+    const requiredSerenaOperationAssertions = [
+      ["allowed non-memory operation boundary", "## Allowed capabilities"],
+      ["Windows guidance", "Windows paths may use backslashes"],
+      ["fallback guidance", "## Known friction and fallback"]
+    ];
+    for (const [topic, phrase] of requiredRunbookAssertions) {
+      check(runbook.includes(phrase), `Construction Runbook is missing required topic: ${topic}`);
+    }
+    for (const [topic, phrase] of requiredSerenaSafetyAssertions) {
+      check(serenaSafety.includes(phrase), `Serena safety policy is missing required topic: ${topic}`);
+    }
+    for (const [topic, phrase] of requiredSerenaOperationAssertions) {
+      check(serenaOperations.includes(phrase), `Serena operations policy is missing required topic: ${topic}`);
     }
   }
 

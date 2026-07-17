@@ -8,10 +8,11 @@ The authoritative Construction Runbook now begins at:
 docs/construction/runbook/README.md
 ```
 
-AI_block-specific Worker, sequencing, context, speed, and waiting rules are in:
+AI_block-specific Orchestrator and Worker lease rules are split into:
 
 ```text
-docs/construction/runbook/ai-block-project-profile.md
+docs/construction/runbook/project/orchestrator-profile.md
+docs/construction/runbook/project/worker-lease-policy.md
 ```
 
 Do not add new construction policy to this retired entry point.

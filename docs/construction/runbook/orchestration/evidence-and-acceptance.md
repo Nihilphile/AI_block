@@ -1,3 +1,10 @@
+---
+kind: policy
+scope: orchestrator
+audience: orchestrator
+authority: constraint-only
+---
+
 # Evidence and Acceptance
 
 ## Core rule

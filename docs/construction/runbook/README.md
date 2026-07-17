@@ -2,92 +2,186 @@
 
 ## Purpose
 
-This is a set of task-specific working guides, not a rigid execution harness.
+This Runbook is a catalog of composable construction-context Bricks. The Orchestrator selects the exact Bricks loaded for a Worker lease and for each dispatch. A directory name, role name, file reference, or neighboring file never causes automatic loading.
 
-The Orchestrator decides what work is being delegated, its allowed scope, authority, acceptance conditions, and escalation boundaries. A Worker reads the guide relevant to the work it has been assigned. Reading a guide never grants authority.
+This is a construction-system experiment informed by AI_block's Prompt Brick ideas. It does not change the Runtime product model or make construction files into product Runtime objects.
 
-The system is designed to remove unnecessary construction ceremony while retaining enough structure for safe delegation and useful audit records.
+## Context composition model
 
-## Design principles
+```text
+Worker context
+  = lease-scoped Bricks loaded once
+  + dispatch-scoped Bricks selected now
+  + Task-specific authority and decision deltas
+```
 
-1. **Work, not identity.** `coding`, `exploring`, `testing`, and similar names describe the work being performed, not permanent Worker roles.
-2. **Authority comes from delegation.** The Task and the Orchestrator define permissions and boundaries. Guides explain methods only.
-3. **Progressive disclosure.** Load only this entry point, the AI_block profile, the assigned work guide, and any specifically triggered rule.
-4. **Minimum sufficient workflow.** Start with the thinnest workflow justified by impact; add controls only for concrete binary triggers.
-5. **Bounded context leases.** Reuse a Worker while a coherent body of work benefits from its context, then retire it.
-6. **Evidence before acceptance.** Completion claims are supported by fresh, proportionate evidence without forcing every Task through independent testing and review.
-7. **Records are interfaces.** Task and Report files carry decisions across Workers without duplicating full transcripts or implementation plans.
+### Lease scope
+
+Lease Bricks remain active for one coherent Worker context lease. They are loaded when the Worker is created, reset, assigned a new role/state owner, or explicitly given a new lease epoch. They are not reloaded for every Task.
+
+Typical lease Bricks:
+
+- project Worker policy;
+- one role profile;
+- construction safety ceilings;
+- Serena no-memory safety when relevant;
+- Superpowers orchestration boundary.
+
+### Dispatch scope
+
+Dispatch Bricks are selected for one Task, phase, or evidence action. Load only what is needed now.
+
+Typical dispatch Bricks:
+
+- the concrete Task;
+- a preflight, implementation, testing, or reviewing procedure;
+- an active specialized gate;
+- an exact design or finding needed by the Task;
+- a tool operation guide;
+- a Report template at handoff.
+
+### Task-specific delta
+
+Baseline, read/write scope, state semantics, error codes, security decisions, acceptance scenarios, commit message, and scope expansion remain in the Task or an explicit Orchestrator authorization delta. They are not generalized into reusable procedures.
+
+## Explicit loading rule
+
+The Orchestrator owns all normative context selection.
+
+```text
+- no directory-wide loading;
+- no sibling discovery;
+- no transitive loading from References;
+- no role-name-based auto-loading;
+- no Worker self-expansion of normative context.
+```
+
+Task `References` are audit pointers, not load directives. If a Worker needs an unlisted normative file, it returns a bounded `LOAD_REQUEST` with the path, reason, and blocked decision.
+
+This rule does not prevent repository investigation. Task `read scope` authorizes dynamic navigation of source, tests, configuration, and Git evidence. `load` controls instructions and decision context, not every source file read.
+
+## Dispatch form
+
+### Establish a lease
+
+```yaml
+lease:
+  id: actor-host-coder-01
+  epoch: 1
+  load_once:
+    - docs/construction/runbook/project/worker-lease-policy.md
+    - docs/construction/runbook/worker-guides/coder/lease.md
+    - docs/construction/runbook/policies/serena-safety.md
+    - docs/construction/runbook/policies/superpowers-boundary.md
+```
+
+### Dispatch a preflight
+
+```yaml
+reuse_lease: actor-host-coder-01
+expected_epoch: 1
+load:
+  - docs/construction/records/<module>/tasks/<task>.md
+  - docs/construction/runbook/worker-guides/coder/procedures/preflight.md
+action: preflight only
+```
+
+### Authorize implementation
+
+```yaml
+reuse_lease: actor-host-coder-01
+expected_epoch: 1
+load:
+  - docs/construction/runbook/worker-guides/coder/procedures/implementation.md
+action: IMPLEMENTATION_AUTHORIZED
+decision_delta:
+  - <Task-specific closed decision>
+```
+
+Loading a Brick never grants more authority than the Task and current authorization delta.
 
 ## Directory map
 
 ```text
-docs/construction/
-├── runbook/
-│   ├── README.md
-│   ├── ai-block-project-profile.md
-│   ├── orchestration/
-│   │   ├── workflow-levels.md
-│   │   ├── specialized-gates.md
-│   │   ├── worker-context-leases.md
-│   │   └── evidence-and-acceptance.md
-│   ├── work-guides/
-│   │   ├── coding.md
-│   │   ├── debugging.md
-│   │   ├── exploring.md
-│   │   ├── researching.md
-│   │   ├── testing.md
-│   │   └── reviewing.md
-│   ├── policies/
-│   │   ├── superpowers.md
-│   │   └── serena.md
-│   ├── task-report-audit.md
-│   ├── templates/
-│   │   ├── task.md
-│   │   └── report.md
-│   └── examples/
-│       └── workflow-classification.md
-└── records/
-    └── <module Task and Report records>
+runbook/
+├── README.md
+├── catalog.md
+├── project/
+│   ├── orchestrator-profile.md
+│   └── worker-lease-policy.md
+├── orchestration/
+├── worker-guides/
+│   └── <role>/
+│       ├── lease.md
+│       └── procedures/
+├── procedures/
+├── policies/
+├── templates/
+└── examples/
 ```
 
-Product architecture constraints, milestone plans, and real Task/Report records remain outside the Runbook because they define construction targets or evidence, not general working method.
+- `orchestration/`: Orchestrator decision references; not default Worker context.
+- `project/`: AI_block-specific Orchestrator and Worker lease profiles.
+- `worker-guides/`: role-specific lease profiles and dispatch procedures.
+- `procedures/`: role-independent, Task-independent dispatch procedures.
+- `policies/`: role-independent safety ceilings and optional operation guides.
+- `templates/`: output or record shapes loaded only when used.
+- `examples/`: non-authoritative composition examples.
 
-## Loading routes
+Product architecture, milestone plans, and real Task/Report records remain outside the Runbook.
 
-### Orchestrator, when classifying new construction
+## Brick metadata
 
-Read:
+Reusable Bricks declare:
 
-1. this file;
-2. `ai-block-project-profile.md`;
-3. `orchestration/workflow-levels.md`;
-4. `orchestration/specialized-gates.md` only for possible triggered gates;
-5. `task-report-audit.md` when creating a delegated Task;
-6. `orchestration/worker-context-leases.md` when selecting or retaining a Worker.
+```yaml
+kind: catalog | worker-profile | procedure | policy | template | project-profile
+scope: lease | dispatch | on-demand | orchestrator
+audience: <role or audience>
+authority: constraint-only | method-only | none
+```
 
-### Worker, when performing assigned work
-
-Read:
-
-1. the Task or delegation message;
-2. `ai-block-project-profile.md`;
-3. exactly the applicable file under `work-guides/`;
-4. referenced product design and acceptance material;
-5. a specialized gate or tool policy only when the Task activates it;
-6. `templates/report.md` before handoff.
-
-If one assignment genuinely contains multiple kinds of work, the Orchestrator may name multiple guides. A Worker does not broaden its assignment merely because another guide exists.
+Metadata helps the Orchestrator compose context. It never causes automatic loading.
 
 ## Authority order
 
 | Source | Governs |
 |---|---|
-| Explicit user direction | Current construction authority and exceptions |
-| Approved product design, contract, or ADR | What the product must mean |
-| Orchestrator Task or clarification | What this Worker may do now |
-| `ai-block-project-profile.md` | Project-specific execution and Worker policy |
-| Orchestration references | How much construction control is required |
-| Work guide or tool policy | How to perform the assigned work well |
-| Report | What was actually decided, done, and evidenced |
+| Explicit user direction | Current authority and exceptions |
+| Approved product design, Contract, or ADR | Product meaning |
+| Orchestrator Task and authorization delta | Current Worker authority |
+| Project and lease policies | Long-lived ceilings and defaults |
+| Procedure or operation policy | Method for assigned work |
+| Template | Output shape only |
+| Report | Work and evidence actually produced |
 
-A work guide or policy cannot override product design, enlarge write scope, authorize external actions, or permit self-dispatch.
+No profile, procedure, policy, template, or load directive enlarges Task authority.
+
+## Lease continuity
+
+Reuse avoids repeated lease loading only while the Worker can confirm its lease identity, epoch, role/state owner, authority model, and current accepted subject. A Worker reports `LEASE_RELOAD_REQUIRED` rather than guessing when continuity is uncertain.
+
+Technical context-window usage and compaction are not exposed reliably. The operational check is semantic lease integrity, defined in `orchestration/worker-context-leases.md`.
+
+## Orchestrator loading route
+
+For a new construction decision, load only:
+
+1. this entry point and `catalog.md` when composition rules are not already active;
+2. `project/orchestrator-profile.md` once for the Orchestrator context;
+3. the relevant orchestration references;
+4. the concrete Task/design evidence needed to compose a lease or dispatch.
+
+## Worker loading route
+
+A Worker reads, in order:
+
+1. the explicit `lease.load_once` list when establishing or reloading a lease;
+2. the current dispatch `load` list;
+3. the inline `action` and Task-specific delta.
+
+It reads no other normative Runbook file unless the Orchestrator adds it to a later load list.
+
+## Compatibility
+
+Historical paths under `work-guides/`, `ai-block-project-profile.md`, `policies/serena.md`, and `policies/superpowers.md` remain compatibility entry points. New dispatches use the composable paths in `catalog.md`.

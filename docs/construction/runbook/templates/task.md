@@ -1,3 +1,10 @@
+---
+kind: template
+scope: on-demand
+audience: orchestrator
+authority: none
+---
+
 # <TASK-ID> <Title>
 
 - owner: <module / state owner>
@@ -5,7 +12,8 @@
 - affected modules: <names or none>
 - workflow: W0 | W1 | W2 | W3, plus active gates
 - base reason: <one rule-based sentence>
-- product baseline: <commit SHA or artifact version>
+- implementation/product subject: <commit SHA or artifact>
+- orchestration baseline: <commit SHA when different, or none>
 
 ## Objective
 
@@ -13,19 +21,19 @@
 
 ## Scope and authority
 
-- read scope: <paths/systems/context>
-- write scope: <paths or none>
+- read scope: <repository/system evidence the Worker may inspect dynamically>
+- write scope: <exact paths or none>
 - delegated discretion: <local decisions the Worker may make>
-- tools/external actions: <allowed set and authorization limits>
-- delegation: none | <explicit allowed capability>
+- tools/external actions: <allowed set and limits>
+- delegation: none | <explicit capability>
 
-## Constraints and escalation
+## Frozen decisions and escalation
 
-<Frozen decisions, forbidden actions, and conditions requiring a stop or return to the Orchestrator.>
+<Task-specific semantics, forbidden actions, and exact stop conditions.>
 
 ## References
 
-<Approved design, contract, work guide, and active gate references.>
+<Audit pointers only. References are not auto-load directives. The dispatch manifest selects which are loaded.>
 
 ## Acceptance
 
@@ -33,4 +41,4 @@
 
 ## Handoff
 
-<Required Report type and any subject-identity requirement.>
+<Required Report path/type, subject identity, and commit instruction.>

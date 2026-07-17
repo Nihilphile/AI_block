@@ -1,3 +1,10 @@
+---
+kind: policy
+scope: orchestrator
+audience: orchestrator
+authority: constraint-only
+---
+
 # Specialized Gates
 
 Load this file when a classification question indicates that the base workflow may be insufficient. Record only gates whose binary trigger is true.

@@ -13,10 +13,10 @@
 
 ## 3. Validation and Compilation
 
-- [ ] 3.1 Implement layered ActorTemplate candidate validation for schema, required components, exact refs, kinds, duplicate Prompt refs, adapter/provider config, Backend/Toolset compatibility, and workspace containment.
-- [ ] 3.2 Implement deterministic aggregate validation reports and stable operation-level errors with safe redacted details and manifest path ordering.
-- [ ] 3.3 Implement the pure ActorCompiler that preserves Prompt order and produces a self-contained ActorConfigSnapshot with source provenance, resolved execution content (including separate Backend `adapter_id`, `model_id`, and opaque `config`), Initial Prompt content, and metadata-independent configuration digest; do not encode model selection into ActorLaunchSpec v1 or adapter config.
-- [ ] 3.4 Add focused validator/compiler tests covering empty Prompt lists, composite Initial Prompts, kind mismatch, stale/missing refs, unsafe workspace paths, equivalent execution content, and no runtime side effects.
+- [x] 3.1 Implement layered ActorTemplate candidate validation for schema, required components, exact refs, kinds, duplicate Prompt refs, adapter/provider config, Backend/Toolset compatibility, and workspace containment.
+- [x] 3.2 Implement deterministic aggregate validation reports and stable operation-level errors with safe redacted details and manifest path ordering.
+- [x] 3.3 Implement the pure ActorCompiler that preserves Prompt order and produces a self-contained ActorConfigSnapshot with source provenance, resolved execution content (including separate Backend `adapter_id`, `model_id`, and opaque `config`), Initial Prompt content, and metadata-independent configuration digest; do not encode model selection into ActorLaunchSpec v1 or adapter config.
+- [x] 3.4 Add focused validator/compiler tests covering empty Prompt lists, composite Initial Prompts, kind mismatch, stale/missing refs, unsafe workspace paths, equivalent execution content, and no runtime side effects.
 
 ## 4. ActorTemplate Application Service
 

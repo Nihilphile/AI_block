@@ -456,7 +456,7 @@
           const modulesRoot = join(sourceRoot, "modules");
           check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor", "host-gateway"]), `${modulesRoot}: Runtime Server module topology mismatch`);
           check(same(readdirSync(join(modulesRoot, "host-gateway"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway.ts", "ports.ts"]), `${modulesRoot}/host-gateway: Runtime Server Host Gateway source files mismatch`);
-          check(same(readdirSync(join(modulesRoot, "actor"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["index.ts", "ports.ts", "values.ts"]), `${modulesRoot}/actor: Actor source files mismatch`);
+          check(same(readdirSync(join(modulesRoot, "actor"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["compiler.ts", "index.ts", "ports.ts", "validation.ts", "values.ts"]), `${modulesRoot}/actor: Actor source files mismatch`);
         } else if (unit === apps[1]) {
           check(same(entries.map((entry) => entry.name).sort(), ["backend", "main.ts", "server-connection"]), `${sourceRoot}: ActorHost source topology mismatch`);
           const backendRoot = join(sourceRoot, "backend");
@@ -523,7 +523,7 @@
         const modulesRoot = join(testRoot, "modules");
         check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor", "host-gateway"]), `${modulesRoot}: Runtime Server test module topology mismatch`);
         check(same(readdirSync(join(modulesRoot, "host-gateway"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway.test.ts"]), `${modulesRoot}/host-gateway: Runtime Server Host Gateway test files mismatch`);
-        check(same(readdirSync(join(modulesRoot, "actor"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor-foundation.test.ts"]), `${modulesRoot}/actor: Actor test files mismatch`);
+        check(same(readdirSync(join(modulesRoot, "actor"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor-foundation.test.ts", "actor-validation-compiler.test.ts"]), `${modulesRoot}/actor: Actor test files mismatch`);
       }
     }
     const forbiddenCatchAll = new Set(["common", "shared", "core", "utils"]);

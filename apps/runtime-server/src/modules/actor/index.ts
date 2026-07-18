@@ -28,7 +28,11 @@ export {
   buildTemplateRevisionDigestMaterial,
   canonicalizeStructuredBody,
   canonicalizeText,
+  computeConfigurationDigest,
+  computeDefinitionBrickDigest,
+  computeTemplateRevisionDigest,
   parseExactBrickRef,
+  sha256CanonicalJson,
 } from "./values.js";
 export type {
   BoundDefinitionBrickRef,
@@ -38,3 +42,23 @@ export type {
   ExactBrickRefParseResult,
   TemplateRevisionDigestMaterial,
 } from "./values.js";
+
+export {
+  createActorTemplateValidationError,
+  resolveAndValidateActorTemplateCandidate,
+  validateActorTemplateCandidate,
+} from "./validation.js";
+export type {
+  ActorTemplateValidationError,
+  ActorTemplateValidationOutcome,
+  ActorTemplateValidationPorts,
+  ResolvedActorTemplateBrick,
+  ResolvedActorTemplateCandidate,
+} from "./validation.js";
+
+export { compileActorTemplate } from "./compiler.js";
+export type {
+  ActorCompilationError,
+  ActorCompilationResult,
+  ActorCompilerInput,
+} from "./compiler.js";

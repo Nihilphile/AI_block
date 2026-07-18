@@ -1,4 +1,5 @@
 import canonicalize from "canonicalize";
+import { createHash } from "node:crypto";
 import {
   decodeContract,
   ExactBrickRefSchema,
@@ -7,8 +8,11 @@ import {
   type BrickKind,
   type BrickPromptBody,
   type BrickSysPromptBody,
+  type ConfigDigest,
   type DefinitionBrickRevision,
+  type DefinitionBrickDigest,
   type ExactBrickRef,
+  type TemplateRevisionDigest,
   type ToolProviderBrickConfig,
 } from "@ai-block/runtime-contracts";
 import type { ProjectId } from "@ai-block/runtime-contracts";
@@ -162,10 +166,34 @@ export type ConfigurationDigestMaterial = Readonly<{
 
 export function buildConfigurationDigestMaterial(input: ConfigurationDigestMaterial): ConfigurationDigestMaterial {
   return {
-    system_prompts: input.system_prompts,
-    initial_prompts: input.initial_prompts,
+    system_prompts: input.system_prompts.map((body) => ({ text: canonicalizeText(body.text) })),
+    initial_prompts: input.initial_prompts.map(normalizePromptBody),
     backend: input.backend,
     tool_providers: input.tool_providers,
     working_directory: input.working_directory,
   };
+}
+
+export function sha256CanonicalJson(value: unknown): string {
+  const canonical = canonicalizeStructuredBody(value);
+  const digest = createHash("sha256").update(canonical, "utf8").digest("hex");
+  return `sha256:${digest}`;
+}
+
+export function computeDefinitionBrickDigest(
+  kind: BrickKind,
+  body: DefinitionBrickRevision["body"],
+): DefinitionBrickDigest {
+  return sha256CanonicalJson(buildDefinitionBrickDigestMaterial(kind, body)) as DefinitionBrickDigest;
+}
+
+export function computeTemplateRevisionDigest(
+  metadata: ActorTemplateSpec["metadata"],
+  spec: ActorTemplateSpec["spec"],
+): TemplateRevisionDigest {
+  return sha256CanonicalJson(buildTemplateRevisionDigestMaterial(metadata, spec)) as TemplateRevisionDigest;
+}
+
+export function computeConfigurationDigest(input: ConfigurationDigestMaterial): ConfigDigest {
+  return sha256CanonicalJson(buildConfigurationDigestMaterial(input)) as ConfigDigest;
 }

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-block/runtime-contracts": "workspace:*",
+    "canonicalize": "3.0.0",
     "ws": "8.21.1"
   },
   "devDependencies": {

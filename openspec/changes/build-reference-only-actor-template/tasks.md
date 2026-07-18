@@ -7,9 +7,9 @@
 
 ## 2. Actor Module Foundation
 
-- [ ] 2.1 Create the `apps/runtime-server/src/modules/actor/` domain/application directory structure and define ports for Project namespace, Definition Brick resolution, Backend/Tool provider validators, Project workspace resolution, repositories, and unit of work.
-- [ ] 2.2 Implement pure Definition Brick reference resolution/domain values that preserve authored refs and resolved revision UID/digest while rejecting floating or cross-Project references.
-- [ ] 2.3 Implement canonicalization helpers for text and structured Bodies and deterministic Template revision/configuration digest material without importing filesystem, YAML, SQLite, HTTP, or Backend process implementations.
+- [x] 2.1 Create the `apps/runtime-server/src/modules/actor/` domain/application directory structure and define ports for Project namespace, Definition Brick resolution, Backend/Tool provider validators, Project workspace resolution, repositories, and unit of work.
+- [x] 2.2 Implement pure Definition Brick reference resolution/domain values that preserve authored refs and resolved revision UID/digest while rejecting floating or cross-Project references.
+- [x] 2.3 Implement canonicalization helpers for text and structured Bodies and deterministic Template revision/configuration digest material without importing filesystem, YAML, SQLite, HTTP, or Backend process implementations.
 
 ## 3. Validation and Compilation
 

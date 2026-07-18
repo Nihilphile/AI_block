@@ -194,5 +194,147 @@
         "working_directory": "/compat/work"
       }
     }
+  },
+  {
+    "name": "ActorTemplateValidationReport",
+    "schema": "ActorTemplateValidationReportSchema",
+    "value": {
+      "valid": false,
+      "issues": [
+        { "code": "unknown_field", "path": "/spec/backend/extra" },
+        { "code": "schema_invalid", "path": "/metadata/display_name" }
+      ]
+    }
+  },
+  {
+    "name": "ActorTemplateValidationFailedDetails",
+    "schema": "ActorTemplateValidationFailedDetailsSchema",
+    "value": {
+      "report": {
+        "valid": false,
+        "issues": [
+          { "code": "unknown_field", "path": "/spec/backend/extra" }
+        ]
+      }
+    }
+  },
+  {
+    "name": "ValidateActorTemplateCandidateResult",
+    "schema": "ValidateActorTemplateCandidateResultSchema",
+    "value": {
+      "report": { "valid": true, "issues": [] }
+    }
+  },
+  {
+    "name": "CreateActorTemplateResult",
+    "schema": "CreateActorTemplateResultSchema",
+    "value": {
+      "revision": {
+        "template_uid": "actor_template_00000000-0000-4000-8000-000000000000",
+        "template_id": "tpl-compat",
+        "project_id": "project_00000000-0000-4000-8000-000000000000",
+        "revision": 1,
+        "revision_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "config_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "metadata": {
+          "display_name": "Compatibility Actor",
+          "description": "Compatibility fixture for ActorTemplateSpec.",
+          "labels": { "role": "coder" }
+        },
+        "spec": {
+          "system_prompt": {
+            "bricks": [
+              {
+                "ref": { "id": "coder-core", "revision": 3 },
+                "resolved": {
+                  "uid": "brickrev_00000000-0000-4000-8000-000000000000",
+                  "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                }
+              }
+            ]
+          },
+          "initial_prompt": { "bricks": [] },
+          "backend": {
+            "ref": { "id": "claude-code-pro", "revision": 1 },
+            "resolved": {
+              "uid": "brickrev_11111111-1111-4111-8111-111111111111",
+              "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          },
+          "toolset": {
+            "ref": { "id": "coder-tools", "revision": 2 },
+            "resolved": {
+              "uid": "brickrev_22222222-2222-4222-8222-222222222222",
+              "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          },
+          "runtime_config": {
+            "ref": { "id": "default-config", "revision": 1 },
+            "resolved": {
+              "uid": "brickrev_33333333-3333-4333-8333-333333333333",
+              "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          }
+        },
+        "status": "active",
+        "created_at": "2026-07-16T12:34:56.789Z"
+      }
+    }
+  },
+  {
+    "name": "ReviseActorTemplateResult",
+    "schema": "ReviseActorTemplateResultSchema",
+    "value": {
+      "revision": {
+        "template_uid": "actor_template_00000000-0000-4000-8000-000000000000",
+        "template_id": "tpl-compat",
+        "project_id": "project_00000000-0000-4000-8000-000000000000",
+        "revision": 1,
+        "revision_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "config_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "metadata": {
+          "display_name": "Compatibility Actor",
+          "description": "Compatibility fixture for ActorTemplateSpec.",
+          "labels": { "role": "coder" }
+        },
+        "spec": {
+          "system_prompt": {
+            "bricks": [
+              {
+                "ref": { "id": "coder-core", "revision": 3 },
+                "resolved": {
+                  "uid": "brickrev_00000000-0000-4000-8000-000000000000",
+                  "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                }
+              }
+            ]
+          },
+          "initial_prompt": { "bricks": [] },
+          "backend": {
+            "ref": { "id": "claude-code-pro", "revision": 1 },
+            "resolved": {
+              "uid": "brickrev_11111111-1111-4111-8111-111111111111",
+              "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          },
+          "toolset": {
+            "ref": { "id": "coder-tools", "revision": 2 },
+            "resolved": {
+              "uid": "brickrev_22222222-2222-4222-8222-222222222222",
+              "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          },
+          "runtime_config": {
+            "ref": { "id": "default-config", "revision": 1 },
+            "resolved": {
+              "uid": "brickrev_33333333-3333-4333-8333-333333333333",
+              "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          }
+        },
+        "status": "active",
+        "created_at": "2026-07-16T12:34:56.789Z"
+      }
+    }
   }
 ]

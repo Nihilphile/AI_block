@@ -3,11 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   ActorConfigSnapshotSchema,
   ActorLaunchSpecSchema,
+  ActorTemplateValidationFailedDetailsSchema,
+  ActorTemplateValidationReportSchema,
   ActorTemplateSpecSchema,
   ContractErrorEnvelopeSchema,
   DeliverySchema,
   HostToServerMessageSchema,
   PackageSchema,
+  CreateActorTemplateResultSchema,
+  ReviseActorTemplateResultSchema,
+  ValidateActorTemplateCandidateResultSchema,
   ServerToHostMessageSchema,
   decodeContract,
 } from "../../src/index.js";
@@ -28,6 +33,11 @@ const sourceSchemas = {
   HostToServerMessageSchema,
   ActorTemplateSpecSchema,
   ActorConfigSnapshotSchema,
+  ActorTemplateValidationReportSchema,
+  ActorTemplateValidationFailedDetailsSchema,
+  ValidateActorTemplateCandidateResultSchema,
+  CreateActorTemplateResultSchema,
+  ReviseActorTemplateResultSchema,
 } as const;
 
 function readSerializedFixtures(): SerializedCompatibilityFixture[] {
@@ -38,7 +48,7 @@ describe("B.4 compatibility fixtures", () => {
   it("decodes the shared serialized fixtures through the source compatibility entrypoint", () => {
     const fixtures = readSerializedFixtures();
 
-    expect(fixtures).toHaveLength(8);
+    expect(fixtures).toHaveLength(13);
     for (const fixture of fixtures) {
       const schema = sourceSchemas[fixture.schema as keyof typeof sourceSchemas];
       expect(schema, fixture.name).toBeDefined();
@@ -60,6 +70,11 @@ describe("B.4 compatibility fixtures", () => {
       ["HostToServerMessage", HostToServerMessageSchema, compatibilityFixtures.hostMessage],
       ["ActorTemplateSpec", ActorTemplateSpecSchema, compatibilityFixtures.actorTemplateSpec],
       ["ActorConfigSnapshot", ActorConfigSnapshotSchema, compatibilityFixtures.actorConfigSnapshot],
+      ["ActorTemplateValidationReport", ActorTemplateValidationReportSchema, compatibilityFixtures.actorTemplateValidationReport],
+      ["ActorTemplateValidationFailedDetails", ActorTemplateValidationFailedDetailsSchema, compatibilityFixtures.actorTemplateValidationFailedDetails],
+      ["ValidateActorTemplateCandidateResult", ValidateActorTemplateCandidateResultSchema, compatibilityFixtures.validateActorTemplateCandidateResult],
+      ["CreateActorTemplateResult", CreateActorTemplateResultSchema, compatibilityFixtures.createActorTemplateResult],
+      ["ReviseActorTemplateResult", ReviseActorTemplateResultSchema, compatibilityFixtures.reviseActorTemplateResult],
     ] as const;
 
     for (const [name, schema, value] of cases) {

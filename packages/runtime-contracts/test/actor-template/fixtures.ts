@@ -221,6 +221,35 @@ export const actorTemplateFixtures = {
     revision: 1,
   },
 
+  validValidationReport: {
+    valid: true,
+    issues: [],
+  },
+
+  invalidValidationReport: {
+    valid: false,
+    issues: [
+      { code: "unknown_field", path: "/spec/backend/extra" },
+      { code: "schema_invalid", path: "/metadata/display_name" },
+    ],
+  },
+
+  validationFailedDetails: {
+    report: {
+      valid: false,
+      issues: [
+        { code: "unknown_field", path: "/spec/backend/extra" },
+      ],
+    },
+  },
+
+  validateResult: {
+    report: {
+      valid: true,
+      issues: [],
+    },
+  },
+
   validateCandidate: {
     project_id: projectId,
     requested_template_id: "tpl-coder",

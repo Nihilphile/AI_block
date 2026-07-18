@@ -193,7 +193,7 @@ const ResolvedBrickEntrySchema = Type.Object(
 
 // --- Validation ---
 
-export const VALIDATION_ISSUE_CODES = [
+export const ACTOR_TEMPLATE_VALIDATION_ISSUE_CODES = [
   "missing_required_component",
   "duplicate_brick_ref",
   "ref_not_found",
@@ -204,10 +204,12 @@ export const VALIDATION_ISSUE_CODES = [
   "workspace_root_not_found",
   "workspace_path_escape",
   "unsupported_schema_version",
+  "unknown_field",
+  "schema_invalid",
 ] as const;
 
 export const ValidationIssueCodeSchema = Type.Union(
-  VALIDATION_ISSUE_CODES.map((code) => Type.Literal(code)),
+  ACTOR_TEMPLATE_VALIDATION_ISSUE_CODES.map((code) => Type.Literal(code)),
 );
 export type ValidationIssueCode = Type.Static<typeof ValidationIssueCodeSchema>;
 
@@ -403,3 +405,56 @@ export const ReviseActorTemplateCommandSchema = Type.Object(
 export type ReviseActorTemplateCommand = Type.Static<
   typeof ReviseActorTemplateCommandSchema
 >;
+
+// --- Validation reports and operation results ---
+
+export const ActorTemplateValidationReportSchema = Type.Union([
+  Type.Object(
+    {
+      valid: Type.Literal(true),
+      issues: Type.Array(ValidationIssueSchema, { maxItems: 0 }),
+    },
+    { additionalProperties: false },
+  ),
+  Type.Object(
+    {
+      valid: Type.Literal(false),
+      issues: Type.Array(ValidationIssueSchema, { minItems: 1 }),
+    },
+    { additionalProperties: false },
+  ),
+]);
+export type ActorTemplateValidationReport = Type.Static<typeof ActorTemplateValidationReportSchema>;
+
+export const ActorTemplateValidationFailedDetailsSchema = Type.Object(
+  {
+    report: ActorTemplateValidationReportSchema,
+  },
+  { additionalProperties: false },
+);
+export type ActorTemplateValidationFailedDetails = Type.Static<
+  typeof ActorTemplateValidationFailedDetailsSchema
+>;
+
+export const ValidateActorTemplateCandidateResultSchema = Type.Object(
+  {
+    report: ActorTemplateValidationReportSchema,
+  },
+  { additionalProperties: false },
+);
+export type ValidateActorTemplateCandidateResult = Type.Static<
+  typeof ValidateActorTemplateCandidateResultSchema
+>;
+
+const ActorTemplateRevisionResultSchema = Type.Object(
+  {
+    revision: ActorTemplateRevisionViewSchema,
+  },
+  { additionalProperties: false },
+);
+
+export const CreateActorTemplateResultSchema = ActorTemplateRevisionResultSchema;
+export type CreateActorTemplateResult = Type.Static<typeof CreateActorTemplateResultSchema>;
+
+export const ReviseActorTemplateResultSchema = ActorTemplateRevisionResultSchema;
+export type ReviseActorTemplateResult = Type.Static<typeof ReviseActorTemplateResultSchema>;

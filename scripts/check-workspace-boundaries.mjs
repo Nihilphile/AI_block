@@ -70,6 +70,7 @@
   const expectedRuntimeExports = [
     "AckPayloadSchema",
     "ACTOR_TEMPLATE_SPEC_SCHEMA_VERSION",
+    "ACTOR_TEMPLATE_VALIDATION_ISSUE_CODES",
     "ActorConfigSnapshotIdSchema",
     "ActorConfigSnapshotSchema",
     "ActorIdSchema",
@@ -81,6 +82,8 @@
     "ActorTemplateSpecSchema",
     "ActorTemplateSpecSchemaVersionSchema",
     "ActorTemplateSummarySchema",
+    "ActorTemplateValidationFailedDetailsSchema",
+    "ActorTemplateValidationReportSchema",
     "BackendAdapterIdSchema",
     "BackendAdapterLaunchConfigSchema",
     "BackendBrickBodySchema",
@@ -100,6 +103,7 @@
     "ContractSchemaVersionSchema",
     "ContentHashSchema",
     "CreateActorTemplateCommandSchema",
+    "CreateActorTemplateResultSchema",
     "CreateSessionDirectiveSchema",
     "DefinitionBrickDigestSchema",
     "DefinitionBrickRevisionIdSchema",
@@ -145,6 +149,7 @@
     "ResolvedBrickRefSchema",
     "ResumeSessionDirectiveSchema",
     "ReviseActorTemplateCommandSchema",
+    "ReviseActorTemplateResultSchema",
     "RunIdSchema",
     "RuntimeConfigBrickBodySchema",
     "ServerToHostMessageSchema",
@@ -163,6 +168,7 @@
     "ToolProviderLaunchConfigSchema",
     "ToolsetBrickBodySchema",
     "ValidateActorTemplateCandidateSchema",
+    "ValidateActorTemplateCandidateResultSchema",
     "ValidationIssueCodeSchema",
     "ValidationIssueSchema",
     "computePackageContentHash",
@@ -182,6 +188,8 @@
     "ActorTemplateRevisionView",
     "ActorTemplateSpec",
     "ActorTemplateSpecSchemaVersion",
+    "ActorTemplateValidationFailedDetails",
+    "ActorTemplateValidationReport",
     "ActorTemplateSummary",
     "BackendAdapterId",
     "BackendAdapterLaunchConfig",
@@ -203,6 +211,7 @@
     "ContractValue",
     "ContentHash",
     "CreateActorTemplateCommand",
+    "CreateActorTemplateResult",
     "CreateSessionDirective",
     "DefinitionBrickDigest",
     "DefinitionBrickRevision",
@@ -247,6 +256,7 @@
     "ResolvedBrickRef",
     "ResumeSessionDirective",
     "ReviseActorTemplateCommand",
+    "ReviseActorTemplateResult",
     "RunId",
     "RuntimeConfigBrickBody",
     "ServerToHostMessage",
@@ -265,6 +275,7 @@
     "ToolProviderLaunchConfig",
     "ToolsetBrickBody",
     "ValidateActorTemplateCandidate",
+    "ValidateActorTemplateCandidateResult",
     "ValidationIssue",
     "ValidationIssueCode"
   ].sort();
@@ -793,7 +804,7 @@ export type RuntimeContractsConsumerFixture = ActorLaunchSpec | HostToServerMess
         temporary.push(dir);
         const rootTypeSource = `import type { ${expectedPublicTypeExports.join(", ")} } from ${JSON.stringify(contractName)};\ntype ConsumerFixture = {\n${expectedPublicTypeExports.map((name) => `  ${name}: ${name === "ContractDecodeResult" || name === "ContractValue" ? `${name}<unknown>` : name};`).join("\n")}\n};\nconst fixture: ConsumerFixture | undefined = undefined;\nvoid fixture;\n`;
         const rootRuntimeSource = `import * as contracts from ${JSON.stringify(contractName)};\nconst expected = ${JSON.stringify(expectedRuntimeExports)};\nif (JSON.stringify(Object.keys(contracts).sort()) !== JSON.stringify(expected)) process.exit(1);\n`;
-        const builtCompatibilitySource = `import { readFileSync } from "node:fs";\nimport * as contracts from ${JSON.stringify(contractName)};\nconst fixtures = JSON.parse(readFileSync(${JSON.stringify(compatibilityFixturePath)}, "utf8"));\nconst schemas = {\n  ContractErrorEnvelopeSchema: contracts.ContractErrorEnvelopeSchema,\n  PackageSchema: contracts.PackageSchema,\n  DeliverySchema: contracts.DeliverySchema,\n  ActorLaunchSpecSchema: contracts.ActorLaunchSpecSchema,\n  ServerToHostMessageSchema: contracts.ServerToHostMessageSchema,\n  HostToServerMessageSchema: contracts.HostToServerMessageSchema,\n  ActorTemplateSpecSchema: contracts.ActorTemplateSpecSchema,\n  ActorConfigSnapshotSchema: contracts.ActorConfigSnapshotSchema\n};\nif (!Array.isArray(fixtures) || fixtures.length !== 8) process.exit(1);\nfor (const fixture of fixtures) {\n  const schema = schemas[fixture.schema];\n  if (schema === undefined) {\n    console.error(\`unknown schema: \${fixture.schema}\`);\n    process.exit(1);\n  }\n  const decoded = contracts.decodeContract(schema, fixture.value);\n  if (!decoded.ok) {\n    console.error(\`fixture failed: \${fixture.name}\`);\n    process.exit(1);\n  }\n  const roundTripped = contracts.decodeContract(schema, JSON.parse(JSON.stringify(decoded.value)));\n  if (!roundTripped.ok) {\n    console.error(\`fixture round-trip failed: \${fixture.name}\`);\n    process.exit(1);\n  }\n}\n`;
+        const builtCompatibilitySource = `import { readFileSync } from "node:fs";\nimport * as contracts from ${JSON.stringify(contractName)};\nconst fixtures = JSON.parse(readFileSync(${JSON.stringify(compatibilityFixturePath)}, "utf8"));\nconst schemas = {\n  ContractErrorEnvelopeSchema: contracts.ContractErrorEnvelopeSchema,\n  PackageSchema: contracts.PackageSchema,\n  DeliverySchema: contracts.DeliverySchema,\n  ActorLaunchSpecSchema: contracts.ActorLaunchSpecSchema,\n  ServerToHostMessageSchema: contracts.ServerToHostMessageSchema,\n  HostToServerMessageSchema: contracts.HostToServerMessageSchema,\n  ActorTemplateSpecSchema: contracts.ActorTemplateSpecSchema,\n  ActorConfigSnapshotSchema: contracts.ActorConfigSnapshotSchema,\n  ActorTemplateValidationReportSchema: contracts.ActorTemplateValidationReportSchema,\n  ActorTemplateValidationFailedDetailsSchema: contracts.ActorTemplateValidationFailedDetailsSchema,\n  ValidateActorTemplateCandidateResultSchema: contracts.ValidateActorTemplateCandidateResultSchema,\n  CreateActorTemplateResultSchema: contracts.CreateActorTemplateResultSchema,\n  ReviseActorTemplateResultSchema: contracts.ReviseActorTemplateResultSchema\n};\nif (!Array.isArray(fixtures) || fixtures.length !== 13) process.exit(1);\nfor (const fixture of fixtures) {\n  const schema = schemas[fixture.schema];\n  if (schema === undefined) {\n    console.error(\`unknown schema: \${fixture.schema}\`);\n    process.exit(1);\n  }\n  const decoded = contracts.decodeContract(schema, fixture.value);\n  if (!decoded.ok) {\n    console.error(\`fixture failed: \${fixture.name}\`);\n    process.exit(1);\n  }\n  const roundTripped = contracts.decodeContract(schema, JSON.parse(JSON.stringify(decoded.value)));\n  if (!roundTripped.ok) {\n    console.error(\`fixture round-trip failed: \${fixture.name}\`);\n    process.exit(1);\n  }\n}\n`;
         check(runTscProbe(`root-${app.name.split("/").pop()}`, dir, rootTypeSource, { success: true }) !== undefined, `${app.name}: package-root TypeScript probe failed`);
         check(runNodeProbe(join(dir, "root.mjs"), rootRuntimeSource, { status: 0, stdout: "", stderr: "" }) !== undefined, `${app.name}: package-root runtime/export probe failed`);
         check(runNodeProbe(join(dir, "compatibility.mjs"), builtCompatibilitySource, { status: 0, stdout: "", stderr: "" }) !== undefined, `${app.name}: built package-root compatibility probe failed`);

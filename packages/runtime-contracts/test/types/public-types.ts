@@ -7,6 +7,8 @@ import type {
   ActorTemplateId,
   ActorTemplateSpec,
   ActorTemplateSpecSchemaVersion,
+  ActorTemplateValidationFailedDetails,
+  ActorTemplateValidationReport,
   ActorTemplateRevisionView,
   ActorTemplateSummary,
   ActorTemplateRevisionSummary,
@@ -30,6 +32,7 @@ import type {
   ContractValue,
   ContentHash,
   CreateActorTemplateCommand,
+  CreateActorTemplateResult,
   CreateSessionDirective,
   DefinitionBrickDigest,
   DefinitionBrickRevision,
@@ -74,6 +77,7 @@ import type {
   ResolvedBrickRef,
   ResumeSessionDirective,
   ReviseActorTemplateCommand,
+  ReviseActorTemplateResult,
   RunId,
   RuntimeConfigBrickBody,
   ServerToHostMessage,
@@ -92,6 +96,7 @@ import type {
   ToolProviderLaunchConfig,
   ToolsetBrickBody,
   ValidateActorTemplateCandidate,
+  ValidateActorTemplateCandidateResult,
   ValidationIssue,
   ValidationIssueCode,
 } from "../../src/index.js";
@@ -107,6 +112,8 @@ type AcceptedPublicDerivedTypes = {
   ActorTemplateRevisionView: ActorTemplateRevisionView;
   ActorTemplateSpec: ActorTemplateSpec;
   ActorTemplateSpecSchemaVersion: ActorTemplateSpecSchemaVersion;
+  ActorTemplateValidationFailedDetails: ActorTemplateValidationFailedDetails;
+  ActorTemplateValidationReport: ActorTemplateValidationReport;
   ActorTemplateSummary: ActorTemplateSummary;
   BackendAdapterId: BackendAdapterId;
   BackendAdapterLaunchConfig: BackendAdapterLaunchConfig;
@@ -128,6 +135,7 @@ type AcceptedPublicDerivedTypes = {
   ContractValue: ContractValue<unknown>;
   ContentHash: ContentHash;
   CreateActorTemplateCommand: CreateActorTemplateCommand;
+  CreateActorTemplateResult: CreateActorTemplateResult;
   CreateSessionDirective: CreateSessionDirective;
   DefinitionBrickDigest: DefinitionBrickDigest;
   DefinitionBrickRevision: DefinitionBrickRevision;
@@ -172,6 +180,7 @@ type AcceptedPublicDerivedTypes = {
   ResolvedBrickRef: ResolvedBrickRef;
   ResumeSessionDirective: ResumeSessionDirective;
   ReviseActorTemplateCommand: ReviseActorTemplateCommand;
+  ReviseActorTemplateResult: ReviseActorTemplateResult;
   RunId: RunId;
   RuntimeConfigBrickBody: RuntimeConfigBrickBody;
   ServerToHostMessage: ServerToHostMessage;
@@ -190,6 +199,7 @@ type AcceptedPublicDerivedTypes = {
   ToolProviderLaunchConfig: ToolProviderLaunchConfig;
   ToolsetBrickBody: ToolsetBrickBody;
   ValidateActorTemplateCandidate: ValidateActorTemplateCandidate;
+  ValidateActorTemplateCandidateResult: ValidateActorTemplateCandidateResult;
   ValidationIssue: ValidationIssue;
   ValidationIssueCode: ValidationIssueCode;
 };

@@ -1,18 +1,25 @@
 import * as AjvModule from "ajv";
 import { describe, expect, it } from "vitest";
 import {
+  ACTOR_TEMPLATE_VALIDATION_ISSUE_CODES,
   ActorConfigSnapshotSchema,
+  ActorTemplateValidationFailedDetailsSchema,
+  ActorTemplateValidationReportSchema,
   ActorTemplateSpecSchema,
   BackendBrickBodySchema,
   BrickPromptBodySchema,
   BrickSysPromptBodySchema,
   CreateActorTemplateCommandSchema,
+  CreateActorTemplateResultSchema,
   DefinitionBrickRevisionSchema,
   ExactBrickRefSchema,
   ResolvedBrickRefSchema,
+  ReviseActorTemplateCommandSchema,
+  ReviseActorTemplateResultSchema,
   RuntimeConfigBrickBodySchema,
   ToolsetBrickBodySchema,
   ValidateActorTemplateCandidateSchema,
+  ValidateActorTemplateCandidateResultSchema,
   ValidationIssueSchema,
   decodeContract,
 } from "../../src/index.js";
@@ -20,6 +27,7 @@ import { actorTemplateFixtures } from "./fixtures.js";
 
 type TestAjv = {
   compile(schema: unknown): (value: unknown) => boolean;
+  addFormat(name: string, format: RegExp): TestAjv;
 };
 
 const Ajv = AjvModule.default as unknown as new (options: Record<string, unknown>) => TestAjv;
@@ -164,6 +172,63 @@ describe("Actor template contracts", () => {
     expect(roundTrip(ValidationIssueSchema, actorTemplateFixtures.validationIssue)).toBe(true);
   });
 
+  it("decodes strict discriminated validation reports", () => {
+    expect(roundTrip(ActorTemplateValidationReportSchema, actorTemplateFixtures.validValidationReport)).toBe(true);
+    expect(roundTrip(ActorTemplateValidationReportSchema, actorTemplateFixtures.invalidValidationReport)).toBe(true);
+
+    expect(decodeContract(ActorTemplateValidationReportSchema, {
+      valid: true,
+      issues: [actorTemplateFixtures.validationIssue],
+    }).ok).toBe(false);
+    expect(decodeContract(ActorTemplateValidationReportSchema, {
+      valid: false,
+      issues: [],
+    }).ok).toBe(false);
+    expect(decodeContract(ActorTemplateValidationReportSchema, {
+      ...actorTemplateFixtures.validValidationReport,
+      extra: true,
+    }).ok).toBe(false);
+    expect(decodeContract(ActorTemplateValidationFailedDetailsSchema, {
+      ...actorTemplateFixtures.validationFailedDetails,
+      extra: true,
+    }).ok).toBe(false);
+    expect(decodeContract(ValidationIssueSchema, {
+      code: "schema_invalid",
+      path: "/spec",
+      message: "raw Ajv message",
+      keyword: "type",
+      params: {},
+    }).ok).toBe(false);
+  });
+
+  it("decodes public validation details and command results", () => {
+    expect(roundTrip(ActorTemplateValidationFailedDetailsSchema, actorTemplateFixtures.validationFailedDetails)).toBe(true);
+    expect(roundTrip(ValidateActorTemplateCandidateResultSchema, actorTemplateFixtures.validateResult)).toBe(true);
+    expect(roundTrip(CreateActorTemplateResultSchema, { revision: actorTemplateFixtures.revisionView })).toBe(true);
+    expect(roundTrip(ReviseActorTemplateResultSchema, { revision: actorTemplateFixtures.revisionView })).toBe(true);
+  });
+
+  it("exposes only the ActorTemplate-specific stable issue vocabulary", () => {
+    expect(ACTOR_TEMPLATE_VALIDATION_ISSUE_CODES).toEqual([
+      "missing_required_component",
+      "duplicate_brick_ref",
+      "ref_not_found",
+      "brick_kind_mismatch",
+      "backend_config_invalid",
+      "tool_provider_invalid",
+      "backend_toolset_incompatible",
+      "workspace_root_not_found",
+      "workspace_path_escape",
+      "unsupported_schema_version",
+      "unknown_field",
+      "schema_invalid",
+    ]);
+    expect(decodeContract(ValidationIssueSchema, {
+      code: "ajv_error",
+      path: "/spec",
+    }).ok).toBe(false);
+  });
+
   it("decodes valid ValidateActorTemplateCandidate command", () => {
     expect(decodeContract(ValidateActorTemplateCandidateSchema, actorTemplateFixtures.validateCandidate).ok).toBe(true);
   });
@@ -176,6 +241,7 @@ describe("Actor template contracts", () => {
 
   it("compiles every public actor-template schema with the Ajv main export", () => {
     const ajv = new Ajv({ allErrors: true, strict: true });
+    ajv.addFormat("date-time", /.*/);
     const pairs = [
       [ExactBrickRefSchema, actorTemplateFixtures.exactBrickRef],
       [ResolvedBrickRefSchema, actorTemplateFixtures.resolvedBrickRef],
@@ -184,8 +250,19 @@ describe("Actor template contracts", () => {
       [RuntimeConfigBrickBodySchema, actorTemplateFixtures.runtimeConfigBrickBody],
       [ActorTemplateSpecSchema, actorTemplateFixtures.minimalSpec],
       [ValidationIssueSchema, actorTemplateFixtures.validationIssue],
+      [ActorTemplateValidationReportSchema, actorTemplateFixtures.validValidationReport],
+      [ActorTemplateValidationFailedDetailsSchema, actorTemplateFixtures.validationFailedDetails],
       [ValidateActorTemplateCandidateSchema, actorTemplateFixtures.validateCandidate],
+      [ValidateActorTemplateCandidateResultSchema, actorTemplateFixtures.validateResult],
       [CreateActorTemplateCommandSchema, actorTemplateFixtures.createCommand],
+      [CreateActorTemplateResultSchema, { revision: actorTemplateFixtures.revisionView }],
+      [ReviseActorTemplateCommandSchema, {
+        project_id: "project_00000000-0000-4000-8000-000000000000",
+        template_id: "tpl-coder",
+        base_revision: 3,
+        spec: actorTemplateFixtures.minimalSpec,
+      }],
+      [ReviseActorTemplateResultSchema, { revision: actorTemplateFixtures.revisionView }],
     ] as const;
     for (const [schema, value] of pairs) {
       expect(() => ajv.compile(schema)).not.toThrow();

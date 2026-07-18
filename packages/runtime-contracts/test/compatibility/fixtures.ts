@@ -7,6 +7,49 @@ const invocationId = `invocation_${UUID}`;
 const messageId = `message_${UUID}`;
 const contentHash = `sha256:${"a".repeat(64)}`;
 const packageRef = { package_id: packageId, content_hash: contentHash };
+const validationReport = {
+  valid: false,
+  issues: [
+    { code: "unknown_field", path: "/spec/backend/extra" },
+    { code: "schema_invalid", path: "/metadata/display_name" }
+  ]
+} as const;
+const actorTemplateRevisionView = {
+  template_uid: `actor_template_${UUID}`,
+  template_id: "tpl-compat",
+  project_id: projectId,
+  revision: 1,
+  revision_digest: contentHash,
+  config_digest: `sha256:${"b".repeat(64)}`,
+  metadata: {
+    display_name: "Compatibility Actor",
+    description: "Compatibility fixture for ActorTemplateSpec.",
+    labels: { role: "coder" }
+  },
+  spec: {
+    system_prompt: {
+      bricks: [{
+        ref: { id: "coder-core", revision: 3 },
+        resolved: { uid: `brickrev_${UUID}`, digest: contentHash }
+      }]
+    },
+    initial_prompt: { bricks: [] },
+    backend: {
+      ref: { id: "claude-code-pro", revision: 1 },
+      resolved: { uid: `brickrev_${"11111111-1111-4111-8111-111111111111"}`, digest: contentHash }
+    },
+    toolset: {
+      ref: { id: "coder-tools", revision: 2 },
+      resolved: { uid: `brickrev_${"22222222-2222-4222-8222-222222222222"}`, digest: contentHash }
+    },
+    runtime_config: {
+      ref: { id: "default-config", revision: 1 },
+      resolved: { uid: `brickrev_${"33333333-3333-4333-8333-333333333333"}`, digest: contentHash }
+    }
+  },
+  status: "active",
+  created_at: "2026-07-16T12:34:56.789Z"
+} as const;
 
 export const compatibilityFixtures = {
   error: {
@@ -98,6 +141,14 @@ export const compatibilityFixtures = {
       runtime_config: { ref: { id: "default-config", revision: 1 } },
     },
   },
+
+  actorTemplateValidationReport: validationReport,
+  actorTemplateValidationFailedDetails: { report: validationReport },
+  validateActorTemplateCandidateResult: {
+    report: { valid: true, issues: [] }
+  },
+  createActorTemplateResult: { revision: actorTemplateRevisionView },
+  reviseActorTemplateResult: { revision: actorTemplateRevisionView },
 
   actorConfigSnapshot: {
     head: {

@@ -30,5 +30,5 @@
 
 - [x] 5.1 Extend repository boundary verification so Runtime Contracts remain schema/value-only and Actor domain/application code cannot import infrastructure, ActorHost, Host Gateway implementation, Package routing, Run Engine, Graph, or concrete Backend process code.
 - [x] 5.2 Run focused ActorTemplate/Runtime Contracts tests and the repository build, typecheck, boundary, and full verification suites; resolve only failures attributable to this change.
-- [ ] 5.3 Perform independent acceptance against every `actor-template-construction` requirement, including proof that existing Package, Host, and ClaudeCodeAdapter behavior remains unchanged and that compiled snapshots preserve model selection without claiming current Host launchability.
+- [x] 5.3 Perform independent acceptance against every `actor-template-construction` requirement, including proof that existing Package, Host, and ClaudeCodeAdapter behavior remains unchanged and that compiled snapshots preserve model selection without claiming current Host launchability.
 - [ ] 5.4 Record implementation, acceptance, and any deferred-risk evidence in the construction records, then obtain module-level review when the stable implementation commit is ready.

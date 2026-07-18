@@ -1,11 +1,13 @@
 import type {
   ActorConfigSnapshot,
   ActorConfigSnapshotId,
+  ActorTemplateId,
+  ActorTemplateRevisionSummary,
   ActorTemplateRevisionView,
   ActorTemplateSummary,
   BackendAdapterId,
   BackendBrickBody,
-  ConfigDigest,
+  CanonicalTimestamp,
   DefinitionBrickRevision,
   ExactBrickRef,
   HumanReadableId,
@@ -91,6 +93,16 @@ export interface ProjectWorkspaceResolverPort {
   ): Promise<WorkspaceResolution>;
 }
 
+export interface ActorClockPort {
+  now(): CanonicalTimestamp;
+}
+
+export interface ActorIdentityProviderPort {
+  newTemplateUid(projectId: ProjectId, templateId: HumanReadableId): ActorTemplateId;
+
+  newSnapshotId(projectId: ProjectId): ActorConfigSnapshotId;
+}
+
 export type ActorTemplateCreateResult = "created" | "resource_id_conflict";
 
 export type ActorTemplateRevisionWriteResult =
@@ -105,6 +117,10 @@ export type ActorTemplateArchiveResult =
   | "base_revision_conflict";
 
 export interface ActorTemplateRepositoryPort {
+  listSummaries(
+    projectId: ProjectId,
+  ): Promise<readonly ActorTemplateSummary[] | undefined>;
+
   findSummary(
     projectId: ProjectId,
     templateId: HumanReadableId,
@@ -115,6 +131,11 @@ export interface ActorTemplateRepositoryPort {
     templateId: HumanReadableId,
     revision: PositiveRevision,
   ): Promise<ActorTemplateRevisionView | undefined>;
+
+  listRevisionSummaries(
+    projectId: ProjectId,
+    templateId: HumanReadableId,
+  ): Promise<readonly ActorTemplateRevisionSummary[] | undefined>;
 
   create(
     revision: ActorTemplateRevisionView,
@@ -137,11 +158,6 @@ export type ActorConfigSnapshotWriteResult = "created" | "snapshot_id_conflict";
 export interface ActorConfigSnapshotRepositoryPort {
   find(snapshotId: ActorConfigSnapshotId): Promise<ActorConfigSnapshot | undefined>;
 
-  findByConfigDigest(
-    projectId: ProjectId,
-    digest: ConfigDigest,
-  ): Promise<ActorConfigSnapshot | undefined>;
-
   save(snapshot: ActorConfigSnapshot): Promise<ActorConfigSnapshotWriteResult>;
 }
 
@@ -156,6 +172,8 @@ export interface ActorUnitOfWorkPort {
 }
 
 export interface ActorModulePorts {
+  clock: ActorClockPort;
+  identity: ActorIdentityProviderPort;
   definitionBricks: DefinitionBrickResolverPort;
   backendValidators: BackendAdapterValidatorRegistryPort;
   toolProviderValidators: ToolProviderValidatorRegistryPort;

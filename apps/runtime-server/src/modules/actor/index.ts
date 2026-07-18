@@ -1,5 +1,7 @@
 export type {
   ActorConfigSnapshotWriteResult,
+  ActorClockPort,
+  ActorIdentityProviderPort,
   ActorModulePorts,
   ActorResourceKind,
   ActorTemplateArchiveResult,
@@ -20,6 +22,14 @@ export type {
   ValidatorFinding,
   WorkspaceResolution,
 } from "./ports.js";
+
+export { ActorTemplateApplicationService } from "./application.js";
+export type {
+  ActorApplicationError,
+  ActorApplicationErrorCode,
+  ActorOperationResult,
+  ActorTemplateCompileCommand,
+} from "./application.js";
 
 export {
   bindDefinitionBrickRef,

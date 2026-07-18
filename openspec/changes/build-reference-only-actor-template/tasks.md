@@ -20,11 +20,11 @@
 
 ## 4. ActorTemplate Application Service
 
-- [ ] 4.1 Implement side-effect-free candidate validation and read/list/history operations against the defined ports.
-- [ ] 4.2 Implement atomic create with Project namespace uniqueness, authoritative validation, immutable revision 1 persistence, and no implicit upsert.
-- [ ] 4.3 Implement atomic revise with current `base_revision` enforcement, immutable history, next-revision assignment, and archived-Template rejection.
-- [ ] 4.4 Implement archive and internal snapshot compilation/persistence operations without creating Actors, Hosts, Runs, Packages, or backend sessions.
-- [ ] 4.5 Add deterministic in-memory test adapters and application-service tests for successful operations, conflicts, rollback/no-partial-write behavior, validation parity, and snapshot reuse transparency.
+- [x] 4.1 Implement side-effect-free candidate validation and read/list/history operations against the defined ports.
+- [x] 4.2 Implement atomic create with Project namespace uniqueness, authoritative validation, immutable revision 1 persistence, and no implicit upsert.
+- [x] 4.3 Implement atomic revise with current `base_revision` enforcement, immutable history, next-revision assignment, and archived-Template rejection.
+- [x] 4.4 Implement archive and internal snapshot compilation/persistence operations without creating Actors, Hosts, Runs, Packages, or backend sessions.
+- [x] 4.5 Add deterministic in-memory test adapters and application-service tests for successful operations, conflicts, rollback/no-partial-write behavior, validation parity, and snapshot reuse transparency.
 
 ## 5. Boundaries and Acceptance
 

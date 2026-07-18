@@ -82,4 +82,59 @@ export const compatibilityFixtures = {
       actor_id: actorId,
     },
   },
+  actorTemplateSpec: {
+    schema_version: "1.0.0",
+    kind: "actor_template_spec",
+    metadata: {
+      display_name: "Compatibility Actor",
+      description: "Compatibility fixture for ActorTemplateSpec.",
+      labels: { role: "coder" },
+    },
+    spec: {
+      system_prompt: { bricks: [{ ref: { id: "coder-core", revision: 3 } }] },
+      initial_prompt: { bricks: [] },
+      backend: { ref: { id: "claude-code-pro", revision: 1 } },
+      toolset: { ref: { id: "coder-tools", revision: 2 } },
+      runtime_config: { ref: { id: "default-config", revision: 1 } },
+    },
+  },
+
+  actorConfigSnapshot: {
+    head: {
+      snapshot_id: `actor_config_${UUID}`,
+      project_id: projectId,
+      source_template: {
+        template_uid: `actor_template_${UUID}`,
+        human_readable_id: "tpl-compat",
+        revision: 1,
+        revision_digest: contentHash,
+      },
+      config_digest: `sha256:${"b".repeat(64)}`,
+      created_at: "2026-07-16T12:34:56.789Z",
+    },
+    source_bricks: [
+      {
+        slot: "sys_prompt",
+        order: 0,
+        revision_uid: `brickrev_${UUID}`,
+        digest: contentHash,
+      },
+      {
+        slot: "backend",
+        revision_uid: `brickrev_${"11111111-1111-4111-8111-111111111111"}`,
+        digest: contentHash,
+      },
+    ],
+    resolved: {
+      system_prompts: [{ text: "Compatibility system prompt." }],
+      initial_prompts: [],
+      backend: {
+        adapter_id: "claude.code",
+        model_id: "compat-model",
+        config: {},
+      },
+      tool_providers: [],
+      working_directory: "/compat/work",
+    },
+  },
 } as const;

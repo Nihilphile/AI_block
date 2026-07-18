@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  ActorConfigSnapshotSchema,
   ActorLaunchSpecSchema,
+  ActorTemplateSpecSchema,
   ContractErrorEnvelopeSchema,
   DeliverySchema,
   HostToServerMessageSchema,
@@ -24,6 +26,8 @@ const sourceSchemas = {
   ActorLaunchSpecSchema,
   ServerToHostMessageSchema,
   HostToServerMessageSchema,
+  ActorTemplateSpecSchema,
+  ActorConfigSnapshotSchema,
 } as const;
 
 function readSerializedFixtures(): SerializedCompatibilityFixture[] {
@@ -34,7 +38,7 @@ describe("B.4 compatibility fixtures", () => {
   it("decodes the shared serialized fixtures through the source compatibility entrypoint", () => {
     const fixtures = readSerializedFixtures();
 
-    expect(fixtures).toHaveLength(6);
+    expect(fixtures).toHaveLength(8);
     for (const fixture of fixtures) {
       const schema = sourceSchemas[fixture.schema as keyof typeof sourceSchemas];
       expect(schema, fixture.name).toBeDefined();
@@ -54,6 +58,8 @@ describe("B.4 compatibility fixtures", () => {
       ["ActorLaunchSpec", ActorLaunchSpecSchema, compatibilityFixtures.launchSpec],
       ["ServerToHostMessage", ServerToHostMessageSchema, compatibilityFixtures.serverMessage],
       ["HostToServerMessage", HostToServerMessageSchema, compatibilityFixtures.hostMessage],
+      ["ActorTemplateSpec", ActorTemplateSpecSchema, compatibilityFixtures.actorTemplateSpec],
+      ["ActorConfigSnapshot", ActorConfigSnapshotSchema, compatibilityFixtures.actorConfigSnapshot],
     ] as const;
 
     for (const [name, schema, value] of cases) {

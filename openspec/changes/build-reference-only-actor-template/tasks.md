@@ -1,9 +1,9 @@
 ## 1. Runtime Contracts
 
-- [ ] 1.1 Add additive identity and exact-reference schemas for Project-scoped human-readable resource IDs, Definition Brick revision UIDs, positive revisions, digests, and ActorTemplate revision references without changing existing ID schemas.
-- [ ] 1.2 Add strict v1 Definition Brick Body and registered-revision schemas for BrickSysPrompt, BrickPrompt, BackendBrick, ToolsetBrick, and RuntimeConfigBrick, including canonical validation constraints and safe secret/path boundaries.
-- [ ] 1.3 Add strict v1 ActorTemplateSpec, metadata, resolved reference, Template revision/view, validation report/issue, command/result, and ActorConfigSnapshot schemas with root-only public exports; snapshot Backend content must retain first-class `model_id` separately from opaque adapter `config`.
-- [ ] 1.4 Add contract tests and compatibility fixtures proving valid/invalid cardinality, unknown-field rejection, exact refs, Body-kind rules, deterministic public serialization, and unchanged Package/Host contract fixtures.
+- [x] 1.1 Add additive identity and exact-reference schemas for Project-scoped human-readable resource IDs, Definition Brick revision UIDs, positive revisions, digests, and ActorTemplate revision references without changing existing ID schemas.
+- [x] 1.2 Add strict v1 Definition Brick Body and registered-revision schemas for BrickSysPrompt, BrickPrompt, BackendBrick, ToolsetBrick, and RuntimeConfigBrick, including canonical validation constraints and safe secret/path boundaries.
+- [x] 1.3 Add strict v1 ActorTemplateSpec, metadata, resolved reference, Template revision/view, validation report/issue, command/result, and ActorConfigSnapshot schemas with root-only public exports; snapshot Backend content must retain first-class `model_id` separately from opaque adapter `config`.
+- [x] 1.4 Add contract tests and compatibility fixtures proving valid/invalid cardinality, unknown-field rejection, exact refs, Body-kind rules, deterministic public serialization, and unchanged Package/Host contract fixtures.
 
 ## 2. Actor Module Foundation
 

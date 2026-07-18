@@ -38,3 +38,12 @@ export const BrickSysPromptSchema = Type.Object(
   { additionalProperties: false },
 );
 export type BrickSysPrompt = Type.Static<typeof BrickSysPromptSchema>;
+
+export const BrickSysPromptBodySchema = Type.Object(
+  { text: Type.String({ minLength: 1 }) },
+  { additionalProperties: false },
+);
+export type BrickSysPromptBody = Type.Static<typeof BrickSysPromptBodySchema>;
+
+export const BrickPromptBodySchema = BrickPromptSchema;
+export type BrickPromptBody = BrickPrompt;

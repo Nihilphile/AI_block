@@ -46,6 +46,30 @@ export type ClientPrincipalId = Type.Static<typeof ClientPrincipalIdSchema>;
 export const GraphIdSchema = resourceIdSchema("graph_");
 export type GraphId = Type.Static<typeof GraphIdSchema>;
 
+export const DefinitionBrickRevisionIdSchema = resourceIdSchema("brickrev_");
+export type DefinitionBrickRevisionId = Type.Static<typeof DefinitionBrickRevisionIdSchema>;
+
+export const PositiveRevisionSchema = Type.Integer({ minimum: 1 });
+export type PositiveRevision = Type.Static<typeof PositiveRevisionSchema>;
+
+export const HumanReadableIdSchema = Type.String({
+  pattern: "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+  maxLength: 64,
+});
+export type HumanReadableId = Type.Static<typeof HumanReadableIdSchema>;
+
+export const BrickKindSchema = Type.Union([
+  Type.Literal("sys_prompt"),
+  Type.Literal("prompt"),
+  Type.Literal("backend"),
+  Type.Literal("toolset"),
+  Type.Literal("runtime_config"),
+]);
+export type BrickKind = Type.Static<typeof BrickKindSchema>;
+
+export const DefinitionBrickDigestSchema = Type.String({ pattern: "^sha256:[0-9a-f]{64}$" });
+export type DefinitionBrickDigest = Type.Static<typeof DefinitionBrickDigestSchema>;
+
 export const CanonicalTimestampSchema = Type.String({
   format: "date-time",
   pattern: "^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{3}Z$",

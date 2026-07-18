@@ -13,6 +13,11 @@ export {
   HostMessageIdSchema,
   ClientPrincipalIdSchema,
   GraphIdSchema,
+  DefinitionBrickRevisionIdSchema,
+  PositiveRevisionSchema,
+  HumanReadableIdSchema,
+  BrickKindSchema,
+  DefinitionBrickDigestSchema,
   CanonicalTimestampSchema,
 } from "./identity/identity.js";
 export type {
@@ -29,6 +34,11 @@ export type {
   HostMessageId,
   ClientPrincipalId,
   GraphId,
+  DefinitionBrickRevisionId,
+  PositiveRevision,
+  HumanReadableId,
+  BrickKind,
+  DefinitionBrickDigest,
   CanonicalTimestamp,
 } from "./identity/identity.js";
 export {
@@ -43,12 +53,16 @@ export type { ContractErrorEnvelope } from "./error/error.js";
 export {
   BrickPromptSchema,
   BrickSysPromptSchema,
+  BrickPromptBodySchema,
+  BrickSysPromptBodySchema,
   CompositeBrickPromptSchema,
   TextBrickPromptSchema,
 } from "./brick/index.js";
 export type {
   BrickPrompt,
   BrickSysPrompt,
+  BrickPromptBody,
+  BrickSysPromptBody,
   CompositeBrickPrompt,
   TextBrickPrompt,
 } from "./brick/index.js";
@@ -118,6 +132,52 @@ export type {
   ToolProviderId,
   ToolProviderLaunchConfig,
 } from "./actor/index.js";
+export {
+  ACTOR_TEMPLATE_SPEC_SCHEMA_VERSION,
+  ActorTemplateSpecSchemaVersionSchema,
+  ExactBrickRefSchema,
+  ResolvedBrickRefSchema,
+  BackendBrickBodySchema,
+  ToolProviderBrickConfigSchema,
+  ToolsetBrickBodySchema,
+  RuntimeConfigBrickBodySchema,
+  DefinitionBrickRevisionSchema,
+  ActorTemplateLabelsSchema,
+  ActorTemplateSpecSchema,
+  ValidationIssueCodeSchema,
+  ValidationIssueSchema,
+  TemplateRevisionDigestSchema,
+  ConfigDigestSchema,
+  ActorTemplateRevisionViewSchema,
+  ActorTemplateSummarySchema,
+  ActorTemplateRevisionSummarySchema,
+  ActorConfigSnapshotSchema,
+  ValidateActorTemplateCandidateSchema,
+  CreateActorTemplateCommandSchema,
+  ReviseActorTemplateCommandSchema,
+} from "./actor-template/index.js";
+export type {
+  ActorTemplateSpecSchemaVersion,
+  ExactBrickRef,
+  ResolvedBrickRef,
+  BackendBrickBody,
+  ToolProviderBrickConfig,
+  ToolsetBrickBody,
+  RuntimeConfigBrickBody,
+  DefinitionBrickRevision,
+  ActorTemplateSpec,
+  ValidationIssueCode,
+  ValidationIssue,
+  TemplateRevisionDigest,
+  ConfigDigest,
+  ActorTemplateRevisionView,
+  ActorTemplateSummary,
+  ActorTemplateRevisionSummary,
+  ActorConfigSnapshot,
+  ValidateActorTemplateCandidate,
+  CreateActorTemplateCommand,
+  ReviseActorTemplateCommand,
+} from "./actor-template/index.js";
 export {
   AckPayloadSchema,
   CompletionRequestPayloadSchema,

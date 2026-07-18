@@ -5,11 +5,13 @@
     mkdtempSync,
     readFileSync,
     readdirSync,
+    realpathSync,
     rmSync,
     statSync,
     writeFileSync
   } from "node:fs";
   import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+  import * as ts from "typescript/unstable/ast";
 
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   const pnpmEntry = process.env.npm_execpath ?? "";
@@ -291,6 +293,18 @@
     { kind: "app", name: "@ai-block/runtime-cli", dir: join(root, "apps", "runtime-cli") }
   ];
   const units = [...apps, contracts];
+  const productionImportPolicies = [
+    {
+      name: "Actor Module",
+      root: resolve(apps[0].dir, "src", "modules", "actor"),
+      allowedPackages: new Set(["@ai-block/runtime-contracts", "canonicalize", "node:crypto"])
+    },
+    {
+      name: "Runtime Contracts",
+      root: resolve(contracts.dir, "src"),
+      allowedPackages: new Set(["typebox", "ajv", "ajv-formats", "canonicalize", "node:crypto"])
+    }
+  ];
   const failures = [];
 
   function fail(message) {
@@ -328,6 +342,179 @@
     } catch (error) {
       fail(`cannot read text ${path}: ${error.message}`);
       return "";
+    }
+  }
+
+  function sourceRelativePath(rootPath, sourcePath) {
+    return relative(rootPath, sourcePath).replaceAll("\\", "/");
+  }
+
+  function isContainedPath(rootPath, targetPath) {
+    const candidate = sourceRelativePath(rootPath, targetPath);
+    return candidate === "" || (candidate !== ".." && !candidate.startsWith("../") && !isAbsolute(candidate));
+  }
+
+  function extractProductionImportSpecifiers(sourceText) {
+    const scanner = ts.createScanner(true, ts.LanguageVariant.Standard, sourceText);
+    const tokens = [];
+    for (let kind = scanner.scan(); kind !== ts.SyntaxKind.EndOfFile; kind = scanner.scan()) {
+      tokens.push({ kind, text: scanner.getTokenText(), value: scanner.getTokenValue() });
+    }
+    const specifiers = [];
+    const addStringLiteralSpecifier = (token) => {
+      if (token?.kind === ts.SyntaxKind.StringLiteral) specifiers.push(token.value);
+    };
+    const isStringLiteral = (token) => token?.kind === ts.SyntaxKind.StringLiteral;
+    const isOpenParen = (token) => token?.kind === ts.SyntaxKind.OpenParenToken;
+    const isCloseParen = (token) => token?.kind === ts.SyntaxKind.CloseParenToken;
+    const isRequireToken = (token) => token?.kind === ts.SyntaxKind.RequireKeyword || (token?.kind === ts.SyntaxKind.Identifier && token.text === "require");
+
+    for (let index = 0; index < tokens.length; index += 1) {
+      const token = tokens[index];
+      const next = tokens[index + 1];
+      if (token.kind === ts.SyntaxKind.FromKeyword && isStringLiteral(next)) {
+        addStringLiteralSpecifier(next);
+        continue;
+      }
+      if (token.kind === ts.SyntaxKind.ImportKeyword) {
+        if (isStringLiteral(next)) {
+          addStringLiteralSpecifier(next);
+          continue;
+        }
+        if (isOpenParen(next) && isStringLiteral(tokens[index + 2]) && isCloseParen(tokens[index + 3])) {
+          addStringLiteralSpecifier(tokens[index + 2]);
+          continue;
+        }
+        if (tokens[index + 2]?.kind === ts.SyntaxKind.EqualsToken && isStringLiteral(tokens[index + 3])) {
+          addStringLiteralSpecifier(tokens[index + 3]);
+        }
+        continue;
+      }
+      if (isRequireToken(token) && isOpenParen(next) && isStringLiteral(tokens[index + 2]) && isCloseParen(tokens[index + 3])) {
+        addStringLiteralSpecifier(tokens[index + 2]);
+      }
+    }
+    return specifiers;
+  }
+
+  function resolveRelativeProductionImport(sourcePath, specifier) {
+    const requestedPath = resolve(dirname(sourcePath), specifier);
+    const extension = requestedPath.slice(requestedPath.lastIndexOf("."));
+    const candidates = extension === ".js" || extension === ".jsx"
+      ? [requestedPath.slice(0, -extension.length) + ".ts", requestedPath.slice(0, -extension.length) + ".tsx", requestedPath.slice(0, -extension.length) + ".d.ts", requestedPath]
+      : [requestedPath, requestedPath + ".ts", requestedPath + ".tsx", requestedPath + ".d.ts", join(requestedPath, "index.ts"), join(requestedPath, "index.tsx"), join(requestedPath, "index.d.ts")];
+    for (const candidate of candidates) {
+      if (existsSync(candidate) && statSync(candidate).isFile()) return realpathSync(candidate);
+    }
+    return undefined;
+  }
+
+  function productionImportViolation(policy, sourcePath, specifier) {
+    if (isAbsolute(specifier)) return "absolute_import";
+    if (specifier.startsWith(".")) {
+      const resolvedPath = resolveRelativeProductionImport(sourcePath, specifier);
+      if (resolvedPath === undefined) return "unresolved_relative_import";
+      return isContainedPath(policy.root, resolve(resolvedPath)) ? undefined : "relative_escape";
+    }
+    return policy.allowedPackages.has(specifier) ? undefined : "forbidden_external_import";
+  }
+
+  function productionImportViolations(policy, sourcePath, sourceText) {
+    return extractProductionImportSpecifiers(sourceText, sourcePath)
+      .map((specifier) => ({
+        specifier,
+        category: productionImportViolation(policy, sourcePath, specifier)
+      }))
+      .filter((violation) => violation.category !== undefined);
+  }
+
+  function productionSourceFiles(sourceRoot) {
+    const files = [];
+    const pending = [sourceRoot];
+    while (pending.length > 0) {
+      const current = pending.pop();
+      for (const entry of readdirSync(current, { withFileTypes: true })) {
+        const child = join(current, entry.name);
+        if (entry.isDirectory()) pending.push(child);
+        else if (entry.isFile() && child.endsWith(".ts")) files.push(child);
+      }
+    }
+    return files.sort();
+  }
+
+  function runProductionImportBoundaryRegressionChecks() {
+    const actorPolicy = productionImportPolicies[0];
+    const contractsPolicy = productionImportPolicies[1];
+    const actorSource = join(actorPolicy.root, "application.ts");
+    const contractsSource = join(contractsPolicy.root, "index.ts");
+    const assertCategories = (label, policy, sourcePath, sourceText, expected) => {
+      const actual = productionImportViolations(policy, sourcePath, sourceText)
+        .map((violation) => violation.category);
+      check(same(actual, expected), `${label}: import boundary self-test mismatch`);
+    };
+
+    assertCategories(
+      "allowed type-only/root/local imports",
+      actorPolicy,
+      actorSource,
+      'import type { ActorModulePorts } from "./ports.js"; export type { ActorModulePorts } from "./ports.js"; import type { ProjectId } from "@ai-block/runtime-contracts";',
+      []
+    );
+    assertCategories(
+      "Actor forbidden imports",
+      actorPolicy,
+      actorSource,
+      'import "node:fs"; import "@ai-block/actor-host"; export * from "../host-gateway/ports.js";',
+      ["forbidden_external_import", "forbidden_external_import", "relative_escape"]
+    );
+    assertCategories(
+      "Actor dynamic import and require",
+      actorPolicy,
+      actorSource,
+      'const fs = import("node:fs"); const host = require("@ai-block/actor-host");',
+      ["forbidden_external_import", "forbidden_external_import"]
+    );
+    assertCategories(
+      "Actor import-equals",
+      actorPolicy,
+      actorSource,
+      'import contracts = require("@ai-block/runtime-contracts"); import forbidden = require("@ai-block/runtime-server");',
+      ["forbidden_external_import"]
+    );
+    assertCategories(
+      "Contracts application import",
+      contractsPolicy,
+      contractsSource,
+      'import "@ai-block/runtime-server";',
+      ["forbidden_external_import"]
+    );
+    assertCategories(
+      "Contracts relative application escape",
+      contractsPolicy,
+      contractsSource,
+      'import "../../../apps/runtime-server/src/main.js";',
+      ["relative_escape"]
+    );
+    assertCategories(
+      "allowed Contracts value imports",
+      contractsPolicy,
+      contractsSource,
+      'import Type from "typebox"; import { ProjectIdSchema } from "./identity/identity.js"; import canonicalize from "canonicalize"; import { createHash } from "node:crypto";',
+      []
+    );
+  }
+
+  function checkProductionImportBoundaries() {
+    for (const policy of productionImportPolicies) {
+      for (const sourcePath of productionSourceFiles(policy.root)) {
+        const sourceRelative = sourceRelativePath(policy.root, sourcePath);
+        for (const violation of productionImportViolations(policy, sourcePath, readText(sourcePath))) {
+          check(
+            false,
+            `${policy.name} ${sourceRelative}: ${violation.specifier}: ${violation.category}`
+          );
+        }
+      }
     }
   }
 
@@ -860,6 +1047,7 @@ export type RuntimeContractsConsumerFixture = ActorLaunchSpec | HostToServerMess
   }
 
   runProbeMatcherRegressionChecks();
+  runProductionImportBoundaryRegressionChecks();
   checkToolchain();
   if (gitCleanMode) {
     checkGitClean();
@@ -868,6 +1056,7 @@ export type RuntimeContractsConsumerFixture = ActorLaunchSpec | HostToServerMess
     checkDirectories();
     checkTsGraph();
     checkSources();
+    checkProductionImportBoundaries();
     checkDocumentation();
     checkArtifacts();
     runBoundaryProbes();

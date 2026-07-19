@@ -12,6 +12,7 @@ import {
   compileActorTemplate,
   createActorTemplateValidationError,
   computeConfigurationDigest,
+  computeDefinitionBrickDigest,
   computeTemplateRevisionDigest,
   resolveAndValidateActorTemplateCandidate,
   validateActorTemplateCandidate,
@@ -23,7 +24,6 @@ import type { WorkspaceResolution } from "../../../src/modules/actor/index.js";
 const UUID = "00000000-0000-4000-8000-000000000000";
 const projectId = `project_${UUID}` as ProjectId;
 const templateUid = `actor_template_${UUID}`;
-const digest = `sha256:${"a".repeat(64)}`;
 
 const refs = {
   sys: { id: "system", revision: 1 } as ExactBrickRef,
@@ -46,7 +46,7 @@ function revision(
     kind,
     revision: ref.revision,
     body,
-    digest,
+    digest: overrides.digest ?? computeDefinitionBrickDigest(kind, body),
     created_at: "2026-07-19T01:02:03.000Z",
     ...overrides,
   };

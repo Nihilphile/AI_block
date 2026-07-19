@@ -31,7 +31,9 @@ import { compileActorTemplate, type ActorCompilationError } from "./compiler.js"
 import {
   createActorTemplateValidationError,
   resolveAndValidateActorTemplateCandidate,
+  type ActorTemplateValidationOptions,
   type ActorTemplateValidationOutcome,
+  type PersistedDefinitionBrickProvenance,
   type ResolvedActorTemplateCandidate,
   type ResolvedActorTemplateBrick,
 } from "./validation.js";
@@ -52,7 +54,7 @@ export type ActorApplicationErrorCode =
   | "actor_template.base_revision_conflict"
   | "actor_template.validation_failed"
   | "actor_template.compilation_failed"
-  | "actor_template.internal_error";
+  | "actor_template.operation_failed";
 
 export type ActorApplicationError = Readonly<{
   schema_version: typeof CONTRACT_SCHEMA_VERSION;
@@ -61,6 +63,14 @@ export type ActorApplicationError = Readonly<{
   message: string;
   retryable: false;
   details?: ActorTemplateValidationFailedDetails;
+}>;
+
+type ActorOperationFailureError = Readonly<{
+  schema_version: typeof CONTRACT_SCHEMA_VERSION;
+  code: "actor_template.operation_failed";
+  category: "internal";
+  message: "ActorTemplate operation failed.";
+  retryable: false;
 }>;
 
 export type ActorOperationResult<T> =
@@ -74,7 +84,7 @@ class ActorOperationAbort extends Error {
 }
 
 function operationError(
-  code: Exclude<ActorApplicationErrorCode, "actor_template.validation_failed" | "actor_template.compilation_failed">,
+  code: Exclude<ActorApplicationErrorCode, "actor_template.validation_failed" | "actor_template.compilation_failed" | "actor_template.operation_failed">,
   category: ActorApplicationError["category"],
   message: string,
 ): ActorApplicationError {
@@ -87,12 +97,14 @@ function operationError(
   };
 }
 
-function internalError(): ActorApplicationError {
-  return operationError(
-    "actor_template.internal_error",
-    "internal",
-    "ActorTemplate operation failed.",
-  );
+function operationFailure(): ActorOperationFailureError {
+  return {
+    schema_version: CONTRACT_SCHEMA_VERSION,
+    code: "actor_template.operation_failed",
+    category: "internal",
+    message: "ActorTemplate operation failed.",
+    retryable: false,
+  };
 }
 
 function projectNotFound(): ActorApplicationError {
@@ -133,15 +145,6 @@ function compilationError(error: ActorCompilationError): ActorApplicationError {
 
 function abort(error: ActorApplicationError): never {
   throw new ActorOperationAbort(error);
-}
-
-function safeValidationOutcome(): ActorTemplateValidationOutcome {
-  return {
-    report: {
-      valid: false,
-      issues: [{ code: "schema_invalid", path: "/" }] as never,
-    },
-  };
 }
 
 function asValidationCandidate(
@@ -187,6 +190,37 @@ function validationCandidateFromRevision(view: ActorTemplateRevisionView): Valid
     base_revision: view.revision,
     spec: authoredSpecFromRevision(view),
   };
+}
+
+function persistedProvenanceFromRevision(
+  view: ActorTemplateRevisionView,
+): ReadonlyMap<string, PersistedDefinitionBrickProvenance> {
+  const provenance = new Map<string, PersistedDefinitionBrickProvenance>();
+  const add = (
+    path: string,
+    entry: ActorTemplateRevisionView["spec"]["backend"],
+    kind: PersistedDefinitionBrickProvenance["kind"],
+  ): void => {
+    provenance.set(path, {
+      project_id: view.project_id,
+      brick_id: entry.ref.id,
+      revision: entry.ref.revision,
+      kind,
+      revision_uid: entry.resolved.uid,
+      digest: entry.resolved.digest,
+    });
+  };
+  view.spec.system_prompt.bricks.forEach((entry, index) => add(`/system_prompt/bricks/${index}/ref`, entry, "sys_prompt"));
+  view.spec.initial_prompt.bricks.forEach((entry, index) => add(`/initial_prompt/bricks/${index}/ref`, entry, "prompt"));
+  add("/backend/ref", view.spec.backend, "backend");
+  add("/toolset/ref", view.spec.toolset, "toolset");
+  add("/runtime_config/ref", view.spec.runtime_config, "runtime_config");
+  return provenance;
+}
+
+function templateRevisionDigestMatches(view: ActorTemplateRevisionView): boolean {
+  const authored = authoredSpecFromRevision(view);
+  return computeTemplateRevisionDigest(authored.metadata, authored.spec) === view.revision_digest;
 }
 
 function resolvedEntry(entry: ResolvedActorTemplateBrick): ActorTemplateRevisionView["spec"]["backend"] {
@@ -282,6 +316,7 @@ export class ActorTemplateApplicationService {
 
   public async validate(input: unknown): Promise<ValidateActorTemplateCandidateResult> {
     const outcome = await this.authoritativeValidation(input);
+    if ("code" in outcome) return { error: outcome };
     return { report: outcome.report };
   }
 
@@ -325,6 +360,7 @@ export class ActorTemplateApplicationService {
     command: CreateActorTemplateCommand,
   ): Promise<ActorOperationResult<CreateActorTemplateResult>> {
     const outcome = await this.authoritativeValidation(asValidationCandidate(command));
+    if ("code" in outcome) return { ok: false, error: outcome };
     if (!outcome.report.valid || outcome.resolved === undefined) {
       return { ok: false, error: validationError(outcome) };
     }
@@ -345,10 +381,10 @@ export class ActorTemplateApplicationService {
         1 as PositiveRevision,
         this.ports.clock.now(),
       );
-      if (revision === undefined) abort(internalError());
+      if (revision === undefined) abort(operationFailure());
       const result = await uow.templates.create(revision);
       if (result === "resource_id_conflict") abort(resourceIdConflict());
-      if (result !== "created") abort(internalError());
+      if (result !== "created") abort(operationFailure());
       return { revision };
     });
   }
@@ -357,6 +393,7 @@ export class ActorTemplateApplicationService {
     command: ReviseActorTemplateCommand,
   ): Promise<ActorOperationResult<ReviseActorTemplateResult>> {
     const outcome = await this.authoritativeValidation(asValidationCandidate(command));
+    if ("code" in outcome) return { ok: false, error: outcome };
     if (!outcome.report.valid || outcome.resolved === undefined) {
       return { ok: false, error: validationError(outcome) };
     }
@@ -375,12 +412,12 @@ export class ActorTemplateApplicationService {
         nextRevision,
         this.ports.clock.now(),
       );
-      if (revision === undefined) abort(internalError());
+      if (revision === undefined) abort(operationFailure());
       const result = await uow.templates.appendRevision(revision, command.base_revision);
       if (result === "not_found") abort(templateNotFound());
       if (result === "archived") abort(templateArchived());
       if (result === "base_revision_conflict") abort(baseRevisionConflict());
-      if (result !== "appended") abort(internalError());
+      if (result !== "appended") abort(operationFailure());
       return { revision };
     });
   }
@@ -399,9 +436,9 @@ export class ActorTemplateApplicationService {
       const result = await uow.templates.archive(projectId, templateId, expectedRevision);
       if (result === "not_found") abort(templateNotFound());
       if (result === "base_revision_conflict") abort(baseRevisionConflict());
-      if (result !== "archived") abort(internalError());
+      if (result !== "archived") abort(operationFailure());
       const archived = await uow.templates.findSummary(projectId, templateId);
-      if (archived === undefined) abort(internalError());
+      if (archived === undefined) abort(operationFailure());
       return archived;
     });
   }
@@ -412,7 +449,12 @@ export class ActorTemplateApplicationService {
     return this.writeInTransaction(async (uow) => {
       const view = await uow.templates.findRevision(command.project_id, command.template_id, command.revision);
       if (view === undefined) abort(templateNotFound());
-      const outcome = await this.authoritativeValidation(validationCandidateFromRevision(view));
+      if (!templateRevisionDigestMatches(view)) abort(operationFailure());
+      const outcome = await this.authoritativeValidation(
+        validationCandidateFromRevision(view),
+        { persistedProvenance: persistedProvenanceFromRevision(view) },
+      );
+      if ("code" in outcome) abort(outcome);
       if (!outcome.report.valid || outcome.resolved === undefined) abort(validationError(outcome));
 
       const compiled = compileActorTemplate({
@@ -428,16 +470,19 @@ export class ActorTemplateApplicationService {
       });
       if (!compiled.ok) abort(compilationError(compiled.error));
       const saveResult = await uow.snapshots.save(compiled.snapshot);
-      if (saveResult !== "created") abort(internalError());
+      if (saveResult !== "created") abort(operationFailure());
       return compiled.snapshot;
     });
   }
 
-  private async authoritativeValidation(input: unknown): Promise<ActorTemplateValidationOutcome> {
+  private async authoritativeValidation(
+    input: unknown,
+    options: ActorTemplateValidationOptions = {},
+  ): Promise<ActorTemplateValidationOutcome | ActorOperationFailureError> {
     try {
-      return await resolveAndValidateActorTemplateCandidate(input, this.ports);
+      return await resolveAndValidateActorTemplateCandidate(input, this.ports, options);
     } catch {
-      return safeValidationOutcome();
+      return operationFailure();
     }
   }
 
@@ -461,7 +506,7 @@ export class ActorTemplateApplicationService {
       return { ok: true, value };
     } catch (error) {
       if (error instanceof ActorOperationAbort) return { ok: false, error: error.error };
-      return { ok: false, error: internalError() };
+      return { ok: false, error: operationFailure() };
     }
   }
 }

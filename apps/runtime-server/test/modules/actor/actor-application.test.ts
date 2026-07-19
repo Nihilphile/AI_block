@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type {
   ActorTemplateSpec,
   BackendBrickBody,
@@ -9,6 +9,7 @@ import type {
 } from "@ai-block/runtime-contracts";
 import {
   ActorTemplateApplicationService,
+  computeDefinitionBrickDigest,
   type ActorTemplateCompileCommand,
 } from "../../../src/modules/actor/index.js";
 import { createInMemoryActorAdapters } from "./in-memory-adapters.js";
@@ -24,7 +25,6 @@ const templateUid3 = `actor_template_${UUID3}`;
 const snapshotId = `actor_config_${UUID}`;
 const snapshotId2 = `actor_config_${UUID2}`;
 const snapshotId3 = `actor_config_${UUID3}`;
-const digest = `sha256:${"a".repeat(64)}`;
 
 const refs = {
   sys: { id: "system", revision: 1 } as ExactBrickRef,
@@ -69,7 +69,7 @@ function revision(
     kind,
     revision: ref.revision,
     body,
-    digest,
+    digest: computeDefinitionBrickDigest(kind, body),
     created_at: "2026-07-19T01:02:03.000Z",
   };
 }
@@ -115,6 +115,8 @@ describe("ActorTemplate application service", () => {
 
     const validated = await service.validate(invalid);
 
+    expect("report" in validated).toBe(true);
+    if (!("report" in validated)) return;
     expect(validated.report.valid).toBe(false);
     expect(adapters.calls.uowRuns).toBe(0);
     expect(adapters.calls.namespaceReservations).toBe(0);
@@ -197,6 +199,8 @@ describe("ActorTemplate application service", () => {
     const invalidCommand = { ...createCommand(), spec: { ...spec, extra: true } };
     const invalidCandidate = { ...invalidCommand, operation: "create" as const };
     const report = await service.validate(invalidCandidate);
+    expect("report" in report).toBe(true);
+    if (!("report" in report)) return;
     const create = await service.create(invalidCommand);
     expect(create).toMatchObject({
       ok: false,
@@ -207,18 +211,161 @@ describe("ActorTemplate application service", () => {
     expect((await service.read(projectId, "missing"))).toMatchObject({ ok: false, error: { code: "actor_template.not_found" } });
   });
 
+  it("returns an operation failure for resolver exceptions without entering persistence", async () => {
+    const { adapters, service } = serviceWith();
+    adapters.ports.definitionBricks = {
+      resolveExact: vi.fn(async () => {
+        throw new Error("resolver unavailable");
+      }),
+    };
+
+    const validated = await service.validate({ ...createCommand(), operation: "create" });
+    expect(validated).toEqual({
+      error: {
+        schema_version: "1.0.0",
+        code: "actor_template.operation_failed",
+        category: "internal",
+        message: "ActorTemplate operation failed.",
+        retryable: false,
+      },
+    });
+    const created = await service.create(createCommand());
+    expect(created).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
+    expect(adapters.calls.uowRuns).toBe(0);
+    expect(adapters.calls.namespaceReservations).toBe(0);
+    expect(adapters.calls.templateWrites).toBe(0);
+
+    const compiledAdapters = serviceWith();
+    await compiledAdapters.service.create(createCommand());
+    compiledAdapters.adapters.ports.definitionBricks = adapters.ports.definitionBricks;
+    const compiled = await compiledAdapters.service.compileAndPersist({
+      project_id: projectId,
+      template_id: "coder",
+      revision: 1,
+    });
+    expect(compiled).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
+    expect(compiledAdapters.adapters.listStoredSnapshots()).toEqual([]);
+  });
+
+  it("does not classify validator or workspace port exceptions as validation findings", async () => {
+    const validatorFailure = serviceWith();
+    validatorFailure.adapters.ports.backendValidators = {
+      find: vi.fn(() => {
+        throw new Error("validator unavailable");
+      }),
+    };
+    expect(await validatorFailure.service.create(createCommand())).toMatchObject({
+      ok: false,
+      error: { code: "actor_template.operation_failed" },
+    });
+    expect(validatorFailure.adapters.calls.uowRuns).toBe(0);
+
+    const workspaceFailure = serviceWith();
+    workspaceFailure.adapters.ports.workspace = {
+      resolveWorkingDirectory: vi.fn(async () => {
+        throw new Error("workspace unavailable");
+      }),
+    };
+    expect(await workspaceFailure.service.create(createCommand())).toMatchObject({
+      ok: false,
+      error: { code: "actor_template.operation_failed" },
+    });
+    expect(workspaceFailure.adapters.calls.uowRuns).toBe(0);
+  });
+
+  it("rejects resolver digest corruption before create and revise writes", async () => {
+    const { adapters, service } = serviceWith();
+    const baseResolver = adapters.ports.definitionBricks;
+    adapters.ports.definitionBricks = {
+      resolveExact: vi.fn(async (project, ref) => {
+        const resolved = await baseResolver.resolveExact(project, ref);
+        return resolved?.brick_id === refs.sys.id
+          ? { ...resolved, digest: `sha256:${"b".repeat(64)}` }
+          : resolved;
+      }),
+    };
+
+    const failedCreate = await service.create(createCommand());
+    expect(failedCreate).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
+    expect(adapters.listStoredTemplates()).toEqual([]);
+    expect(adapters.calls.uowRuns).toBe(0);
+
+    adapters.ports.definitionBricks = baseResolver;
+    expect((await service.create(createCommand())).ok).toBe(true);
+    const writesBeforeRevise = adapters.calls.templateWrites;
+    adapters.ports.definitionBricks = {
+      resolveExact: vi.fn(async (project, ref) => {
+        const resolved = await baseResolver.resolveExact(project, ref);
+        return resolved?.brick_id === refs.sys.id
+          ? { ...resolved, digest: `sha256:${"c".repeat(64)}` }
+          : resolved;
+      }),
+    };
+
+    const failedRevise = await service.revise(reviseCommand());
+    expect(failedRevise).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
+    expect(adapters.calls.templateWrites).toBe(writesBeforeRevise);
+    expect(adapters.listStoredTemplates()).toHaveLength(1);
+  });
+
+  it("rejects historical UID, content, and Template digest drift without Snapshot writes", async () => {
+    const { adapters, service } = serviceWith();
+    await service.create(createCommand());
+    const baseResolver = adapters.ports.definitionBricks;
+
+    adapters.ports.definitionBricks = {
+      resolveExact: vi.fn(async (project, ref) => {
+        const resolved = await baseResolver.resolveExact(project, ref);
+        return resolved?.brick_id === refs.sys.id
+          ? { ...resolved, revision_uid: `brickrev_${UUID2}` }
+          : resolved;
+      }),
+    };
+    const uidDrift = await service.compileAndPersist({ project_id: projectId, template_id: "coder", revision: 1 });
+    expect(uidDrift).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
+
+    adapters.ports.definitionBricks = {
+      resolveExact: vi.fn(async (project, ref) => {
+        const resolved = await baseResolver.resolveExact(project, ref);
+        if (resolved?.brick_id !== refs.sys.id) return resolved;
+        const body = { text: "Changed persisted content" };
+        return { ...resolved, body, digest: computeDefinitionBrickDigest("sys_prompt", body) };
+      }),
+    };
+    const contentDrift = await service.compileAndPersist({ project_id: projectId, template_id: "coder", revision: 1 });
+    expect(contentDrift).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
+
+    const baseUnitOfWork = adapters.ports.unitOfWork;
+    adapters.ports.definitionBricks = baseResolver;
+    adapters.ports.unitOfWork = {
+      run: async (work) => baseUnitOfWork.run(async (uow) => work({
+        ...uow,
+        templates: {
+          ...uow.templates,
+          findRevision: async (project, template, revision) => {
+            const view = await uow.templates.findRevision(project, template, revision);
+            return view === undefined ? undefined : { ...view, revision_digest: `sha256:${"d".repeat(64)}` };
+          },
+        },
+      })),
+    };
+    const templateDigestDrift = await service.compileAndPersist({ project_id: projectId, template_id: "coder", revision: 1 });
+    expect(templateDigestDrift).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
+    expect(adapters.listStoredSnapshots()).toEqual([]);
+  });
+
   it("rolls back namespace/template changes on every write-stage failure", async () => {
     const reservation = serviceWith();
     reservation.adapters.addFailure("namespace.reserve");
     const failedReservation = await reservation.service.create(createCommand());
-    expect(failedReservation).toMatchObject({ ok: false, error: { code: "actor_template.internal_error" } });
+    expect(failedReservation).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
     expect(reservation.adapters.listStoredTemplates()).toEqual([]);
     expect(reservation.adapters.calls.rollbacks).toBe(1);
 
     const { adapters, service } = serviceWith();
     adapters.addFailure("template.create");
     const failedCreate = await service.create(createCommand());
-    expect(failedCreate).toMatchObject({ ok: false, error: { code: "actor_template.internal_error" } });
+    expect(failedCreate).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
     expect(adapters.listStoredTemplates()).toEqual([]);
     expect(adapters.calls.rollbacks).toBe(1);
 
@@ -226,14 +373,14 @@ describe("ActorTemplate application service", () => {
     expect(created.ok).toBe(true);
     adapters.addFailure("template.append");
     const failedRevise = await service.revise(reviseCommand());
-    expect(failedRevise).toMatchObject({ ok: false, error: { code: "actor_template.internal_error" } });
+    expect(failedRevise).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
     expect(adapters.listStoredTemplates()).toHaveLength(1);
 
     const failedArchive = (() => {
       adapters.addFailure("template.archive");
       return service.archive(projectId, "coder");
     })();
-    expect(await failedArchive).toMatchObject({ ok: false, error: { code: "actor_template.internal_error" } });
+    expect(await failedArchive).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
     expect((await service.read(projectId, "coder"))).toMatchObject({ ok: true, value: { status: "active" } });
   });
 
@@ -277,7 +424,7 @@ describe("ActorTemplate application service", () => {
 
     const failed = await service.compileAndPersist({ project_id: projectId, template_id: "coder", revision: 1 });
 
-    expect(failed).toMatchObject({ ok: false, error: { code: "actor_template.internal_error" } });
+    expect(failed).toMatchObject({ ok: false, error: { code: "actor_template.operation_failed" } });
     expect(adapters.listStoredSnapshots()).toEqual([]);
     expect((await service.read(projectId, "coder", 1))).toMatchObject({ ok: true, value: { revision: 1 } });
     expect(adapters.calls.rollbacks).toBe(1);

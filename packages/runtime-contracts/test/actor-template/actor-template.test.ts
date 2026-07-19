@@ -204,6 +204,15 @@ describe("Actor template contracts", () => {
   it("decodes public validation details and command results", () => {
     expect(roundTrip(ActorTemplateValidationFailedDetailsSchema, actorTemplateFixtures.validationFailedDetails)).toBe(true);
     expect(roundTrip(ValidateActorTemplateCandidateResultSchema, actorTemplateFixtures.validateResult)).toBe(true);
+    expect(roundTrip(ValidateActorTemplateCandidateResultSchema, {
+      error: {
+        schema_version: "1.0.0",
+        code: "actor_template.operation_failed",
+        category: "internal",
+        message: "ActorTemplate operation failed.",
+        retryable: false,
+      },
+    })).toBe(true);
     expect(roundTrip(CreateActorTemplateResultSchema, { revision: actorTemplateFixtures.revisionView })).toBe(true);
     expect(roundTrip(ReviseActorTemplateResultSchema, { revision: actorTemplateFixtures.revisionView })).toBe(true);
   });

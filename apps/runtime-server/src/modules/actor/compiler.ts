@@ -30,6 +30,7 @@ import {
 import {
   canonicalizeText,
   computeConfigurationDigest,
+  computeDefinitionBrickDigest,
   type ConfigurationDigestMaterial,
 } from "./values.js";
 import type { ResolvedActorTemplateCandidate, ResolvedActorTemplateBrick } from "./validation.js";
@@ -102,7 +103,8 @@ function validRevision(
   if (!decodeContract(ExactBrickRefSchema, entry.authored).ok) return false;
   if (entry.authored.id !== entry.revision.brick_id || entry.authored.revision !== entry.revision.revision) return false;
   if (entry.revision.project_id !== projectId || entry.revision.kind !== expectedKind) return false;
-  return decodeContract(DefinitionBrickRevisionSchema, entry.revision).ok;
+  if (!decodeContract(DefinitionBrickRevisionSchema, entry.revision).ok) return false;
+  return computeDefinitionBrickDigest(entry.revision.kind, entry.revision.body) === entry.revision.digest;
 }
 
 function sourceBrick(

@@ -436,15 +436,28 @@ export type ActorTemplateValidationFailedDetails = Type.Static<
   typeof ActorTemplateValidationFailedDetailsSchema
 >;
 
-export const ValidateActorTemplateCandidateResultSchema = Type.Object(
+const ActorTemplateOperationErrorSchema = Type.Object(
   {
-    report: ActorTemplateValidationReportSchema,
+    schema_version: ContractSchemaVersionSchema,
+    code: Type.Literal("actor_template.operation_failed"),
+    category: Type.Literal("internal"),
+    message: Type.Literal("ActorTemplate operation failed."),
+    retryable: Type.Literal(false),
   },
   { additionalProperties: false },
 );
-export type ValidateActorTemplateCandidateResult = Type.Static<
-  typeof ValidateActorTemplateCandidateResultSchema
->;
+
+export const ValidateActorTemplateCandidateResultSchema = Type.Union([
+  Type.Object(
+    { report: ActorTemplateValidationReportSchema },
+    { additionalProperties: false },
+  ),
+  Type.Object(
+    { error: ActorTemplateOperationErrorSchema },
+    { additionalProperties: false },
+  ),
+]);
+export type ValidateActorTemplateCandidateResult = Type.Static<typeof ValidateActorTemplateCandidateResultSchema>;
 
 const ActorTemplateRevisionResultSchema = Type.Object(
   {

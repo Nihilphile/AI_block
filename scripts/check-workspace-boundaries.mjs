@@ -354,47 +354,62 @@
     return candidate === "" || (candidate !== ".." && !candidate.startsWith("../") && !isAbsolute(candidate));
   }
 
-  function extractProductionImportSpecifiers(sourceText) {
+  function extractProductionImportReferences(sourceText) {
     const scanner = ts.createScanner(true, ts.LanguageVariant.Standard, sourceText);
     const tokens = [];
     for (let kind = scanner.scan(); kind !== ts.SyntaxKind.EndOfFile; kind = scanner.scan()) {
       tokens.push({ kind, text: scanner.getTokenText(), value: scanner.getTokenValue() });
     }
-    const specifiers = [];
-    const addStringLiteralSpecifier = (token) => {
-      if (token?.kind === ts.SyntaxKind.StringLiteral) specifiers.push(token.value);
+    const references = [];
+    const addStaticReference = (token) => {
+      if (token?.kind === ts.SyntaxKind.StringLiteral) references.push({ specifier: token.value });
     };
     const isStringLiteral = (token) => token?.kind === ts.SyntaxKind.StringLiteral;
     const isOpenParen = (token) => token?.kind === ts.SyntaxKind.OpenParenToken;
     const isCloseParen = (token) => token?.kind === ts.SyntaxKind.CloseParenToken;
     const isRequireToken = (token) => token?.kind === ts.SyntaxKind.RequireKeyword || (token?.kind === ts.SyntaxKind.Identifier && token.text === "require");
+    const addCallReference = (index, category) => {
+      if (isStringLiteral(tokens[index + 1]) && isCloseParen(tokens[index + 2])) {
+        references.push({ specifier: tokens[index + 1].value });
+      } else {
+        references.push({ category, specifier: "<non-literal>" });
+      }
+    };
 
     for (let index = 0; index < tokens.length; index += 1) {
       const token = tokens[index];
       const next = tokens[index + 1];
       if (token.kind === ts.SyntaxKind.FromKeyword && isStringLiteral(next)) {
-        addStringLiteralSpecifier(next);
+        addStaticReference(next);
         continue;
       }
       if (token.kind === ts.SyntaxKind.ImportKeyword) {
         if (isStringLiteral(next)) {
-          addStringLiteralSpecifier(next);
+          addStaticReference(next);
           continue;
         }
-        if (isOpenParen(next) && isStringLiteral(tokens[index + 2]) && isCloseParen(tokens[index + 3])) {
-          addStringLiteralSpecifier(tokens[index + 2]);
+        if (isOpenParen(next)) {
+          addCallReference(index + 1, "non_literal_dynamic_import");
+          continue;
+        }
+        if (next?.kind === ts.SyntaxKind.QuestionDotToken && isOpenParen(tokens[index + 2])) {
+          references.push({ category: "non_literal_dynamic_import", specifier: "<non-literal>" });
           continue;
         }
         if (tokens[index + 2]?.kind === ts.SyntaxKind.EqualsToken && isStringLiteral(tokens[index + 3])) {
-          addStringLiteralSpecifier(tokens[index + 3]);
+          addStaticReference(tokens[index + 3]);
         }
         continue;
       }
-      if (isRequireToken(token) && isOpenParen(next) && isStringLiteral(tokens[index + 2]) && isCloseParen(tokens[index + 3])) {
-        addStringLiteralSpecifier(tokens[index + 2]);
+      if (isRequireToken(token)) {
+        if (isOpenParen(next)) {
+          addCallReference(index + 1, "non_literal_require");
+        } else if (next?.kind === ts.SyntaxKind.QuestionDotToken && isOpenParen(tokens[index + 2])) {
+          references.push({ category: "non_literal_require", specifier: "<non-literal>" });
+        }
       }
     }
-    return specifiers;
+    return references;
   }
 
   function resolveRelativeProductionImport(sourcePath, specifier) {
@@ -420,10 +435,10 @@
   }
 
   function productionImportViolations(policy, sourcePath, sourceText) {
-    return extractProductionImportSpecifiers(sourceText, sourcePath)
-      .map((specifier) => ({
-        specifier,
-        category: productionImportViolation(policy, sourcePath, specifier)
+    return extractProductionImportReferences(sourceText)
+      .map((reference) => ({
+        specifier: reference.specifier,
+        category: reference.category ?? productionImportViolation(policy, sourcePath, reference.specifier)
       }))
       .filter((violation) => violation.category !== undefined);
   }
@@ -473,6 +488,19 @@
       actorSource,
       'const fs = import("node:fs"); const host = require("@ai-block/actor-host");',
       ["forbidden_external_import", "forbidden_external_import"]
+    );
+    assertCategories(
+      "Actor non-literal dynamic import and require",
+      actorPolicy,
+      actorSource,
+      'const target = "@ai-block/actor-host"; import(target); import("@ai-block/host-gateway" + suffix); import(`@ai-block/runtime-server`); require?.(target); require("../host-gateway/ports.js", extra);',
+      [
+        "non_literal_dynamic_import",
+        "non_literal_dynamic_import",
+        "non_literal_dynamic_import",
+        "non_literal_require",
+        "non_literal_require"
+      ]
     );
     assertCategories(
       "Actor import-equals",

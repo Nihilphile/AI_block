@@ -4,6 +4,7 @@ import {
   BrickSysPromptBodySchema,
   CONTRACT_SCHEMA_VERSION,
   decodeContract,
+  DefinitionBrickRevisionSchema,
   RuntimeConfigBrickBodySchema,
   ToolsetBrickBodySchema,
   ValidateActorTemplateCandidateSchema,
@@ -19,12 +20,25 @@ import {
   type ValidateActorTemplateCandidate,
 } from "@ai-block/runtime-contracts";
 import type { ActorModulePorts } from "./ports.js";
-import { bindDefinitionBrickRef } from "./values.js";
+import { bindDefinitionBrickRef, computeDefinitionBrickDigest } from "./values.js";
 
 export type ActorTemplateValidationPorts = Pick<
   ActorModulePorts,
   "definitionBricks" | "backendValidators" | "toolProviderValidators" | "compatibility" | "workspace"
 >;
+
+export type PersistedDefinitionBrickProvenance = Readonly<{
+  project_id: ProjectId;
+  brick_id: ExactBrickRef["id"];
+  revision: ExactBrickRef["revision"];
+  kind: BrickKind;
+  revision_uid: DefinitionBrickRevision["revision_uid"];
+  digest: DefinitionBrickRevision["digest"];
+}>;
+
+export type ActorTemplateValidationOptions = Readonly<{
+  persistedProvenance?: ReadonlyMap<string, PersistedDefinitionBrickProvenance>;
+}>;
 
 export type ResolvedActorTemplateBrick = Readonly<{
   authored: ExactBrickRef;
@@ -295,6 +309,7 @@ function validatePromptBody(
 async function resolveCandidate(
   command: ValidateActorTemplateCandidate,
   ports: ActorTemplateValidationPorts,
+  options: ActorTemplateValidationOptions = {},
 ): Promise<ActorTemplateValidationOutcome> {
   const issues: PublicIssue[] = [];
   const descriptors = descriptorsFor(command.spec.spec);
@@ -317,6 +332,23 @@ async function resolveCandidate(
         actual_kind: candidate?.kind,
       });
       continue;
+    }
+    if (!decodeContract(DefinitionBrickRevisionSchema, candidate).ok) {
+      throw new Error("Definition Brick resolver returned an invalid revision.");
+    }
+    if (computeDefinitionBrickDigest(candidate.kind, candidate.body) !== candidate.digest) {
+      throw new Error("Definition Brick digest integrity check failed.");
+    }
+    const expected = options.persistedProvenance?.get(descriptor.path);
+    if (expected !== undefined && (
+      candidate.project_id !== expected.project_id
+      || candidate.brick_id !== expected.brick_id
+      || candidate.revision !== expected.revision
+      || candidate.kind !== expected.kind
+      || candidate.revision_uid !== expected.revision_uid
+      || candidate.digest !== expected.digest
+    )) {
+      throw new Error("Persisted Definition Brick provenance check failed.");
     }
     const entries = resolved.get(descriptor.slot) ?? [];
     entries.push({ authored: descriptor.ref, revision: candidate });
@@ -343,11 +375,7 @@ async function resolveCandidate(
       if (validator === undefined) {
         mapValidatorFinding("backend", "/backend/ref", undefined, issues);
       } else {
-        try {
-          for (const _finding of validator.validate(decoded.value)) {
-            mapValidatorFinding("backend", "/backend/ref", undefined, issues);
-          }
-        } catch {
+        for (const _finding of validator.validate(decoded.value)) {
           mapValidatorFinding("backend", "/backend/ref", undefined, issues);
         }
       }
@@ -373,11 +401,7 @@ async function resolveCandidate(
           mapValidatorFinding("tool_provider", "/toolset/ref", provider.provider_id, issues);
           continue;
         }
-        try {
-          for (const _finding of validator.validate(provider)) {
-            mapValidatorFinding("tool_provider", "/toolset/ref", provider.provider_id, issues);
-          }
-        } catch {
+        for (const _finding of validator.validate(provider)) {
           mapValidatorFinding("tool_provider", "/toolset/ref", provider.provider_id, issues);
         }
       }
@@ -385,11 +409,7 @@ async function resolveCandidate(
   }
 
   if (backendBody !== undefined && toolsetBody !== undefined) {
-    try {
-      for (const _finding of ports.compatibility.validate(backendBody, toolsetBody)) {
-        mapValidatorFinding("compatibility", "/toolset/ref", undefined, issues);
-      }
-    } catch {
+    for (const _finding of ports.compatibility.validate(backendBody, toolsetBody)) {
       mapValidatorFinding("compatibility", "/toolset/ref", undefined, issues);
     }
   }
@@ -400,17 +420,13 @@ async function resolveCandidate(
     if (!decoded.ok) {
       pushIssue(issues, "schema_invalid", "/runtime_config/ref");
     } else {
-      try {
-        const workspace = await ports.workspace.resolveWorkingDirectory(command.project_id, decoded.value.workspace);
-        if (workspace.kind === "root_not_found") {
-          pushIssue(issues, "workspace_root_not_found", "/runtime_config/ref");
-        } else if (workspace.kind === "path_escape") {
-          pushIssue(issues, "workspace_path_escape", "/runtime_config/ref");
-        } else {
-          workingDirectory = workspace.working_directory;
-        }
-      } catch {
+      const workspace = await ports.workspace.resolveWorkingDirectory(command.project_id, decoded.value.workspace);
+      if (workspace.kind === "root_not_found") {
         pushIssue(issues, "workspace_root_not_found", "/runtime_config/ref");
+      } else if (workspace.kind === "path_escape") {
+        pushIssue(issues, "workspace_path_escape", "/runtime_config/ref");
+      } else {
+        workingDirectory = workspace.working_directory;
       }
     }
   }
@@ -437,12 +453,13 @@ async function resolveCandidate(
 export async function resolveAndValidateActorTemplateCandidate(
   input: unknown,
   ports: ActorTemplateValidationPorts,
+  options: ActorTemplateValidationOptions = {},
 ): Promise<ActorTemplateValidationOutcome> {
   const shape = shapeReport(input);
   if (shape !== undefined) return { report: shape };
   const decoded = decodeContract(ValidateActorTemplateCandidateSchema, input);
   if (!decoded.ok) return { report: reportFor([{ code: "schema_invalid", path: "/" }]) };
-  return resolveCandidate(decoded.value as ValidateActorTemplateCandidate, ports);
+  return resolveCandidate(decoded.value as ValidateActorTemplateCandidate, ports, options);
 }
 
 export async function validateActorTemplateCandidate(

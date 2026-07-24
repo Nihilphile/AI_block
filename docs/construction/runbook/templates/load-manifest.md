@@ -25,6 +25,8 @@ lease:
 reuse_lease: <lease-id>
 expected_epoch: <integer>
 load:
+  - project_state/README.md
+  - project_state/<target-module-card>/README.md
   - <Task path>
   - <current procedure>
   - <only active gate/policy/design context>
@@ -44,5 +46,8 @@ scope_delta:
 
 - Paths are repository-relative and ordered.
 - No glob, directory, sibling, or transitive loading.
+- Every task names the root Project State README and one exact target module card.
+- Add a neighboring state card only for a declared module-boundary crossing, together with the relevant Contract/interface evidence.
+- State cards route current context; they do not replace source, Contracts, tests, accepted evidence, OpenSpec planning, or Runbook procedure.
 - The manifest selects context but grants no authority beyond Task/delta.
 - If a loaded file is missing or the lease is uncertain, stop with `LOAD_REQUEST` or `LEASE_RELOAD_REQUIRED`.

@@ -53,3 +53,11 @@ Workspace and toolchain
 ```
 
 The active architecture and milestone plan determine the exact next Task. This sequence does not authorize implementation.
+
+## Project State System ownership
+
+For a new construction decision, read the [root Project State route](../../../../project_state/README.md), its authority/map/focus documents, and then only the module cards relevant to the decision. The Orchestrator owns root routing, the cross-module map, current focus, and accepted/deferred summaries.
+
+Every dispatch includes `project_state/README.md` and the exact target module card in `load:`. Add direct-neighbor cards only for a declared boundary crossing, and include the relevant Contract or interface evidence. Project State is a current-state summary; source, Runtime Contracts, tests, accepted records, active OpenSpec planning, and Runbook policy retain their respective authority.
+
+When a Worker reports stale state, compare the card with scoped source and accepted evidence. Authorize a directly affected card reconciliation when it is inside the current Task; otherwise create or request a bounded state task. Do not broaden the task into unrelated card cleanup.

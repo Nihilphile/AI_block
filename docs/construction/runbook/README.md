@@ -6,6 +6,8 @@ This Runbook is a catalog of composable construction-context Bricks. The Orchest
 
 This is a construction-system experiment informed by AI_block's Prompt Brick ideas. It does not change the Runtime product model or make construction files into product Runtime objects.
 
+The repository's current-state route is [`project_state/README.md`](../../../project_state/README.md). It is a bounded navigation layer: load the root state README and the exact target module card for a task, then inspect the authorized source, Contracts, tests, and evidence. Project State summaries never override those authorities or the Runbook's procedure rules.
+
 ## Context composition model
 
 ```text
@@ -34,6 +36,7 @@ Dispatch Bricks are selected for one Task, phase, or evidence action. Load only 
 Typical dispatch Bricks:
 
 - the concrete Task;
+- the root Project State README and exact target module state card;
 - a preflight, implementation, testing, or reviewing procedure;
 - an active specialized gate;
 - an exact design or finding needed by the Task;
@@ -58,6 +61,18 @@ The Orchestrator owns all normative context selection.
 
 Task `References` are audit pointers, not load directives. If a Worker needs an unlisted normative file, it returns a bounded `LOAD_REQUEST` with the path, reason, and blocked decision.
 
+### Project State dispatch rule
+
+Every task dispatch names these exact repository-relative paths in its `load:` set:
+
+```text
+project_state/README.md
+project_state/<target-module-card>/README.md
+<task and current procedure>
+```
+
+`<target-module-card>` is a concrete card path, never a glob or directory. Add a neighboring card only when the Task crosses that module's declared boundary, and name the relevant Contract or interface evidence in the same load set. A routing node is not a substitute for the target card.
+
 This rule does not prevent repository investigation. Task `read scope` authorizes dynamic navigation of source, tests, configuration, and Git evidence. `load` controls instructions and decision context, not every source file read.
 
 ## Dispatch form
@@ -81,6 +96,8 @@ lease:
 reuse_lease: actor-host-coder-01
 expected_epoch: 1
 load:
+  - project_state/README.md
+  - project_state/apps/actor-host/README.md
   - docs/construction/records/<module>/tasks/<task>.md
   - docs/construction/runbook/worker-guides/coder/procedures/preflight.md
 action: preflight only
@@ -92,6 +109,9 @@ action: preflight only
 reuse_lease: actor-host-coder-01
 expected_epoch: 1
 load:
+  - project_state/README.md
+  - project_state/<target-module-card>/README.md
+  - <Task path>
   - docs/construction/runbook/worker-guides/coder/procedures/implementation.md
 action: IMPLEMENTATION_AUTHORIZED
 decision_delta:
@@ -150,6 +170,10 @@ Metadata helps the Orchestrator compose context. It never causes automatic loadi
 | Explicit user direction | Current authority and exceptions |
 | Approved product design, Contract, or ADR | Product meaning |
 | Orchestrator Task and authorization delta | Current Worker authority |
+| Source code, Runtime Contracts, and tests | Executable behavior and supported current surface |
+| `project_state/` | Bounded current orientation and navigation only; never proof or authority over the rows above |
+| Accepted construction records, Reports, and Git | Verification and historical evidence |
+| Active OpenSpec changes | Approved future-work planning |
 | Project and lease policies | Long-lived ceilings and defaults |
 | Procedure or operation policy | Method for assigned work |
 | Template | Output shape only |
@@ -181,6 +205,14 @@ A Worker reads, in order:
 3. the inline `action` and Task-specific delta.
 
 It reads no other normative Runbook file unless the Orchestrator adds it to a later load list.
+
+For a product or construction task, the dispatch `load` list also includes the root Project State README and the exact target module card. The Worker then reads only the local source/test roots and direct-neighbor cards needed by the declared write scope. If the card disagrees with scoped evidence, the Worker reports the mismatch and does not treat the card as proof.
+
+## State-card maintenance and facet rule
+
+The Orchestrator owns root routing, the cross-module map, current focus, and accepted/deferred summaries. A Coder updates only directly affected module cards when authorized. A Tester reports observed mismatches without rewriting implementation claims. A Reviewer checks changed cards against the accepted implementation and evidence.
+
+Each module keeps one default `README.md` card. Add a future facet such as `interfaces.md`, `lifecycle.md`, or `persistence.md` only when Workers routinely load that subject independently or the README can no longer remain a compact orientation layer. File length alone is not a split trigger, and this activation creates no facet files.
 
 ## Compatibility
 

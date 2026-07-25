@@ -44,28 +44,22 @@ blocking evidence gap.
   Body authoring/integrity, and exact-revision coherence.
 - The Project boundary has no production persistence, SQLite, restart
   recovery, Server composition, external adapter, or Actor resolver wiring.
-- Root/Runtime Server routing and the system map still require an
-  Orchestrator-owned reconciliation after the user's in-progress Runbook and
-  Project State policy edits receive a stable commit baseline.
+- Root/Runtime Server routing and the system map include the accepted Project
+  application boundary.
 - SQLite, schema/migrations, restart recovery, production repositories,
   external authoring adapters, Actor resolver wiring, Server composition,
   execution, Package workflow, Run, and Graph remain deferred.
 
 ## Next entry point
 
-First give the in-progress Runbook/Project State policy refactor a stable
-commit baseline, then reconcile the Project entry into the root route, Runtime
-Server route, and system map without overwriting that work.
-
-After routing reconciliation, the next product decision is an
-Orchestrator-owned Task boundary for the separately authorized SQLite
-persistence slice. No SQLite implementation Worker is currently authorized.
+The next product decision is an Orchestrator-owned Task boundary for the
+separately authorized SQLite persistence slice. No SQLite implementation Worker
+is currently authorized.
 
 ## Reconciliation posture
 
-The Project card is now accepted and must not be deleted or recreated. The
-remaining root/parent/system-map reconciliation is documentation routing work,
-not a product blocker and not authority to begin persistence.
+The Project card and its root/parent/system-map routes are accepted current
+views and must not be deleted or recreated.
 
 The Orchestrator owns that reconciliation and the next persistence decision.
 Future Coders may update only authorized Project implementation/evidence

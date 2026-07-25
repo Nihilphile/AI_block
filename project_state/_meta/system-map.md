@@ -6,8 +6,8 @@ This is a sparse current-state map, not a literal source-tree index. The five ca
 
 ```text
 Runtime Contracts
-   ↑                 ↑
-Actor Module     Host Gateway core
+   ↑                 ↑                    ↑
+Actor Module     Host Gateway core    Project Module
                          ↑
               WebSocket infrastructure adapter
 
@@ -16,11 +16,26 @@ Runtime CLI ─────┼──> Runtime Contracts
 Contract tests ──┘
 ```
 
-Runtime Server currently contains independently testable Actor and Host Gateway slices plus a loopback WebSocket adapter. It has no composition root or running daemon. ActorHost has Host-local backend/protocol slices but no application startup. Runtime CLI has no executable command surface. Package is currently a Runtime Contracts boundary, not a Server workflow: one immutable Package has a Head plus exactly one Body whose value is one root `BrickPrompt`, while mutable routing state belongs to Delivery.
+Runtime Server currently contains independently testable Actor, Host Gateway,
+and Project application slices plus a loopback WebSocket adapter. The Project
+slice owns explicit Project records and Definition Brick authoring/history
+behind inward ports with deterministic in-memory evidence; it has no production
+persistence or Server composition. Runtime Server has no composition root or
+running daemon. ActorHost has Host-local backend/protocol slices but no
+application startup. Runtime CLI has no executable command surface. Package is
+currently a Runtime Contracts boundary, not a Server workflow: one immutable
+Package has a Head plus exactly one Body whose value is one root `BrickPrompt`,
+while mutable routing state belongs to Delivery.
 
 ## Product target and Direct Actor MVP stage
 
-The [system target and Direct Actor MVP target-stage distinction](../../docs/design/current/runtime-invariants.md#target-stage-distinctions) permits one Runtime Server to manage multiple Projects and eventually multiple active Project Runtimes while intentionally limiting Direct Actor MVP acceptance to one Project at a time. These are target versus stage, not contradictory current behavior; neither is implemented by the current Server slices, and this distinction does not create a Project card.
+The [system target and Direct Actor MVP target-stage distinction](../../docs/design/current/runtime-invariants.md#target-stage-distinctions)
+permits one Runtime Server to manage multiple Projects and eventually multiple
+active Project Runtimes while intentionally limiting Direct Actor MVP
+acceptance to one Project at a time. The accepted Project application boundary
+establishes explicit Project identities and Project-local Definition Brick
+ownership only; it does not implement activation, a running Project Runtime, or
+multi-Project Server composition.
 
 ## State-card map
 
@@ -29,10 +44,12 @@ The [system target and Direct Actor MVP target-stage distinction](../../docs/des
 | Runtime Contracts | [card](../packages/runtime-contracts/README.md) | [`packages/runtime-contracts/src/`](../../packages/runtime-contracts/src/) | [`packages/runtime-contracts/test/`](../../packages/runtime-contracts/test/) |
 | Runtime Server Actor Module | [card](../apps/runtime-server/modules/actor/README.md) | [`apps/runtime-server/src/modules/actor/`](../../apps/runtime-server/src/modules/actor/) | [`apps/runtime-server/test/modules/actor/`](../../apps/runtime-server/test/modules/actor/) |
 | Runtime Server Host Gateway | [card](../apps/runtime-server/modules/host-gateway/README.md) | Gateway core and WebSocket adapter | Gateway core and adapter tests |
+| Runtime Server Project Module | [card](../apps/runtime-server/modules/project/README.md) | [`apps/runtime-server/src/modules/project/`](../../apps/runtime-server/src/modules/project/) | [`apps/runtime-server/test/modules/project/`](../../apps/runtime-server/test/modules/project/) |
 | ActorHost | [card](../apps/actor-host/README.md) | [`apps/actor-host/src/`](../../apps/actor-host/src/) | [`apps/actor-host/test/`](../../apps/actor-host/test/) |
 | Runtime CLI | [card](../apps/runtime-cli/README.md) | [`apps/runtime-cli/src/`](../../apps/runtime-cli/src/) | None currently exists |
 
-The [Runtime Server route](../apps/runtime-server/README.md) groups the Actor and Host Gateway cards without owning a third domain card.
+The [Runtime Server route](../apps/runtime-server/README.md) groups the Actor,
+Host Gateway, and Project cards without owning another domain card.
 
 ## Scope reconciliation at initial activation
 
@@ -45,13 +62,22 @@ The following mismatches were reconciled before card creation. “Intent” is t
 | ActorHost | Intent is one-Actor execution ownership with backend/session lifecycle and Server reporting. Current source proves supervisor, FakeBackend, process/Claude adapter, connection, command processing, and WebSocket slices; startup wiring, heartbeat/reconnect, outbox, Package/completion emission, and recovery are absent. | Card is `partial` and separates Host-local behavior from deferred application lifecycle. |
 | Runtime Contracts and Package | Intent makes Contracts the shared schema/value boundary and Package a future workflow-owned module. The accepted current Package is immutable Head plus exactly one root-`BrickPrompt` Body; mutable routing belongs to Delivery. Current source supplies the Contracts and hash helper, while Server has no Package module or publication/routing service. A Package-as-Brick redesign is not accepted current intent. | Package remains a Contracts-only planned/deferred workflow boundary; no Package card is created and any redesign remains unresolved. |
 | Runtime CLI and Server | Intent is stateless CLI → Server API and an authoritative Server composition root. Current CLI is a type-consumer fixture and Server has no startup/composition root or API surface. | CLI is deferred; Server remains a routing node and no Server card is created. |
-| Project, Run, Graph, SQLite | Designs name these as future ownership/persistence boundaries. Current source/evidence does not establish independently hand-offable implementations. | Keep them visible here as planned/deferred map entries only; create no empty cards. |
+| Run, Graph, SQLite | Designs name these as future ownership/persistence boundaries. Current source/evidence does not establish independently hand-offable implementations. | Keep them visible here as planned/deferred map entries only; create no empty cards. |
 
-Evidence for the reconciliation includes the accepted [Runtime Contracts closeout](../../docs/construction/records/runtime-contracts/phase-0b-closeout.md), [ActorTemplate closeout](../../docs/construction/records/actor-template/reference-only-actor-template-closeout.md), [Host Gateway closeout](../../docs/construction/records/host-gateway/host-gateway-walking-skeleton-closeout.md), and [ClaudeCodeAdapter closeout](../../docs/construction/records/claude-code-adapter/claude-code-adapter-v0.1-closeout.md), together with the scoped source/test roots named by the cards.
+Evidence for the reconciliation includes the accepted
+[Runtime Contracts closeout](../../docs/construction/records/runtime-contracts/phase-0b-closeout.md),
+[ActorTemplate closeout](../../docs/construction/records/actor-template/reference-only-actor-template-closeout.md),
+[Host Gateway closeout](../../docs/construction/records/host-gateway/host-gateway-walking-skeleton-closeout.md),
+[ClaudeCodeAdapter closeout](../../docs/construction/records/claude-code-adapter/claude-code-adapter-v0.1-closeout.md),
+and Project integrity
+[testing](../../docs/construction/records/project-persistence/reports/PP-application-remediation-acceptance-001-project-brick-integrity.testing.md)
+and
+[re-review](../../docs/construction/records/project-persistence/reports/PP-application-remediation-review-001-project-brick-integrity.reviewing.md),
+together with the scoped source/test roots named by the cards.
 
 ## Planned or deferred boundaries without cards
 
-- Project namespace and persistence
+- Project production persistence and Runtime activation
 - Package workflow and Delivery persistence/routing
 - Run Engine
 - Graph and GraphRun

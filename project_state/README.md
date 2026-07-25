@@ -9,17 +9,20 @@
 3. Read [current focus](./_meta/current-focus.md) for active construction scope, named blockers, and the next entry point.
 4. Load one target card below before opening its local source and tests.
 
-## Initial module cards
+## Current module cards
 
 | Module | State card | Source boundary |
 |---|---|---|
 | Runtime Contracts | [packages/runtime-contracts](./packages/runtime-contracts/README.md) | `packages/runtime-contracts/` |
 | Runtime Server Actor Module | [apps/runtime-server/modules/actor](./apps/runtime-server/modules/actor/README.md) | `apps/runtime-server/src/modules/actor/` |
 | Runtime Server Host Gateway | [apps/runtime-server/modules/host-gateway](./apps/runtime-server/modules/host-gateway/README.md) | Gateway core plus its WebSocket infrastructure adapter |
+| Runtime Server Project Module | [apps/runtime-server/modules/project](./apps/runtime-server/modules/project/README.md) | `apps/runtime-server/src/modules/project/` |
 | ActorHost | [apps/actor-host](./apps/actor-host/README.md) | `apps/actor-host/` |
 | Runtime CLI | [apps/runtime-cli](./apps/runtime-cli/README.md) | `apps/runtime-cli/` |
 
-The [Runtime Server route](./apps/runtime-server/README.md) is only a routing node for its two cards; it is not a third Server module card.
+The [Runtime Server route](./apps/runtime-server/README.md) is a routing node
+for its three independently owned module cards; it is not a separate Server
+domain card.
 
 ## Bounded dispatch
 
@@ -45,4 +48,7 @@ condition, and evidence on the directly affected card. Testers report
 mismatches; Reviewers verify candidate cards. Root/parent routing, cross-module
 map, focus, and acceptance summaries remain Orchestrator-owned.
 
-This initial activation is documentation/process-only. It creates no Runtime behavior, dependency, lockfile, source, or test changes. Project, Package, Run, Graph, and SQLite remain visible in the system map without empty cards.
+The Project State System itself is documentation/process-only and creates no
+Runtime behavior, dependency, lockfile, source, or test changes. Package, Run,
+Graph, and SQLite remain visible in the system map without speculative empty
+cards.

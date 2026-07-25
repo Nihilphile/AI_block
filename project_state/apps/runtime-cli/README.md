@@ -30,8 +30,8 @@ The workspace/type-consumer fixture is present, but the user-facing CLI surface 
 - [Root state route](../../../project_state/README.md), [authority](../../../project_state/_meta/authority.md), and [system map](../../../project_state/_meta/system-map.md)
 - [CLI source](../../../apps/runtime-cli/src/) and [package metadata](../../../apps/runtime-cli/package.json)
 - [Runtime Contracts card](../../../project_state/packages/runtime-contracts/README.md)
-- [Runtime module architecture](../../../runtime-module-architecture-v0.1.md) for Client boundary intent
-- [Runtime system architecture](../../../runtime-system-architecture-v0.1.md) for process topology intent
+- [Runtime design catalog](../../../docs/design/README.md) for the status-aware Client boundary route
+- [Current Runtime invariants](../../../docs/design/current/runtime-invariants.md#target-stage-distinctions) for target process topology
 
 ## Evidence
 

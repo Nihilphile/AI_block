@@ -27,6 +27,6 @@ Cards describe the accepted approach that is true today. When an approach change
 
 - [Project State System design](../../docs/construction/project-state-system-design-v0.1.md)
 - [Construction Runbook](../../docs/construction/runbook/README.md)
-- [Runtime module architecture](../../runtime-module-architecture-v0.1.md)
-- [Runtime system architecture](../../runtime-system-architecture-v0.1.md)
+- [Runtime design catalog](../../docs/design/README.md)
+- [Current Runtime invariants](../../docs/design/current/runtime-invariants.md)
 - [OpenSpec change](../../openspec/changes/establish-project-state-system/)

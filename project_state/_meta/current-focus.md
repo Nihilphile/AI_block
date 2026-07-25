@@ -6,6 +6,8 @@ Project State System v0.1 is accepted and its OpenSpec change [`establish-projec
 
 The accepted scope is documentation/process-only: the sparse state tree and Runbook integration add no Runtime source, test, dependency, lockfile, product-design, or product-API change.
 
+Runtime Design Knowledge System v0.1 has independently passed acceptance and semantic review with zero actionable findings. Its canonical entry is the [Runtime design catalog](../../docs/design/README.md), and confirmed current cross-module semantics route through the [Runtime invariant kernel](../../docs/design/current/runtime-invariants.md). This acceptance covers documentation routing and status preservation only: future files do not authorize product implementation, and the OpenSpec change remains unarchived pending a separate explicit archive action.
+
 ## Current condition
 
 - The accepted Runtime Contracts, Host Gateway, ClaudeCodeAdapter, and reference-only ActorTemplate slices remain the current implementation evidence.
@@ -14,7 +16,7 @@ The accepted scope is documentation/process-only: the sparse state tree and Runb
 
 ## Next entry point
 
-A new Orchestrator reads the [root state README](../README.md), [authority](./authority.md), [system map](./system-map.md), and this focus file, then loads only cards relevant to the selected decision. The next Runtime construction slice remains an Orchestrator decision; this current view does not select or authorize it.
+A new Orchestrator reads the [root state README](../README.md), [authority](./authority.md), [system map](./system-map.md), and this focus file, then loads only cards relevant to the selected decision. Runtime design questions start at the [Runtime design catalog](../../docs/design/README.md). The next Runtime construction slice remains an Orchestrator decision; this current view does not select or authorize it.
 
 ## Reconciliation posture
 

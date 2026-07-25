@@ -38,7 +38,7 @@ The walking-skeleton and WebSocket adapter evidence is accepted with no open acc
 - [Gateway source](../../../../../apps/runtime-server/src/modules/host-gateway/) and [Gateway tests](../../../../../apps/runtime-server/test/modules/host-gateway/)
 - [WebSocket adapter source](../../../../../apps/runtime-server/src/infrastructure/actor-host-websocket/) and [adapter tests](../../../../../apps/runtime-server/test/infrastructure/actor-host-websocket/)
 - [Runtime Contracts card](../../../../../project_state/packages/runtime-contracts/README.md) and [ActorHost card](../../../../../project_state/apps/actor-host/README.md) for a cross-boundary task
-- [Runtime module architecture](../../../../../runtime-module-architecture-v0.1.md) for intended ownership
+- [Actor/Host lifecycle and recovery future design](../../../../../docs/design/future/actor-host-lifecycle-and-recovery.md) for status-labeled intended ownership and reliability seams
 - [Host Gateway closeout](../../../../../docs/construction/records/host-gateway/host-gateway-walking-skeleton-closeout.md) for accepted evidence
 
 ## Evidence

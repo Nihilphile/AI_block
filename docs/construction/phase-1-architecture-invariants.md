@@ -8,17 +8,17 @@
 
 The next construction phase must remain traceable to:
 
-- `runtime-module-concept-v0.2.md` for runtime intent and Project/Actor/Graph/Package concepts;
-- `runtime-object-module-v0.3.md` for domain objects, Run, and ActorInvocation;
-- `runtime-system-architecture-v0.1.md` for Client-Server-Host process topology and lifecycle boundaries;
-- `runtime-module-architecture-v0.1.md` for module ownership, Direct Actor MVP scope, and newer compatibility decisions.
+- [the Runtime design catalog](../design/README.md) for authority and status routing;
+- [current Runtime invariants](../design/current/runtime-invariants.md) for confirmed cross-module guardrails and explicit target-stage distinctions;
+- [Run and Invocation](../design/future/run-and-invocation.md) plus [Graph and Policy](../design/future/graph-and-policy.md) for status-labeled future domain concepts;
+- [Actor/Host lifecycle and recovery](../design/future/actor-host-lifecycle-and-recovery.md) for status-labeled process topology and lifecycle boundaries.
 
 When wording differs:
 
-1. `runtime-module-architecture-v0.1.md` governs its explicitly newer decisions, including GraphTemplate/GraphInstance/GraphRun separation, strict single Package Body, immutable ActorConfigSnapshot, Delivery-owned routing metadata, Host initialization from ActorLaunchSpec, and lazy backend-session creation.
-2. `runtime-object-module-v0.3.md` governs domain concepts not superseded by the Module Architecture.
-3. `runtime-system-architecture-v0.1.md` governs deployable processes, communication direction, daemon behavior, and Host lifecycle.
-4. `runtime-module-concept-v0.2.md` remains the intent reference and future Graph model; older GraphActivation terminology does not override v0.3 Run terminology.
+1. [Current Runtime invariants](../design/current/runtime-invariants.md) governs the explicitly reconciled current decisions, including strict single Package Body, immutable ActorConfigSnapshot, Delivery-owned routing metadata, Host initialization/session separation, and lazy backend-session creation.
+2. [Run and Invocation](../design/future/run-and-invocation.md) and [Graph and Policy](../design/future/graph-and-policy.md) preserve domain concepts not superseded by those current decisions, while retaining accepted-future and open status.
+3. [Actor/Host lifecycle and recovery](../design/future/actor-host-lifecycle-and-recovery.md) preserves deployable-process, communication-direction, and Host-lifecycle intent as status-labeled future material.
+4. The [design catalog](../design/README.md) routes historical intent without granting it current authority; older `GraphActivation` terminology does not override the `GraphTemplate` → `GraphInstance` → `GraphRun` and DirectRun distinctions.
 
 ## 2. Whole-system invariants
 

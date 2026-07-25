@@ -20,7 +20,7 @@ Runtime Server currently contains independently testable Actor and Host Gateway 
 
 ## Product target and Direct Actor MVP stage
 
-The [system target](../../runtime-system-architecture-v0.1.md) permits one Runtime Server to manage multiple Projects and eventually multiple active Project Runtimes. The newer [Direct Actor MVP stage](../../runtime-module-architecture-v0.1.md) intentionally limits acceptance to one Project at a time. These are target versus stage, not contradictory current behavior; neither is implemented by the current Server slices, and this distinction does not create a Project card.
+The [system target and Direct Actor MVP target-stage distinction](../../docs/design/current/runtime-invariants.md#target-stage-distinctions) permits one Runtime Server to manage multiple Projects and eventually multiple active Project Runtimes while intentionally limiting Direct Actor MVP acceptance to one Project at a time. These are target versus stage, not contradictory current behavior; neither is implemented by the current Server slices, and this distinction does not create a Project card.
 
 ## State-card map
 

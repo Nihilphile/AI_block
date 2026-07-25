@@ -35,7 +35,7 @@ The accepted Phase 0B boundary is stable and the later ActorTemplate additions a
 ## Read next
 
 - [Root state route](../../../project_state/README.md) and [authority](../../../project_state/_meta/authority.md)
-- [Runtime module architecture](../../../runtime-module-architecture-v0.1.md) for intent
+- [Current Runtime invariants](../../../docs/design/current/runtime-invariants.md) for accepted Contract/value constraints and [Package and Delivery future design](../../../docs/design/future/package-and-delivery.md) for status-labeled workflow and proposed migration seams
 - [Contract source](../../../packages/runtime-contracts/src/) and [Contract tests](../../../packages/runtime-contracts/test/) for executable truth
 - [Runtime Contracts README](../../../packages/runtime-contracts/README.md) for consumer boundary rules
 - [Phase 0B closeout](../../../docs/construction/records/runtime-contracts/phase-0b-closeout.md) for accepted evidence

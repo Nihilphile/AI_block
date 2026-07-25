@@ -35,8 +35,8 @@ The reference-only result is accepted and the three remediation findings for per
 - [Root state route](../../../../../project_state/README.md), [authority](../../../../../project_state/_meta/authority.md), and [system map](../../../../../project_state/_meta/system-map.md)
 - [Actor source](../../../../../apps/runtime-server/src/modules/actor/) and [Actor tests](../../../../../apps/runtime-server/test/modules/actor/)
 - [Runtime Contracts card](../../../../../project_state/packages/runtime-contracts/README.md)
-- [Runtime module architecture](../../../../../runtime-module-architecture-v0.1.md) for intended ownership
-- [ActorTemplate design](../../../../../runtime-actor-template-and-brick-design-v0.1.md) for the accepted construction boundary
+- [Current Runtime invariants](../../../../../docs/design/current/runtime-invariants.md) for confirmed ownership and construction constraints
+- Future design inputs, not current implementation: [Project persistence and Brick authoring](../../../../../docs/design/future/project-persistence-and-brick-authoring.md) and [Actor/Host lifecycle and recovery](../../../../../docs/design/future/actor-host-lifecycle-and-recovery.md)
 - [Reference-only ActorTemplate closeout](../../../../../docs/construction/records/actor-template/reference-only-actor-template-closeout.md) for accepted evidence
 - [OpenSpec ActorTemplate change](../../../../../openspec/changes/build-reference-only-actor-template/)
 

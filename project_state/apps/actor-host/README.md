@@ -39,7 +39,7 @@ The accepted Host-local supervisor/protocol and Claude adapter slices are stable
 - [ActorHost source](../../../apps/actor-host/src/) and [ActorHost tests](../../../apps/actor-host/test/)
 - [Runtime Contracts card](../../../project_state/packages/runtime-contracts/README.md)
 - [Host Gateway card](../../../project_state/apps/runtime-server/modules/host-gateway/README.md) for the Server boundary
-- [Runtime system architecture](../../../runtime-system-architecture-v0.1.md) for process/lifecycle intent
+- [Actor/Host lifecycle and recovery future design](../../../docs/design/future/actor-host-lifecycle-and-recovery.md) for status-labeled process/lifecycle intent and open recovery seams
 - [ClaudeCodeAdapter closeout](../../../docs/construction/records/claude-code-adapter/claude-code-adapter-v0.1-closeout.md) and [Host Gateway closeout](../../../docs/construction/records/host-gateway/host-gateway-walking-skeleton-closeout.md) for accepted evidence
 
 ## Evidence

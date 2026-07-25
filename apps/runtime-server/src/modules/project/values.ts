@@ -9,6 +9,7 @@ import {
   ToolsetBrickBodySchema,
   computeDefinitionBrickDigest,
   decodeContract,
+  normalizeDefinitionBrickBody,
   type BrickKind,
   type DefinitionBrickBody,
   type DefinitionBrickDigest,
@@ -34,7 +35,9 @@ export function canonicalDefinitionBrickBody(
           ? ToolsetBrickBodySchema
           : RuntimeConfigBrickBodySchema;
   const decoded = decodeContract(schema, body);
-  return decoded.ok ? decoded.value as DefinitionBrickBody : undefined;
+  return decoded.ok
+    ? normalizeDefinitionBrickBody(decoded.value as DefinitionBrickBody)
+    : undefined;
 }
 
 export const runtimeContractsDefinitionBrickDigest = {
@@ -78,6 +81,7 @@ export function decodeStoredRevision(
     revision.project_id !== summary.project_id
     || revision.brick_id !== summary.brick_id
     || revision.kind !== summary.kind
+    || revision.revision > summary.current_revision
     || (expectedRevision !== undefined && revision.revision !== expectedRevision)
   ) {
     return undefined;

@@ -30,11 +30,16 @@ release, deterministic list/history ordering, and exact archived-revision
 resolution.
 
 Commands and results use the root-exported Runtime Contracts. Candidate Bodies
-are validated by their declared kind, and digests use the sole shared Runtime
-Contracts Definition Brick digest helper. Stored Project, aggregate, revision,
-identity binding, and digest values are checked before reads return them.
-Deterministic test-only in-memory repositories snapshot all Project, namespace,
-aggregate, and revision state and prove complete Unit-of-Work rollback.
+are validated by their declared kind, normalized through the shared Runtime
+Contracts Definition Brick normalizer, and returned and persisted canonically
+on create and revise. Digests use the sole shared Runtime Contracts Definition
+Brick digest helper. Stored Project, aggregate, revision, identity binding,
+canonical Body, digest, and revision-range coherence are checked before reads
+return them. Exact-revision absence beyond the aggregate head remains not
+found, while an absent claimed-history revision or a returned beyond-head
+revision fails closed as an integrity error. Deterministic test-only in-memory
+repositories snapshot all Project, namespace, aggregate, and revision state
+and prove complete Unit-of-Work rollback.
 
 ## Boundary and dependencies
 

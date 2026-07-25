@@ -134,13 +134,17 @@ describe("Project application service", () => {
   });
 
   it("keeps kind immutable, enforces base revision, and preserves equal-content provenance", async () => {
-    const { service } = adaptersAndService();
+    const { adapters, service } = adaptersAndService();
     const projectId = await createProject(service);
     const created = await service.createDefinitionBrick(
-      createBrickCommand(projectId, "canonical", "\uFEFFone\r\ntwo"),
+      createBrickCommand(projectId, "canonical", "\uFEFFone\r\ntwo\rthree"),
     );
     expect("revision" in created).toBe(true);
     if (!("revision" in created)) return;
+    expect(created.revision.body).toEqual({ text: "one\ntwo\nthree" });
+    expect(adapters.listStoredBricks()[0]?.revisions[0]?.body).toEqual({
+      text: "one\ntwo\nthree",
+    });
 
     const mismatchedKind = await service.reviseDefinitionBrick({
       project_id: projectId,
@@ -158,13 +162,17 @@ describe("Project application service", () => {
       brick_id: "canonical",
       base_revision: 1,
       kind: "sys_prompt",
-      body: { text: "one\ntwo" },
+      body: { text: "\uFEFFone\r\ntwo\rthree" },
     });
     expect("revision" in revised).toBe(true);
     if (!("revision" in revised)) return;
     expect(revised.revision.revision).toBe(2);
     expect(revised.revision.revision_uid).not.toBe(created.revision.revision_uid);
     expect(revised.revision.digest).toBe(created.revision.digest);
+    expect(revised.revision.body).toEqual({ text: "one\ntwo\nthree" });
+    expect(adapters.listStoredBricks()[0]?.revisions[1]?.body).toEqual({
+      text: "one\ntwo\nthree",
+    });
 
     expect(await service.reviseDefinitionBrick({
       project_id: projectId,
@@ -175,6 +183,41 @@ describe("Project application service", () => {
     })).toEqual({
       error: { code: "definition_brick_revision_conflict", category: "conflict" },
     });
+  });
+
+  it("recursively canonicalizes prompt Bodies without reordering composite parts", async () => {
+    const { adapters, service } = adaptersAndService();
+    const projectId = await createProject(service);
+    const created = await service.createDefinitionBrick({
+      project_id: projectId,
+      requested_brick_id: "nested",
+      kind: "prompt",
+      body: {
+        kind: "composite",
+        parts: [
+          { kind: "text", text: "\uFEFFFirst\r\n" },
+          {
+            kind: "composite",
+            parts: [{ kind: "text", text: "Second\rThird" }],
+          },
+        ],
+      },
+    });
+    expect("revision" in created).toBe(true);
+    if (!("revision" in created)) return;
+
+    const canonicalBody = {
+      kind: "composite",
+      parts: [
+        { kind: "text", text: "First\n" },
+        {
+          kind: "composite",
+          parts: [{ kind: "text", text: "Second\nThird" }],
+        },
+      ],
+    };
+    expect(created.revision.body).toEqual(canonicalBody);
+    expect(adapters.listStoredBricks()[0]?.revisions[0]?.body).toEqual(canonicalBody);
   });
 
   it("archives idempotently without releasing the ID and resolves exact archived history", async () => {
@@ -297,6 +340,79 @@ describe("Project application service", () => {
     expect(await service.readDefinitionBrick({
       project_id: projectId,
       brick_id: "corrupt",
+    })).toEqual({
+      error: { code: "definition_brick_integrity_error", category: "integrity" },
+    });
+  });
+
+  it("rejects noncanonical stored Bodies even when their normalized digest matches", async () => {
+    const { adapters, service } = adaptersAndService();
+    const projectId = await createProject(service);
+    await service.createDefinitionBrick(
+      createBrickCommand(projectId, "noncanonical", "one\ntwo"),
+    );
+    adapters.corruptRevision(projectId, "noncanonical", 1, (revision) => ({
+      ...revision,
+      body: { text: "\uFEFFone\r\ntwo" },
+    }));
+
+    expect(await service.readExactDefinitionBrickRevision({
+      project_id: projectId,
+      ref: { id: "noncanonical", revision: 1 },
+    })).toEqual({
+      error: { code: "definition_brick_integrity_error", category: "integrity" },
+    });
+  });
+
+  it("classifies missing and beyond-current exact revisions by aggregate coherence", async () => {
+    const { adapters, service } = adaptersAndService();
+    const projectId = await createProject(service);
+    await service.createDefinitionBrick(createBrickCommand(projectId, "coherence"));
+    await service.reviseDefinitionBrick({
+      project_id: projectId,
+      brick_id: "coherence",
+      base_revision: 1,
+      kind: "sys_prompt",
+      body: { text: "revision two" },
+    });
+
+    const serviceWithMissingRevision = new ProjectApplicationService({
+      ...adapters.ports,
+      unitOfWork: {
+        run: (work) => adapters.ports.unitOfWork.run((uow) => work({
+          ...uow,
+          definitionBricks: {
+            ...uow.definitionBricks,
+            findRevision: async (requestedProjectId, brickId, revision) => (
+              revision === 1
+                ? undefined
+                : uow.definitionBricks.findRevision(requestedProjectId, brickId, revision)
+            ),
+          },
+        })),
+      },
+    });
+    expect(await serviceWithMissingRevision.readExactDefinitionBrickRevision({
+      project_id: projectId,
+      ref: { id: "coherence", revision: 1 },
+    })).toEqual({
+      error: { code: "definition_brick_integrity_error", category: "integrity" },
+    });
+
+    expect(await service.readExactDefinitionBrickRevision({
+      project_id: projectId,
+      ref: { id: "coherence", revision: 3 },
+    })).toEqual({
+      error: { code: "definition_brick_revision_not_found", category: "not_found" },
+    });
+
+    adapters.corruptSummary(projectId, "coherence", (summary) => ({
+      ...summary,
+      current_revision: 1,
+    }));
+    expect(await service.readExactDefinitionBrickRevision({
+      project_id: projectId,
+      ref: { id: "coherence", revision: 2 },
     })).toEqual({
       error: { code: "definition_brick_integrity_error", category: "integrity" },
     });

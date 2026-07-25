@@ -279,7 +279,12 @@ export class ProjectApplicationService {
         decoded.value.ref.id,
         decoded.value.ref.revision,
       );
-      if (stored === undefined) abortProjectOperation(definitionBrickRevisionNotFoundError());
+      if (stored === undefined) {
+        if (decoded.value.ref.revision <= brick.current_revision) {
+          abortProjectOperation(definitionBrickIntegrityError());
+        }
+        abortProjectOperation(definitionBrickRevisionNotFoundError());
+      }
       const revision = this.requireRevisionIntegrity(
         stored,
         brick,
@@ -353,6 +358,13 @@ export class ProjectApplicationService {
   ): DefinitionBrickRevision {
     const revision = decodeStoredRevision(stored, brick, expectedRevision);
     if (revision === undefined) abortProjectOperation(definitionBrickIntegrityError());
+    const canonicalBody = canonicalDefinitionBrickBody(revision.kind, revision.body);
+    if (
+      canonicalBody === undefined
+      || JSON.stringify(canonicalBody) !== JSON.stringify(revision.body)
+    ) {
+      abortProjectOperation(definitionBrickIntegrityError());
+    }
     try {
       if (this.ports.digest.compute(revision.kind, revision.body) !== revision.digest) {
         abortProjectOperation(definitionBrickIntegrityError());

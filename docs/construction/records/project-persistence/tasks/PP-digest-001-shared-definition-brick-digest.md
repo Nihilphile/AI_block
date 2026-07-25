@@ -67,7 +67,9 @@ changing digest values, validation behavior, or the accepted
   behavior, transport, CLI, Host, Package, Run, recovery, or Graph.
 - `scripts/check-workspace-boundaries.mjs` may change only for the exact new
   Runtime Contracts source/test topology and accepted root runtime/type export
-  allowlists. Do not change probe logic or another workspace boundary.
+  allowlists, plus the mirrored Runtime Contracts `test:types` command when the
+  authorized package-local test list changes. Do not change probe logic or
+  another workspace boundary.
 - Coder may update only the two directly affected module cards if their current
   claims/evidence routes become stale. Root routing, Runtime Server routing,
   system map, current focus, and cross-module summaries remain

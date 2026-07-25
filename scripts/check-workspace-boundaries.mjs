@@ -86,6 +86,8 @@
     "ActorTemplateSummarySchema",
     "ActorTemplateValidationFailedDetailsSchema",
     "ActorTemplateValidationReportSchema",
+    "ArchiveDefinitionBrickCommandSchema",
+    "ArchiveDefinitionBrickResultSchema",
     "BackendAdapterIdSchema",
     "BackendAdapterLaunchConfigSchema",
     "BackendBrickBodySchema",
@@ -106,10 +108,18 @@
     "ContentHashSchema",
     "CreateActorTemplateCommandSchema",
     "CreateActorTemplateResultSchema",
+    "CreateDefinitionBrickCommandSchema",
+    "CreateDefinitionBrickResultSchema",
+    "CreateProjectCommandSchema",
+    "CreateProjectResultSchema",
     "CreateSessionDirectiveSchema",
+    "DefinitionBrickBodySchema",
     "DefinitionBrickDigestSchema",
+    "DefinitionBrickIdSchema",
     "DefinitionBrickRevisionIdSchema",
     "DefinitionBrickRevisionSchema",
+    "DefinitionBrickStatusSchema",
+    "DefinitionBrickSummarySchema",
     "DeliveryIdSchema",
     "DeliverySchema",
     "DeliveryStateSchema",
@@ -135,6 +145,11 @@
     "JsonObjectSchema",
     "JsonValueSchema",
     "LaunchFailedProcessFactSchema",
+    "ListDefinitionBrickHistoryCommandSchema",
+    "ListDefinitionBrickHistoryResultSchema",
+    "ListDefinitionBricksCommandSchema",
+    "ListDefinitionBricksResultSchema",
+    "PROJECT_DEFINITION_BRICK_ERROR_CODES",
     "PackageCreatorSchema",
     "PackageHashMaterialSchema",
     "PackageHeadSchema",
@@ -147,11 +162,22 @@
     "PackageTypeSchema",
     "PACKAGE_SCHEMA_VERSION",
     "PositiveRevisionSchema",
+    "ProjectDefinitionBrickErrorCodeSchema",
+    "ProjectDefinitionBrickErrorSchema",
     "ProjectIdSchema",
+    "ProjectRecordSchema",
+    "ReadDefinitionBrickCommandSchema",
+    "ReadDefinitionBrickResultSchema",
+    "ReadExactDefinitionBrickRevisionCommandSchema",
+    "ReadExactDefinitionBrickRevisionResultSchema",
+    "ReadProjectCommandSchema",
+    "ReadProjectResultSchema",
     "ResolvedBrickRefSchema",
     "ResumeSessionDirectiveSchema",
     "ReviseActorTemplateCommandSchema",
     "ReviseActorTemplateResultSchema",
+    "ReviseDefinitionBrickCommandSchema",
+    "ReviseDefinitionBrickResultSchema",
     "RunIdSchema",
     "RuntimeConfigBrickBodySchema",
     "ServerToHostMessageSchema",
@@ -214,10 +240,18 @@
     "ContentHash",
     "CreateActorTemplateCommand",
     "CreateActorTemplateResult",
+    "CreateDefinitionBrickCommand",
+    "CreateDefinitionBrickResult",
+    "CreateProjectCommand",
+    "CreateProjectResult",
     "CreateSessionDirective",
+    "DefinitionBrickBody",
     "DefinitionBrickDigest",
+    "DefinitionBrickId",
     "DefinitionBrickRevision",
     "DefinitionBrickRevisionId",
+    "DefinitionBrickStatus",
+    "DefinitionBrickSummary",
     "Delivery",
     "DeliveryId",
     "DeliveryState",
@@ -243,6 +277,10 @@
     "JsonObject",
     "JsonValue",
     "LaunchFailedProcessFact",
+    "ListDefinitionBrickHistoryCommand",
+    "ListDefinitionBrickHistoryResult",
+    "ListDefinitionBricksCommand",
+    "ListDefinitionBricksResult",
     "Package",
     "PackageCreator",
     "PackageHashMaterial",
@@ -254,11 +292,22 @@
     "PackageSchemaVersion",
     "PackageType",
     "PositiveRevision",
+    "ProjectDefinitionBrickError",
+    "ProjectDefinitionBrickErrorCode",
     "ProjectId",
+    "ProjectRecord",
+    "ReadDefinitionBrickCommand",
+    "ReadDefinitionBrickResult",
+    "ReadExactDefinitionBrickRevisionCommand",
+    "ReadExactDefinitionBrickRevisionResult",
+    "ReadProjectCommand",
+    "ReadProjectResult",
     "ResolvedBrickRef",
     "ResumeSessionDirective",
     "ReviseActorTemplateCommand",
     "ReviseActorTemplateResult",
+    "ReviseDefinitionBrickCommand",
+    "ReviseDefinitionBrickResult",
     "RunId",
     "RuntimeConfigBrickBody",
     "ServerToHostMessage",
@@ -626,7 +675,7 @@
       type: "module",
       scripts: {
         test: "vitest run && pnpm run test:types",
-        "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts test/actor/actor.test.ts test/host/host.test.ts test/compatibility/compatibility.test.ts test/actor-template/actor-template.test.ts test/types/public-types.ts --pretty false"
+        "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts test/actor/actor.test.ts test/host/host.test.ts test/compatibility/compatibility.test.ts test/actor-template/actor-template.test.ts test/project-definition-brick/project-definition-brick.test.ts test/types/public-types.ts --pretty false"
       },
       dependencies: { ajv: "8.20.0", "ajv-formats": "3.0.1", canonicalize: "3.0.0", typebox: "1.3.6" },
       devDependencies: { "fast-check": "4.8.0", vitest: "4.1.10" },
@@ -683,7 +732,7 @@
           check(entries.length === 1 && entries[0].isFile() && entries[0].name === expectedFile, `${sourceRoot} must contain exactly ${expectedFile} and no subdirectory`);
         }
       } else {
-        check(same(entries.map((entry) => entry.name).sort(), ["actor", "actor-template", "brick", "error", "host", "identity", "index.ts", "package", "validation"]), `${sourceRoot}: B.3 source topology mismatch`);
+        check(same(entries.map((entry) => entry.name).sort(), ["actor", "actor-template", "brick", "error", "host", "identity", "index.ts", "package", "project-definition-brick", "validation"]), `${sourceRoot}: B.3 source topology mismatch`);
         check(entries.find((entry) => entry.name === "index.ts")?.isFile() === true, `${sourceRoot}/index.ts is missing`);
         const expectedSubdirectories = new Map([
           ["actor", ["index.ts", "schemas.ts"]],
@@ -693,7 +742,8 @@
           ["error", ["error.ts"]],
           ["host", ["index.ts", "schemas.ts"]],
           ["actor-template", ["index.ts", "schemas.ts"]],
-          ["package", ["hash.ts", "index.ts", "node-crypto.d.ts", "schemas.ts"]]
+          ["package", ["hash.ts", "index.ts", "node-crypto.d.ts", "schemas.ts"]],
+          ["project-definition-brick", ["index.ts", "schemas.ts"]]
         ]);
         for (const [directory, files] of expectedSubdirectories) {
           const directoryPath = join(sourceRoot, directory);
@@ -702,7 +752,7 @@
       }
       if (unit.kind === "contracts") {
         const testRoot = join(unit.dir, "test");
-        check(same(directories(testRoot), ["actor", "actor-template", "brick", "compatibility", "error", "fixtures", "host", "identity", "package", "types", "validation"]), `${testRoot}: B.4 test topology mismatch`);
+        check(same(directories(testRoot), ["actor", "actor-template", "brick", "compatibility", "error", "fixtures", "host", "identity", "package", "project-definition-brick", "types", "validation"]), `${testRoot}: B.4 test topology mismatch`);
         const expectedTests = new Map([
           ["actor", ["actor.test.ts"]],
           ["brick", ["brick.test.ts"]],
@@ -713,6 +763,7 @@
           ["host", ["host.test.ts"]],
           ["package", ["hash.test.ts", "package.test.ts"]],
           ["actor-template", ["actor-template.test.ts", "fixtures.ts"]],
+          ["project-definition-brick", ["project-definition-brick.test.ts"]],
           ["types", ["public-types.ts"]]
         ]);
         for (const [directory, files] of expectedTests) {

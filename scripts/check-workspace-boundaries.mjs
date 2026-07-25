@@ -353,6 +353,11 @@
       name: "Runtime Contracts",
       root: resolve(contracts.dir, "src"),
       allowedPackages: new Set(["typebox", "ajv", "ajv-formats", "canonicalize", "node:crypto"])
+    },
+    {
+      name: "Project Module",
+      root: resolve(apps[0].dir, "src", "modules", "project"),
+      allowedPackages: new Set(["@ai-block/runtime-contracts"])
     }
   ];
   const failures = [];
@@ -510,8 +515,10 @@
   function runProductionImportBoundaryRegressionChecks() {
     const actorPolicy = productionImportPolicies[0];
     const contractsPolicy = productionImportPolicies[1];
+    const projectPolicy = productionImportPolicies[2];
     const actorSource = join(actorPolicy.root, "application.ts");
     const contractsSource = join(contractsPolicy.root, "index.ts");
+    const projectSource = join(projectPolicy.root, "application.ts");
     const assertCategories = (label, policy, sourcePath, sourceText, expected) => {
       const actual = productionImportViolations(policy, sourcePath, sourceText)
         .map((violation) => violation.category);
@@ -579,6 +586,20 @@
       contractsSource,
       'import Type from "typebox"; import { ProjectIdSchema } from "./identity/identity.js"; import canonicalize from "canonicalize"; import { createHash } from "node:crypto";',
       []
+    );
+    assertCategories(
+      "allowed Project root/local imports",
+      projectPolicy,
+      projectSource,
+      'import type { ProjectId } from "@ai-block/runtime-contracts"; import type { ProjectModulePorts } from "./ports.js";',
+      []
+    );
+    assertCategories(
+      "Project forbidden package and module escape",
+      projectPolicy,
+      projectSource,
+      'import "@ai-block/actor-host"; import "../actor/index.js";',
+      ["forbidden_external_import", "relative_escape"]
     );
   }
 
@@ -719,9 +740,10 @@
           check(same(readdirSync(infrastructureRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor-host-websocket"]), `${infrastructureRoot}: Runtime Server infrastructure topology mismatch`);
           check(same(readdirSync(join(infrastructureRoot, "actor-host-websocket"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway-websocket-adapter.ts"]), `${infrastructureRoot}/actor-host-websocket: Runtime Server infrastructure files mismatch`);
           const modulesRoot = join(sourceRoot, "modules");
-          check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor", "host-gateway"]), `${modulesRoot}: Runtime Server module topology mismatch`);
+          check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor", "host-gateway", "project"]), `${modulesRoot}: Runtime Server module topology mismatch`);
           check(same(readdirSync(join(modulesRoot, "host-gateway"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway.ts", "ports.ts"]), `${modulesRoot}/host-gateway: Runtime Server Host Gateway source files mismatch`);
           check(same(readdirSync(join(modulesRoot, "actor"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["application.ts", "compiler.ts", "index.ts", "ports.ts", "validation.ts", "values.ts"]), `${modulesRoot}/actor: Actor source files mismatch`);
+          check(same(readdirSync(join(modulesRoot, "project"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["application.ts", "errors.ts", "index.ts", "ports.ts", "values.ts"]), `${modulesRoot}/project: Project source files mismatch`);
         } else if (unit === apps[1]) {
           check(same(entries.map((entry) => entry.name).sort(), ["backend", "main.ts", "server-connection"]), `${sourceRoot}: ActorHost source topology mismatch`);
           const backendRoot = join(sourceRoot, "backend");
@@ -788,9 +810,10 @@
         check(same(readdirSync(infrastructureTestRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor-host-websocket"]), `${infrastructureTestRoot}: Runtime Server infrastructure test topology mismatch`);
         check(same(readdirSync(join(infrastructureTestRoot, "actor-host-websocket"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway-websocket-adapter.test.ts"]), `${infrastructureTestRoot}/actor-host-websocket: Runtime Server infrastructure test files mismatch`);
         const modulesRoot = join(testRoot, "modules");
-        check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor", "host-gateway"]), `${modulesRoot}: Runtime Server test module topology mismatch`);
+        check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor", "host-gateway", "project"]), `${modulesRoot}: Runtime Server test module topology mismatch`);
         check(same(readdirSync(join(modulesRoot, "host-gateway"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway.test.ts"]), `${modulesRoot}/host-gateway: Runtime Server Host Gateway test files mismatch`);
         check(same(readdirSync(join(modulesRoot, "actor"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor-application.test.ts", "actor-foundation.test.ts", "actor-validation-compiler.test.ts", "in-memory-adapters.ts"]), `${modulesRoot}/actor: Actor test files mismatch`);
+        check(same(readdirSync(join(modulesRoot, "project"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["in-memory-adapters.ts", "project-application.test.ts"]), `${modulesRoot}/project: Project test files mismatch`);
       }
     }
     const forbiddenCatchAll = new Set(["common", "shared", "core", "utils"]);

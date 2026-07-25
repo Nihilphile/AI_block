@@ -13,11 +13,11 @@
 
 ## 3. Project and Definition Brick application boundary
 
-- [ ] 3.1 Create the Runtime Server Project module with Project/Brick values, errors, repository ports, transaction port, identity/clock/digest dependencies, and application interfaces that depend inward on Runtime Contracts.
-- [ ] 3.2 Implement explicit Project create/read behavior without Project activation, implicit resource creation, aliasing, deletion, or workspace-root mutation.
-- [ ] 3.3 Implement strict Definition Brick create and immutable revision behavior with Project-local typed namespace ownership, canonical Body/digest, and no upsert or content deduplication.
-- [ ] 3.4 Implement optimistic revise, idempotent archive, aggregate read/list, deterministic history, exact revision read, and archived historical resolution.
-- [ ] 3.5 Add deterministic in-memory repository/transaction adapters and focused application tests for success, validation failure, rollback, stale revision, archive, Project isolation, equal-content provenance, and error mapping.
+- [x] 3.1 Create the Runtime Server Project module with Project/Brick values, errors, repository ports, transaction port, identity/clock/digest dependencies, and application interfaces that depend inward on Runtime Contracts.
+- [x] 3.2 Implement explicit Project create/read behavior without Project activation, implicit resource creation, aliasing, deletion, or workspace-root mutation.
+- [x] 3.3 Implement strict Definition Brick create and immutable revision behavior with Project-local typed namespace ownership, canonical Body/digest, and no upsert or content deduplication.
+- [x] 3.4 Implement optimistic revise, idempotent archive, aggregate read/list, deterministic history, exact revision read, and archived historical resolution.
+- [x] 3.5 Add deterministic in-memory repository/transaction adapters and focused application tests for success, validation failure, rollback, stale revision, archive, Project isolation, equal-content provenance, and error mapping.
 
 ## 4. Versioned `node:sqlite` persistence
 

@@ -203,6 +203,7 @@
     "computePackageContentHash",
     "decodeContract",
     "derivePackageHashMaterial",
+    "normalizeDefinitionBrickBody",
     "verifyPackageContentHash",
     "HOST_PROTOCOL_VERSION"
   ].sort();

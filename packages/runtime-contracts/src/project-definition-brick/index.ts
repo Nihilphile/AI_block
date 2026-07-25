@@ -49,4 +49,7 @@ export type {
   ReadExactDefinitionBrickRevisionCommand,
   ReadExactDefinitionBrickRevisionResult,
 } from "./schemas.js";
-export { computeDefinitionBrickDigest } from "./digest.js";
+export {
+  computeDefinitionBrickDigest,
+  normalizeDefinitionBrickBody,
+} from "./digest.js";

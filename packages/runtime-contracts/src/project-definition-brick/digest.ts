@@ -63,7 +63,7 @@ function normalizePromptBody(body: BrickPromptBody): BrickPromptBody {
     : { kind: "composite", parts: body.parts.map(normalizePromptBody) };
 }
 
-function normalizeDefinitionBrickBody(body: DefinitionBrickBody): DefinitionBrickBody {
+export function normalizeDefinitionBrickBody(body: DefinitionBrickBody): DefinitionBrickBody {
   if ("kind" in body) {
     return normalizePromptBody(body);
   }

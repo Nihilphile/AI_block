@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeDefinitionBrickDigest,
+  normalizeDefinitionBrickBody,
   type BrickKind,
   type DefinitionBrickBody,
   type DefinitionBrickDigest,
@@ -55,11 +56,46 @@ describe("Definition Brick canonical digest", () => {
   it("preserves the frozen digest for every accepted Body kind", () => {
     for (const fixture of KNOWN_DIGESTS) {
       expect(computeDefinitionBrickDigest(fixture.kind, fixture.body)).toBe(fixture.expected);
+      expect(computeDefinitionBrickDigest(
+        fixture.kind,
+        normalizeDefinitionBrickBody(fixture.body),
+      )).toBe(fixture.expected);
       expect(computeDefinitionBrickDigest(fixture.kind, fixture.body)).toMatch(/^sha256:[0-9a-f]{64}$/);
     }
   });
 
+  it("normalizes sys prompt and Prompt text without mutating either input", () => {
+    const sysPrompt: DefinitionBrickBody = {
+      text: "\uFEFFLine one\r\nLine two\rLine three\n",
+    };
+    const promptText: DefinitionBrickBody = {
+      kind: "text",
+      text: "\uFEFFLine one\r\nLine two\rLine three\n",
+    };
+
+    expect(normalizeDefinitionBrickBody(sysPrompt)).toEqual({
+      text: "Line one\nLine two\nLine three\n",
+    });
+    expect(normalizeDefinitionBrickBody(promptText)).toEqual({
+      kind: "text",
+      text: "Line one\nLine two\nLine three\n",
+    });
+    expect(sysPrompt).toEqual({
+      text: "\uFEFFLine one\r\nLine two\rLine three\n",
+    });
+    expect(promptText).toEqual({
+      kind: "text",
+      text: "\uFEFFLine one\r\nLine two\rLine three\n",
+    });
+  });
+
   it("removes one leading BOM and normalizes CRLF and CR to LF", () => {
+    expect(normalizeDefinitionBrickBody({
+      text: "\uFEFF\uFEFFText",
+    })).toEqual({
+      text: "\uFEFFText",
+    });
+
     expect(computeDefinitionBrickDigest("sys_prompt", {
       text: "\uFEFFLine one\r\nLine two\rLine three\n",
     })).toBe(computeDefinitionBrickDigest("sys_prompt", {
@@ -89,7 +125,16 @@ describe("Definition Brick canonical digest", () => {
       kind: "composite",
       parts: [...normalized.parts].reverse(),
     };
+    const original = {
+      kind: "composite",
+      parts: [
+        { kind: "text", text: "\uFEFFFirst\r\n" },
+        { kind: "composite", parts: [{ kind: "text", text: "Second\rThird" }] },
+      ],
+    };
 
+    expect(normalizeDefinitionBrickBody(mixed)).toEqual(normalized);
+    expect(mixed).toEqual(original);
     expect(computeDefinitionBrickDigest("prompt", mixed))
       .toBe(computeDefinitionBrickDigest("prompt", normalized));
     expect(computeDefinitionBrickDigest("prompt", reordered))
@@ -108,8 +153,31 @@ describe("Definition Brick canonical digest", () => {
       config: { a: 2, z: 1 },
     };
 
+    expect(normalizeDefinitionBrickBody(unordered)).toEqual(unordered);
     expect(computeDefinitionBrickDigest("backend", unordered))
       .toBe(computeDefinitionBrickDigest("backend", ordered));
+  });
+
+  it("preserves structured Body values and ordering without mutation", () => {
+    const bodies: readonly DefinitionBrickBody[] = [
+      { adapter_id: "claude.code", model_id: "model", config: { z: 1, a: 2 } },
+      {
+        providers: [
+          { provider_id: "first", config: { enabled: true } },
+          { provider_id: "second", config: { enabled: false } },
+        ],
+      },
+      { workspace: { root_id: "primary", relative_working_directory: "src" } },
+    ];
+    const snapshots = bodies.map((body) => structuredClone(body));
+
+    for (const [index, body] of bodies.entries()) {
+      expect(normalizeDefinitionBrickBody(body)).toEqual(snapshots[index]);
+      expect(body).toEqual(snapshots[index]);
+    }
+    expect(Object.keys((normalizeDefinitionBrickBody(bodies[0]!) as {
+      config: Record<string, unknown>;
+    }).config)).toEqual(["z", "a"]);
   });
 
   it("fails closed for values without one canonical JSON serialization", () => {

@@ -2,7 +2,12 @@
 
 AI_block's design documents, OpenSpec changes, construction records, and source/tests each serve a different purpose, but none provides a compact answer to “what is true for this module today?” A new Orchestrator or Worker therefore tends to reload too much history or search broad source areas before it can identify a bounded read/write scope.
 
-The durable policy is defined in `docs/construction/project-state-system-design-v0.1.md`. This change implements only its first activation: a sparse root `project_state/` tree, five module state cards, and runbook integration. The repository currently has no `project_state/` directory. The existing reference-only ActorTemplate change is complete and remains historical implementation evidence, not an active work plan.
+The durable policy is defined in
+`docs/construction/project-state-system-design.md`. This change implemented its
+first activation: a sparse root `project_state/` tree, five module state cards,
+and runbook integration. The existing reference-only ActorTemplate change is
+complete and remains historical implementation evidence, not an active work
+plan.
 
 ## Goals / Non-Goals
 

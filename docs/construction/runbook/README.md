@@ -2,19 +2,30 @@
 
 ## Purpose
 
-This Runbook is a catalog of composable construction-context Bricks. The Orchestrator selects the exact Bricks loaded for a Worker lease and for each dispatch. A directory name, role name, file reference, or neighboring file never causes automatic loading.
+This Runbook is a catalog of reusable construction-context Bricks. Keep a
+Brick only when its stable, high-quality information will be consumed often
+enough to replace repeated prompting or prevent a concrete failure. The
+Orchestrator selects exact Bricks for a Worker lease and dispatch; a directory
+name, role name, file reference, or neighboring file never causes automatic
+normative loading.
 
 This is a construction-system experiment informed by AI_block's Prompt Brick ideas. It does not change the Runtime product model or make construction files into product Runtime objects.
 
-The repository's current-state route is [`project_state/README.md`](../../../project_state/README.md). It is a bounded navigation layer: load the root state README and the exact target module card for a task, then inspect the authorized source, Contracts, tests, and evidence. Project State summaries never override those authorities or the Runbook's procedure rules.
+The repository's current-state route is
+[`project_state/README.md`](../../../project_state/README.md). It is a bounded
+navigation layer: declare one existing-module card or one new-module parent
+route, then inspect authorized source, Contracts, tests, and evidence. Project
+State summaries never override those authorities or the Runbook's procedure
+rules.
 
 ## Context composition model
 
 ```text
 Worker context
   = lease-scoped Bricks loaded once
-  + dispatch-scoped Bricks selected now
-  + Task-specific authority and decision deltas
+  + bounded Project State context
+  + dispatch-scoped method/evidence Bricks selected now
+  + Task file or inline Task-specific authority delta
 ```
 
 ### Lease scope
@@ -24,6 +35,7 @@ Lease Bricks remain active for one coherent Worker context lease. They are loade
 Typical lease Bricks:
 
 - project Worker policy;
+- Project State context policy;
 - one role profile;
 - construction safety ceilings;
 - Serena no-memory safety when relevant;
@@ -36,16 +48,20 @@ Dispatch Bricks are selected for one Task, phase, or evidence action. Load only 
 Typical dispatch Bricks:
 
 - the concrete Task;
-- the root Project State README and exact target module state card;
 - a preflight, implementation, testing, or reviewing procedure;
 - an active specialized gate;
 - an exact design or finding needed by the Task;
 - a tool operation guide;
-- a Report template at handoff.
+- a Report template only when `output_mode: file`.
 
 ### Task-specific delta
 
-Baseline, read/write scope, state semantics, error codes, security decisions, acceptance scenarios, commit message, and scope expansion remain in the Task or an explicit Orchestrator authorization delta. They are not generalized into reusable procedures.
+Baseline, read/write scope, state semantics, error codes, security decisions,
+acceptance scenarios, commit instruction, and scope expansion remain in a
+durable Task or an explicit inline authorization delta. W2/W3 work, public
+boundaries, new state owners, cross-context authority, and independent
+acceptance use a committed Task. Bounded W0/W1 work may use an inline delta.
+These details are not generalized into reusable procedures.
 
 ## Explicit loading rule
 
@@ -63,62 +79,24 @@ Task `References` are audit pointers, not load directives. If a Worker needs an 
 
 ### Project State dispatch rule
 
-Every task dispatch names these exact repository-relative paths in its `load:` set:
+Every product dispatch declares `state_context` according to
+[`project/project-state-policy.md`](./project/project-state-policy.md).
+Existing-module work names one exact target card. New-module preflight names
+the nearest parent route and intended card path; the Orchestrator creates the
+initial card only after READY and before implementation authorization.
 
-```text
-project_state/README.md
-project_state/<target-module-card>/README.md
-<task and current procedure>
-```
-
-`<target-module-card>` is a concrete card path, never a glob or directory. Add a neighboring card only when the Task crosses that module's declared boundary, and name the relevant Contract or interface evidence in the same load set. A routing node is not a substitute for the target card.
-
-This rule does not prevent repository investigation. Task `read scope` authorizes dynamic navigation of source, tests, configuration, and Git evidence. `load` controls instructions and decision context, not every source file read.
+Normative Runbook/design/Task context remains manifest-selected. Inside Task
+read scope, Workers may investigate source, tests, Contracts, Git, and evidence
+links without gaining new instructions or write authority.
 
 ## Dispatch form
 
-### Establish a lease
-
-```yaml
-lease:
-  id: actor-host-coder-01
-  epoch: 1
-  load_once:
-    - docs/construction/runbook/project/worker-lease-policy.md
-    - docs/construction/runbook/worker-guides/coder/lease.md
-    - docs/construction/runbook/policies/serena-safety.md
-    - docs/construction/runbook/policies/superpowers-boundary.md
-```
-
-### Dispatch a preflight
-
-```yaml
-reuse_lease: actor-host-coder-01
-expected_epoch: 1
-load:
-  - project_state/README.md
-  - project_state/apps/actor-host/README.md
-  - docs/construction/records/<module>/tasks/<task>.md
-  - docs/construction/runbook/worker-guides/coder/procedures/preflight.md
-action: preflight only
-```
-
-### Authorize implementation
-
-```yaml
-reuse_lease: actor-host-coder-01
-expected_epoch: 1
-load:
-  - project_state/README.md
-  - project_state/<target-module-card>/README.md
-  - <Task path>
-  - docs/construction/runbook/worker-guides/coder/procedures/implementation.md
-action: IMPLEMENTATION_AUTHORIZED
-decision_delta:
-  - <Task-specific closed decision>
-```
-
-Loading a Brick never grants more authority than the Task and current authorization delta.
+Use the canonical
+[`templates/load-manifest.md`](./templates/load-manifest.md). It covers lease
+creation, existing/new module state context, durable or inline authority,
+action, and output mode. Non-authoritative worked compositions live only in
+[`examples/dispatch-composition.md`](./examples/dispatch-composition.md).
+Loading a Brick never grants more authority than the Task or inline delta.
 
 ## Directory map
 
@@ -128,7 +106,8 @@ runbook/
 ├── catalog.md
 ├── project/
 │   ├── orchestrator-profile.md
-│   └── worker-lease-policy.md
+│   ├── worker-lease-policy.md
+│   └── project-state-policy.md
 ├── orchestration/
 ├── worker-guides/
 │   └── <role>/
@@ -148,7 +127,8 @@ runbook/
 - `templates/`: output or record shapes loaded only when used.
 - `examples/`: non-authoritative composition examples.
 
-Product architecture, milestone plans, and real Task/Report records remain outside the Runbook.
+Product architecture, milestone plans, real Tasks, product/state commits, and
+evidence Reports remain outside the Runbook.
 
 ## Brick metadata
 
@@ -172,12 +152,12 @@ Metadata helps the Orchestrator compose context. It never causes automatic loadi
 | Orchestrator Task and authorization delta | Current Worker authority |
 | Source code, Runtime Contracts, and tests | Executable behavior and supported current surface |
 | `project_state/` | Bounded current orientation and navigation only; never proof or authority over the rows above |
-| Accepted construction records, Reports, and Git | Verification and historical evidence |
+| Accepted construction records, focused evidence Reports, commits, and Git | Verification and historical evidence |
 | Active OpenSpec changes | Approved future-work planning |
 | Project and lease policies | Long-lived ceilings and defaults |
 | Procedure or operation policy | Method for assigned work |
 | Template | Output shape only |
-| Report | Work and evidence actually produced |
+| Declared output (`reply`, `commit`, or `file`) | Work and evidence actually produced |
 
 No profile, procedure, policy, template, or load directive enlarges Task authority.
 
@@ -206,11 +186,16 @@ A Worker reads, in order:
 
 It reads no other normative Runbook file unless the Orchestrator adds it to a later load list.
 
-For a product or construction task, the dispatch `load` list also includes the root Project State README and the exact target module card. The Worker then reads only the local source/test roots and direct-neighbor cards needed by the declared write scope. If the card disagrees with scoped evidence, the Worker reports the mismatch and does not treat the card as proof.
+For product construction, the Worker also reads the declared `state_context`.
+It then investigates only the source/test/evidence surface allowed by Task read
+scope. If a card disagrees with scoped evidence, the Worker reports the
+mismatch and does not treat the card as proof.
 
 ## State-card maintenance and facet rule
 
-The Orchestrator owns root routing, the cross-module map, current focus, and accepted/deferred summaries. A Coder updates only directly affected module cards when authorized. A Tester reports observed mismatches without rewriting implementation claims. A Reviewer checks changed cards against the accepted implementation and evidence.
+The reusable lifecycle and role ownership live only in
+[`project/project-state-policy.md`](./project/project-state-policy.md); role
+guides do not repeat them.
 
 Each module keeps one default `README.md` card. Add a future facet such as `interfaces.md`, `lifecycle.md`, or `persistence.md` only when Workers routinely load that subject independently or the README can no longer remain a compact orientation layer. File length alone is not a split trigger, and this activation creates no facet files.
 

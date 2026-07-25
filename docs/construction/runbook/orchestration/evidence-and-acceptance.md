@@ -35,7 +35,17 @@ Triggered gates may add specific evidence.
 
 ## Subject identity
 
-Testing and reviewing Reports identify the exact commit or artifact examined. If the subject changes materially, earlier evidence does not silently transfer to the new subject.
+Testing and reviewing evidence identifies the exact commit or artifact
+examined. If the subject changes materially, earlier evidence does not silently
+transfer to the new subject.
+
+## Evidence durability
+
+Self-verification may live in the implementation commit when source, tests, or
+Project State are the natural durable result. Independent testing/review and
+decision-bearing diagnosis/research use a focused file Report because their
+unique contribution has no product diff. Evidence files stay delta-only and do
+not restate their Task.
 
 ## Module acceptance
 

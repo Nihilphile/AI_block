@@ -21,7 +21,7 @@ authority: constraint-only
 - Stay inside exact write and external-action scope.
 - Stop before changing a public Contract, dependency, acceptance condition, another state owner, or an unlisted path.
 - Git, source, tests, and the committed subject remain authoritative over remembered context.
-- Reports contain no secrets, raw transcripts, or large logs.
+- Durable outputs contain no secrets, raw transcripts, or large logs.
 
 ## Context loading
 
@@ -38,4 +38,7 @@ Return `LEASE_RELOAD_REQUIRED` when continuity is uncertain. Do not claim that n
 
 ## Handoff
 
-State decisions, work/evidence, exact verification, deviations, remaining risk, and subject identity. Stop after the assigned handoff; do not schedule the next construction phase.
+Use the declared output mode. Return only unique decisions/evidence, exact
+verification, deviations, remaining risk, subject identity, and the durable
+artifact reference when one exists. Stop after the assigned handoff; do not
+schedule the next construction phase.

@@ -5,22 +5,83 @@ audience: orchestrator-and-workers
 authority: constraint-only
 ---
 
-# Task and Report Audit
+# Authority and Evidence Records
 
 ## Purpose
 
-Every delegated construction assignment leaves a small Git-tracked authorization/evidence trail:
+Construction records preserve only authority or evidence that must survive the
+current conversation. They are interfaces, not a second project-management
+system, and a Task/Report pair is never created by default.
 
-- the Orchestrator owns the Task;
-- each Worker owns the Report for work it performed;
-- the dispatch Load Manifest selects reusable context without duplicating it into the Task;
-- records preserve Task-specific decisions, work/evidence, deviations, and risk.
+Every delegated assignment has:
 
-These are interfaces, not a second project-management system.
+```text
+composition manifest
++ authority input
++ declared output mode
++ concise handoff
+```
+
+## Authority input
+
+Use `authority_mode: inline` for bounded W0/W1 work whose outcome, write scope,
+constraints, and verification are exact and do not cross a public boundary,
+state owner, context lease, or external state.
+
+Use `authority_mode: task` with a committed Task for:
+
+- W2/W3 product construction;
+- a new state owner or public Contract;
+- work requiring independent testing/review;
+- authority that must survive context, Worker, or phase changes;
+- external, destructive, costly, or stateful action;
+- any ambiguity where later readers must know exactly what was authorized.
+
+Reusable instructions remain in loaded Runbook Bricks. A Task or inline delta
+contains only Task-specific subject, scope, decisions, acceptance, and output
+instruction.
+
+## Output modes
+
+Every dispatch declares one primary `output_mode`.
+
+### `reply`
+
+Use for preflight, load/scope requests, bounded status, non-binding exploration,
+or other results that do not need repository durability.
+
+### `commit`
+
+Use when source, tests, Project State, or another authorized deliverable is the
+natural durable result. The commit body records only the Task/delta identity,
+baseline, concise verification, material deviation, and residual risk. Do not
+add a coding Report that restates the diff, state card, or commit evidence.
+
+### `file`
+
+Use when the Worker's unique contribution has no better durable home or will
+authorize later work. Typical examples are independent testing/review,
+decision-bearing research/exploration, and root-cause diagnosis.
+
+A file Report is delta-only: exact subject, verdict or decision, decisive
+evidence, findings/deviations, coverage limit, and residual risk. It does not
+repeat the Task objective, reusable policy, full command logs, or current facts
+already summarized by Project State.
+
+## Selection test
+
+Before requiring a record, ask:
+
+1. Will another Worker or future Orchestrator consume this information?
+2. Is it absent from source, tests, Project State, Task, and Git metadata?
+3. Would losing it weaken authority, acceptance, or a later decision?
+
+If all answers are no, keep it in the reply. File count and workflow level
+alone do not justify an artifact.
 
 ## Naming and layout
 
-Task IDs use `<MODULE>-<subarea>-<number>`. Real records remain under:
+Durable Tasks and file Reports remain under:
 
 ```text
 docs/construction/records/<module>/
@@ -28,36 +89,32 @@ docs/construction/records/<module>/
 └── reports/<task-id>-<slug>.<work-type>.md
 ```
 
-Historical `.coder.md`, `.tester.md`, `.reviewer.md`, and similar suffixes remain valid.
+Task IDs use `<MODULE>-<subarea>-<number>`. Historical suffixes and existing
+Task/Report pairs remain valid.
 
 ## Ownership
 
-- The Orchestrator writes and commits the Task before authorized product work begins.
-- A Worker may read but not rewrite the Task.
-- A Worker writes only authorized product/evidence paths and its own Report.
-- Objective, authority, public semantics, acceptance, or external-action changes require an explicit authorization delta or a new Task.
-- Reports contain no secrets, raw transcripts, or large logs.
-
-## Context composition
-
-- Task `References` are audit pointers, not auto-load directives.
-- The Orchestrator dispatches the Task plus exact role/procedure/policy/design Bricks.
-- Reusable instructions stay in the Runbook and are not copied into every Task.
-- Task-specific baseline, scope, semantics, error codes, decisions, acceptance, and commit instructions stay in the Task/delta.
+- The Orchestrator owns durable Tasks and inline authorization deltas.
+- A Worker may read but not rewrite its authority input.
+- A Worker writes only authorized deliverables and its declared file Report.
+- Objective, authority, public semantics, acceptance, or external-action
+  changes require an explicit authorization delta or replacement Task.
+- Testers and Reviewers retain independent ownership of their evidence.
 
 ## Task content
 
-A Task records identity, state owner, workflow/gates, exact subject, objective, read/write/external authority, frozen decisions, escalation conditions, audit references, observable acceptance, and handoff.
-
-## Report content
-
-A Report records lease/subject identity, uncertainty and decisions, work/evidence, exact verification/result, material tool/context integrity, deviations, and remaining risk.
-
-The Orchestrator classifies reported decisions as accepted, acceptable alternative, correction required, or out of authority. This calibrates only the same lease/module/decision category.
+A durable Task records identity, state owner, workflow/gates, exact subject,
+objective, read/write/external authority, Task-specific frozen decisions,
+escalation conditions, observable acceptance, and output mode.
 
 ## Git use
 
-- Product-writing Workers commit authorized implementation and their Report together when practical.
-- Testing/review Reports name the exact implementation subject and later orchestration baseline separately.
-- Workers stage only explicit authorized paths and their Report.
-- Cancelled or blocked Tasks remain with a brief status explanation.
+- Product-writing Workers normally commit source/tests/direct state-card
+  updates with structured commit evidence and no separate coding Report.
+- State-only reconciliation uses the state diff and commit as its durable
+  result.
+- Testing/review Reports name the exact implementation subject and later
+  orchestration baseline separately.
+- Workers stage only explicit authorized paths and their declared output.
+- Cancelled or blocked durable Tasks retain a brief status only when later
+  readers need it.

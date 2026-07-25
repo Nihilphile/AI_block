@@ -26,6 +26,8 @@ authority: none
 - delegated discretion: <local decisions the Worker may make>
 - tools/external actions: <allowed set and limits>
 - delegation: none | <explicit capability>
+- authority mode: task
+- output mode: reply | commit | file
 
 ## Frozen decisions and escalation
 
@@ -41,4 +43,5 @@ authority: none
 
 ## Handoff
 
-<Required Report path/type, subject identity, and commit instruction.>
+<Required durable output path/commit instruction, subject identity, and concise
+return shape. A Report path is present only for `output mode: file`.>

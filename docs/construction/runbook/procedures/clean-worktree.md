@@ -23,4 +23,6 @@ authority: method-only
 
 ## Handoff
 
-Report starting state, generated-output cleanup, final authorized diff, and whether the worktree is clean after the Task commit. Never obtain cleanliness by deleting or reverting user work.
+Return starting state, generated-output cleanup, final authorized diff, and
+whether the worktree is clean after the Task commit through the declared output
+mode. Never obtain cleanliness by deleting or reverting user work.

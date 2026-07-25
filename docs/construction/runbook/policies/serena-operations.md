@@ -38,4 +38,6 @@ Use only when explicitly loaded for the current dispatch and inside Task authori
 - Unicode CLI output on Windows may require `PYTHONUTF8=1` or `PYTHONIOENCODING=utf-8`;
 - when output truncates or a file is non-symbolic, use bounded `rg`, PowerShell, or ordinary read/patch operations.
 
-Report material Serena operations, useful effects, friction/fallbacks, and confirmation that memory/onboarding/`.serena/` were not used.
+Record only material Serena effects or fallback-relevant friction through the
+declared output mode. Confirm that memory, onboarding, and `.serena/` were not
+used when that integrity fact matters to acceptance.

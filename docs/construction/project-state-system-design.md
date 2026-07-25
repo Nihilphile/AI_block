@@ -1,6 +1,8 @@
-# Project State System Design v0.1
+# Project State System Design
 
-> Status: construction-system design
+> Status: current construction-system design
+>
+> Revision: 0.2
 >
 > Scope: a versioned, progressively disclosed current-state knowledge layer for AI_block Orchestrators and Workers.
 >
@@ -67,6 +69,22 @@ Runbook               operational policy
 
 The objective is not to eliminate source reading. It eliminates broad repository archaeology while retaining local-source verification before a change.
 
+Context assembly distinguishes two kinds of reading:
+
+```text
+Normative context
+  -> exact Runbook, Task, design, Contract, and state-card inputs selected by
+     the Orchestrator
+
+Investigative evidence
+  -> source, tests, Git, and evidence links a Worker may inspect dynamically
+     inside Task read scope
+```
+
+Following investigative evidence does not load new instructions, enlarge write
+authority, or authorize a neighboring state owner. Missing normative context
+returns a bounded load request.
+
 ## 4. What counts as a module
 
 A module is the smallest stable responsibility unit that can be independently understood, changed, reviewed, and handed off. It is not automatically a directory, package, class, task, test suite, or OpenSpec change.
@@ -77,7 +95,9 @@ A candidate owns a module state card when it has all or most of the following:
 2. a clear external boundary, such as a Contract, port, protocol, or supported entry point;
 3. independent invariants or lifecycle rules;
 4. a realistic independent implementation/review/closeout path;
-5. a bounded source area that a Worker can safely enter after reading the card and direct neighbors.
+5. a bounded source area that a Worker can safely enter after reading the card
+   and direct neighbors, or an implementation-ready source/test boundary
+   confirmed by Coder preflight and explicitly authorized by the Orchestrator.
 
 Directories that merely group code may receive a short routing README, but do not become module state cards solely because they exist on disk.
 
@@ -117,7 +137,12 @@ The first module cards are:
 - ActorHost;
 - Runtime CLI.
 
-Project, Package, Run, Graph, and SQLite persistence remain visible in `_meta/system-map.md` as planned or deferred architecture boundaries. They receive their own cards only after they acquire real code, persistent state, a stable interface, or a separately hand-offable construction boundary.
+Project, Package, Run, Graph, and SQLite persistence remain visible in
+`_meta/system-map.md` as planned or deferred architecture boundaries. Product
+planning alone does not create cards. A boundary receives a card after it
+acquires real code, persistent state, or a stable interface, or immediately
+before implementation when a READY preflight has established a separately
+hand-offable state owner and the Orchestrator authorizes that construction.
 
 ## 6. One module, one default README
 
@@ -170,6 +195,12 @@ The front matter is intentionally small. It supports fast routing without introd
 
 `implementation_state` describes capability maturity. `work_state` describes present attention or constraint. For example, a reference-only Actor Module may be `implementation_state: reference-only` and `work_state: stable`; a planned Graph Module is not automatically a blocker.
 
+For an implementation-ready boundary with no source yet, the Orchestrator uses
+`implementation_state: planned`, `work_state: active`, and empty
+`source_roots`/`test_roots`. The body must say that implementation is
+authorized but not yet present. Intended paths belong in the Task or prose
+until they exist.
+
 ### 6.2 Current condition vocabulary
 
 - `stable`: no active authorized work and no known immediate blocker;
@@ -178,6 +209,34 @@ The front matter is intentionally small. It supports fast routing without introd
 - `deferred`: intentionally outside the current stage, not an active blocker.
 
 Every `blocked` statement must name both the blocking condition and the path that can unblock it. Deferred scope must not be written as a blocker.
+
+### 6.3 Initial-card lifecycle and section ownership
+
+An initial module card is created only after a Coder preflight returns READY
+and before the Orchestrator grants implementation authority:
+
+```text
+Task and preflight
+  -> Orchestrator creates the initial card
+  -> Coder implements and reconciles current implementation claims
+  -> Tester reports mismatches without editing
+  -> Reviewer verifies the candidate card
+  -> Orchestrator accepts and updates routing/meta state
+```
+
+The Orchestrator authors `Intent`, the stable ownership boundary, dependency
+direction, and explicit exclusions. A Coder may not silently redefine them; an
+incompatible implementation finding returns to scope or design authority.
+
+The Coder updates `Implemented today`, actual source/test roots, concrete local
+dependencies, current implementation condition, and evidence when authorized.
+Before acceptance, the card states that implementation is self-verified and
+independent acceptance is pending.
+
+The Orchestrator owns the final accepted/deferred condition and all root,
+parent-route, system-map, and current-focus reconciliation. These lifecycle
+states use the existing front matter and prose; they do not require a second
+state database or additional phase fields.
 
 ## 7. Progressive disclosure and later splitting
 
@@ -228,16 +287,27 @@ It then loads only the cards relevant to the selected module or decision. Produc
 
 ### 9.2 Worker task entry
 
-A task dispatch explicitly supplies a bounded load set, for example:
+A task dispatch explicitly supplies a bounded state context, for example:
 
-```text
-load:
-- project_state/README.md
-- project_state/apps/runtime-server/modules/actor/README.md
-- <task file>
+```yaml
+state_context:
+  root: project_state/README.md
+  target:
+    kind: existing
+    card: project_state/apps/runtime-server/modules/actor/README.md
+  neighbors: []
 ```
 
-The Worker then reads only the local source, tests, Contracts, and direct-neighbor cards required to inspect its actual write scope. State cards reduce broad exploration; they do not authorize edits without local evidence.
+Task/procedure/design authority remains in the separate manifest inputs. The
+Worker then reads only the local source, tests, Contracts, and direct-neighbor
+evidence required by its actual read/write scope. State cards reduce broad
+exploration; they do not authorize edits without local evidence.
+
+For a new module whose initial card does not yet exist, preflight instead
+receives the root route, nearest existing parent route, and Task. After READY,
+the Orchestrator creates the initial card and every implementation/evidence
+dispatch names that exact card. A future or speculative design boundary never
+creates an empty card merely to satisfy a dispatch shape.
 
 ### 9.3 Review entry
 
@@ -267,7 +337,8 @@ Orchestrator
   owns root routing, cross-module map, current focus, and acceptance/defer summaries
 
 Coder
-  proposes and updates only the directly affected module card
+  updates current implementation/evidence claims only on the authorized
+  directly affected module card
 
 Tester
   may report an observed mismatch but does not rewrite implementation state
@@ -305,7 +376,10 @@ This prevents a state card from becoming a hidden changelog and keeps its contex
 
 ## 12. Initial activation scope
 
-The first activation creates only the root/meta files and the five initial module cards. It does not backfill every source directory, rewrite historical records, or require a complete source audit.
+The first activation created only the root/meta files and the five initial
+module cards. It did not backfill every source directory, rewrite historical
+records, or require a complete source audit. Later cards follow the
+implementation-ready lifecycle above.
 
 The initial cards are based on accepted closeouts, current source roots, existing product design, and existing construction evidence. Each later construction slice expands or corrects cards incrementally.
 
@@ -328,12 +402,18 @@ The Project State System does not:
 The initial adoption succeeds when:
 
 1. a new Orchestrator can identify current architecture, accepted modules, deferred scope, and the next entry point without scanning the full source tree;
-2. a Worker can receive an explicit `load:` set containing a root and one module card before reading local source;
+2. an existing-module Worker can receive a bounded state context containing a
+   root and one module card, while a new-module preflight can enter through the
+   root, parent route, and Task without creating speculative state;
 3. each initial card cleanly separates intent, current implementation, boundaries, and condition;
 4. a Reviewer can determine whether a changed module card matches the accepted implementation;
 5. state-card maintenance remains bounded to directly affected modules;
 6. the system produces no new product runtime behavior and no duplicate construction history.
 
-## 15. Next construction boundary
+## 15. Evolution rule
 
-Before any Project/Brick persistence implementation begins, create a dedicated construction change to initialize the Project State System and integrate its read/write rules into the runbook. That change must remain documentation and process scoped. It must not implement Runtime persistence, Actor functionality, or a Graph feature.
+Future Runbook integration must preserve semantic compression: reusable
+construction method belongs in Runbook Bricks, reusable current facts belong
+in Project State, Task-specific authority belongs in a Task or inline delta,
+and only unique durable evidence belongs in a Report. No artifact or workflow
+step is retained merely for ceremony.

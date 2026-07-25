@@ -5,32 +5,29 @@ audience: all-workers
 authority: none
 ---
 
-# <TASK-ID> <Work Type> Report
+# <TASK-ID> <Work Type> Evidence
 
 - work: coding | debugging | exploring | researching | testing | reviewing
-- result: completed | blocked | failed
-- implementation subject: same-as-report | <commit/artifact> | none
+- verdict: pass | accept | completed | blocked | failed | remediation-required
+- implementation subject: <commit/artifact> | none
 - orchestration baseline: <commit when relevant> | none
 - lease: <lease-id>@<epoch> | not-applicable
 
-## Decisions
+## Decision or findings
 
-- uncertainty found: yes | no
-- implicit decisions found: yes | no
-- decisions made or escalation requested: <short list or none>
+<Lead with the verdict, durable decision, or actionable findings. Do not repeat
+the Task.>
 
-## Work and evidence
+## Decisive evidence
 
-<What was implemented or evidenced, with concise references.>
+<Only evidence needed to support the verdict/decision, with concise references
+and exact results.>
 
-## Verification or result
-
-<Exact checks/outcomes appropriate to the assigned work.>
-
-## Context and tool integrity
-
-<Lease continuity, material tool operations/fallbacks, and prohibited capability confirmation when relevant.>
-
-## Deviations and remaining risk
+## Coverage limits and residual risk
 
 <None, or a short explicit list.>
+
+## Integrity
+
+<Subject/lease continuity, material deviation, and final repository state when
+relevant. Omit routine tool narration.>

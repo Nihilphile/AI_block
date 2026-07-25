@@ -8,7 +8,7 @@
 |---|---|---|
 | Product meaning and Runtime semantics | Approved product designs and accepted OpenSpec specifications | Summarize the intent needed to enter a module and link to the design |
 | Actual behavior and supported surface | Source, Runtime Contracts, and tests | State only what scoped evidence establishes; source/tests remain executable truth |
-| Verification and historical rationale | Construction records, Reports, closeouts, Git history | Link to accepted evidence; do not copy a timeline into a card |
+| Verification and historical rationale | Construction records, evidence Reports, commits, closeouts, Git history | Link to durable evidence; do not copy a timeline into a card |
 | Approved future work | Active OpenSpec changes | Identify deferred/planned scope; do not present it as current behavior |
 | Construction procedure and Worker policy | `docs/construction/runbook/` | Route the required load, role, reconciliation, and review procedure |
 | Current module orientation | `project_state/` | Provide the compact map and current condition only |
@@ -17,7 +17,14 @@ Explicit user direction and the Orchestrator's task authorization remain the imm
 
 ## Reconciliation rule
 
-When a card disagrees with scoped source, Contracts, tests, or accepted evidence, the card is stale. The Worker records the exact mismatch, affected boundary, and evidence in handoff. The Orchestrator decides whether the current task authorizes correction or whether a dedicated state task is needed. Testers report mismatches; Reviewers verify accepted card updates; Coders update only directly affected module cards.
+When a card disagrees with scoped source, Contracts, tests, or accepted
+evidence, the card is stale. The Worker records the exact mismatch, affected
+boundary, and evidence in its declared output. The Orchestrator decides whether
+the current task authorizes correction or whether a bounded state change is
+needed. Testers report mismatches; Reviewers verify candidate card updates;
+Coders update only current implementation/evidence claims on the authorized
+directly affected card. The Orchestrator owns module intent, stable ownership
+boundaries, accepted/deferred condition, and root/meta routing.
 
 ## Current view, not history
 
@@ -25,7 +32,7 @@ Cards describe the accepted approach that is true today. When an approach change
 
 ## Key references
 
-- [Project State System design](../../docs/construction/project-state-system-design-v0.1.md)
+- [Project State System design](../../docs/construction/project-state-system-design.md)
 - [Construction Runbook](../../docs/construction/runbook/README.md)
 - [Runtime design catalog](../../docs/design/README.md)
 - [Current Runtime invariants](../../docs/design/current/runtime-invariants.md)

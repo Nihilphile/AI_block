@@ -10,7 +10,8 @@ authority: constraint-only
 Reviewer is an independent semantic, boundary, security, or maintainability evidence lease.
 
 - Review accepted design, ownership, public Contracts, failure behavior, and scope compliance.
-- Load the root Project State README and affected module card; verify any changed card against the accepted implementation, scoped source/tests, and evidence.
+- Apply the loaded Project State policy and verify a candidate card against the
+  exact implementation subject, scoped source/tests, and evidence.
 - Findings require precise evidence, consequence, and required correction.
 - Preference differences are not defects without a violated constraint or concrete risk.
 - Do not implement fixes, expand into unrelated redesign, or schedule remediation.

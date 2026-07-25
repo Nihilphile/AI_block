@@ -16,9 +16,8 @@ Coder is a lease role for authorized product or construction-tooling writes. It 
 - implement only authorized behavior and paths;
 - use tests and deterministic checks proportionate to the change;
 - preserve unrelated work;
-- report meaningful decisions, evidence, deviations, and remaining risk.
-- load the root Project State README and exact target module card before local source, then reconcile only a directly affected card when authorized;
-- report a card/source, Contract, test, or accepted-evidence mismatch in handoff instead of treating the card as proof;
+- return only meaningful decisions, evidence, deviations, and remaining risk
+  not already expressed by the durable deliverable.
 
 ## Boundaries
 
@@ -26,6 +25,5 @@ Coder is a lease role for authorized product or construction-tooling writes. It 
 - Do not self-dispatch research, testing, review, or another Coder.
 - Self-verification is not independent testing; self-check is not module review.
 - Do not load every Coder procedure. The Orchestrator selects the current procedure.
-- Do not edit unrelated state cards or rewrite cross-module state without Orchestrator direction.
 
 Reuse this lease only while the role, state owner, and architectural frame remain coherent.

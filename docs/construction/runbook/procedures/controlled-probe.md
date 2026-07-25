@@ -28,5 +28,7 @@ Use this procedure only when the Task explicitly authorizes a stateful, costly, 
 
 - Clean only the exact temporary state authorized by the Task.
 - Do not alter user-level credentials, configuration, caches, histories, or pre-existing sessions unless the Task names the exact state and action.
-- Report consumed budgets, residual state, cleanup evidence, deviations, and which questions remain unproven.
-- Stop after the Report and authorized commit; do not run follow-up probes without a new authorization delta.
+- Record consumed budgets, residual state, cleanup evidence, deviations, and
+  unproven questions through the declared output mode.
+- Stop after the declared output and authorized commit; do not run follow-up
+  probes without a new authorization delta.

@@ -19,7 +19,8 @@ This is an Orchestrator catalog, not a Worker auto-load manifest. Select exact f
 | `orchestration/specialized-gates.md` | orchestrator / dispatch when active | Binary gate triggers and added controls |
 | `orchestration/worker-context-leases.md` | orchestrator | Lease creation, reuse, continuity, reset, and retirement |
 | `orchestration/evidence-and-acceptance.md` | orchestrator / evidence dispatch | Evidence ownership and module acceptance |
-| `task-report-audit.md` | orchestrator / handoff | Task and Report record authority |
+| `task-report-audit.md` | orchestrator / handoff | Authority-input and durable-output selection |
+| `project/project-state-policy.md` | lease / orchestrator | State-context composition, initial-card lifecycle, and role ownership |
 
 ## Project State System
 
@@ -29,7 +30,7 @@ This is an Orchestrator catalog, not a Worker auto-load manifest. Select exact f
 | `project_state/_meta/authority.md` | orchestrator / on-demand | Authority separation and stale-card reconciliation rule |
 | `project_state/_meta/system-map.md` | orchestrator / on-demand | Sparse current architecture, dependency direction, and planned/deferred boundaries |
 | `project_state/_meta/current-focus.md` | orchestrator / on-demand | Active focus, named blockers with unblock paths, and next entry point |
-| `docs/construction/project-state-system-design-v0.1.md` | orchestrator / design context | Semantics and maintenance rules for the current-state system |
+| `docs/construction/project-state-system-design.md` | orchestrator / design context | Semantics and maintenance rules for the current-state system |
 
 State cards are dispatch-scoped target context, not a directory-wide load. Select one exact card for the target module; add direct neighbors only for a declared cross-module boundary.
 
@@ -70,7 +71,7 @@ All procedure paths are relative to that role's `procedures/` directory.
 |---|---|---|
 | `templates/load-manifest.md` | orchestrator | Lease and dispatch composition shape |
 | `templates/task.md` | orchestrator | Task authority record |
-| `templates/report.md` | handoff | Worker evidence record |
+| `templates/report.md` | handoff | Delta-only evidence record for `output_mode: file` |
 
 ## Selection rules
 
@@ -79,5 +80,7 @@ All procedure paths are relative to that role's `procedures/` directory.
 - Load a specialized gate only when its trigger is true.
 - Load operation policy only when the tool/method will be used.
 - Load templates only while producing that artifact.
-- Load the root Project State README and exact target module card for every task dispatch; add neighbor cards only for declared boundary crossings.
+- Apply the Project State policy for every product dispatch. Existing-module
+  work names the exact card; new-module preflight names the parent route and
+  gains an exact card only after READY and Orchestrator authorization.
 - Do not treat this catalog as authority or as an instruction to read every listed file.

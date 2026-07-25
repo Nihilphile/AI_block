@@ -30,4 +30,8 @@ Use only when the dispatch explicitly requests preflight. This procedure authori
 
 ## Stop condition
 
-Do not edit files, write the final Report, or commit. Wait for exact `IMPLEMENTATION_AUTHORIZED` or a replacement Task. If missing normative context blocks the decision, return `LOAD_REQUEST` rather than loading it independently.
+Do not edit files or commit. Preflight uses `output_mode: reply` unless
+authority explicitly requires a durable decision artifact. Wait for exact
+`IMPLEMENTATION_AUTHORIZED` or replacement authority. If missing normative
+context blocks the decision, return `LOAD_REQUEST` rather than loading it
+independently.

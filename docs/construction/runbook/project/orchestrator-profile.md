@@ -15,12 +15,20 @@ Protect Orchestrator context for product intent, current architecture, major dec
 
 ## Worker runtime selection
 
-- Sol remains the main Orchestrator and is not dispatched as a Worker.
-- Delegated Workers use the Luna model family.
-- Use standard/default service speed; never request Speed/priority unless the user changes this rule.
-- Coding and reviewing default to `high`; use `xhigh` for Contract-heavy, cross-module, security/concurrency-sensitive, or complex refactoring work.
-- Testing and researching default to `medium`; researching may use `high` for ambiguous or conflicting external behavior.
-- Name model and reasoning explicitly when a Worker is created.
+- Select by capability class rather than a durable vendor/model name.
+- The Orchestrator uses the strongest available orchestration/reasoning class;
+  in the current Codex runtime this maps to Sol.
+- Delegated Workers use the balanced agentic Worker class; in the current Codex
+  runtime this maps to Terra.
+- Use standard/default service speed; never request Speed/priority unless the
+  user changes this rule.
+- Coding and reviewing default to `high`; use `xhigh` for Contract-heavy,
+  cross-module, security/concurrency-sensitive, or complex refactoring work.
+- Testing and researching default to `medium`; researching may use `high` for
+  ambiguous or conflicting external behavior.
+- Record the concrete model and reasoning when the platform exposes them. A
+  runtime adapter may choose the closest available model without changing this
+  capability policy.
 
 ## Sequential delivery
 
@@ -33,8 +41,11 @@ Protect Orchestrator context for product intent, current architecture, major dec
 
 ## Communication and waiting
 
-- Worker prompts are composition manifests plus the minimum Task-specific delta; do not repeat loaded Brick content.
-- Reports lead with decisions, result, boundary impact, unresolved risk, and evidence references.
+- Worker prompts are composition manifests plus the minimum Task-specific
+  delta; do not repeat loaded Brick content.
+- Every dispatch declares `output_mode: reply | commit | file`.
+- Durable output records only information not already expressed naturally by
+  source, tests, Project State, Task, or Git.
 - Keep raw listings, diffs, transcripts, and large logs in Worker context or referenced artifacts.
 - For long work, use one initial observation window up to 15 minutes, then windows up to 5 minutes.
 - Do not emit unchanged heartbeat commentary.
@@ -56,8 +67,8 @@ The active architecture and milestone plan determine the exact next Task. This s
 
 ## Project State System ownership
 
-For a new construction decision, read the [root Project State route](../../../../project_state/README.md), its authority/map/focus documents, and then only the module cards relevant to the decision. The Orchestrator owns root routing, the cross-module map, current focus, and accepted/deferred summaries.
-
-Every dispatch includes `project_state/README.md` and the exact target module card in `load:`. Add direct-neighbor cards only for a declared boundary crossing, and include the relevant Contract or interface evidence. Project State is a current-state summary; source, Runtime Contracts, tests, accepted records, active OpenSpec planning, and Runbook policy retain their respective authority.
-
-When a Worker reports stale state, compare the card with scoped source and accepted evidence. Authorize a directly affected card reconciliation when it is inside the current Task; otherwise create or request a bounded state task. Do not broaden the task into unrelated card cleanup.
+Load and apply
+[`project-state-policy.md`](./project-state-policy.md). For a new construction
+decision, read the root route and meta context, then only the target cards
+needed to compose a bounded `state_context`. Do not repeat that policy in each
+dispatch.

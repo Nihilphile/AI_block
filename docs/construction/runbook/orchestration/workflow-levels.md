@@ -45,7 +45,9 @@ Use for bounded read-only inspection, status reporting, or maintenance of constr
 Default:
 
 - no implementation Worker;
-- no Task/Report pair unless delegated evidence will materially constrain later construction;
+- inline authority and `output_mode: reply` by default;
+- no durable Task or Report unless delegated evidence will materially constrain
+  later construction;
 - deep repository investigation may still be delegated as `exploring` to protect Orchestrator context.
 
 Product design is outside this classification.
@@ -58,10 +60,13 @@ Default:
 
 - Orchestrator provides exact objective, write scope, constraints, and acceptance;
 - coding Worker performs a micro-preflight and continues without a second authorization;
-- Worker self-verifies and writes a brief Report;
+- inline authority is sufficient unless the result crosses context or state;
+- Worker self-verifies and normally uses `output_mode: commit` for a product or
+  Project State deliverable;
 - no separate plan, independent test, or review.
 
-The Worker retrospectively reports meaningful uncertainty, implicit decisions, chosen direction, and reason.
+The handoff reports only meaningful uncertainty, implicit decisions,
+deviations, and risk not already expressed by the committed result.
 
 ## W2 — Standard module construction
 
@@ -72,7 +77,8 @@ Default:
 - Orchestrator writes the Task;
 - coding Worker returns a full preflight;
 - Orchestrator closes material decisions and gives one implementation authorization;
-- Worker implements, tests, self-verifies, and reports;
+- Worker implements, tests, self-verifies, and normally records evidence in the
+  product/state commit; a file Report requires unique durable knowledge;
 - no independent testing or per-Task review unless triggered separately.
 
 ## W3 — Controlled multi-boundary construction
@@ -84,6 +90,8 @@ Default:
 - Orchestrator provides a short construction map covering ownership, sequence, interfaces, and acceptance;
 - unresolved decisions close before their dependent slice starts;
 - implementation is authorized in meaningful slices, not per file;
+- implementation uses a durable Task and product/state commit; a coding Report
+  is not automatic;
 - integrated output receives independent testing;
 - review normally occurs once at module or boundary acceptance, not after every slice.
 

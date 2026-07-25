@@ -23,10 +23,26 @@ The [Runtime Server route](./apps/runtime-server/README.md) is only a routing no
 
 ## Bounded dispatch
 
-A task dispatch names `project_state/README.md`, the target module card, and the task/procedure. Add a neighboring card only when the task crosses a declared boundary. The card reduces repository archaeology; it never removes the requirement to inspect scoped source, Contracts, tests, and accepted evidence.
+A product dispatch declares one bounded state context. Existing-module work
+names this root and one exact target card. New-module preflight names this root,
+the nearest parent route, and the intended card path; after READY and before
+implementation authorization, the Orchestrator creates the initial
+`planned`/`active` card. Add a neighboring card only when the task crosses a
+declared boundary.
+
+Cards reduce repository archaeology; they never remove the requirement to
+inspect scoped source, Contracts, tests, and accepted evidence. Workers may
+follow those investigative links inside Task read scope, but doing so does not
+load new instructions or enlarge authority.
 
 ## Maintenance
 
-Cards are overwrite-style current views. Reconcile the directly affected card when behavior, ownership, dependency direction, Contract/protocol surface, lifecycle, persistence/recovery semantics, current condition, or source/test entry points change. A stale card is reported and escalated to the Orchestrator; it is not treated as proof. Cross-module map, focus, and accepted/deferred summaries remain Orchestrator-owned.
+Cards are overwrite-style current views. The Orchestrator creates an initial
+card only for an implementation-ready boundary and owns its Intent, stable
+ownership/dependency boundary, exclusions, and accepted/deferred condition. An
+authorized Coder reconciles actual implementation, roots, local dependencies,
+condition, and evidence on the directly affected card. Testers report
+mismatches; Reviewers verify candidate cards. Root/parent routing, cross-module
+map, focus, and acceptance summaries remain Orchestrator-owned.
 
 This initial activation is documentation/process-only. It creates no Runtime behavior, dependency, lockfile, source, or test changes. Project, Package, Run, Graph, and SQLite remain visible in the system map without empty cards.

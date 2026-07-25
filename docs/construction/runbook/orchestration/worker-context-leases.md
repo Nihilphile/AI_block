@@ -24,6 +24,7 @@ The Orchestrator records:
 - lease ID and epoch;
 - role and state owner;
 - exact lease-scoped Brick paths and versions/commit;
+- concrete runtime/model mapping when exposed;
 - allowed delegation/external-action ceiling;
 - current accepted subject and material open decisions.
 
@@ -34,11 +35,17 @@ The Worker reads only the explicit `lease.load_once` list. A role directory is n
 Each assignment provides:
 
 - lease ID and expected epoch;
+- one bounded Project State context;
+- authority mode and durable Task path or exact inline delta;
 - exact dispatch `load` list;
 - action;
+- output mode;
 - Task-specific decision/scope delta when needed.
 
-References inside a loaded file are inert unless the Orchestrator adds them to a later load list. Missing normative context returns `LOAD_REQUEST`.
+References never auto-load new normative instructions. Inside authorized read
+scope, state-card links to source, tests, Contracts, Git, and evidence remain
+available for investigation under the Project State policy. Missing normative
+context returns `LOAD_REQUEST`.
 
 ## Typical lease shapes
 
@@ -80,6 +87,7 @@ epoch: <integer>
 role_state_owner: <value>
 last_accepted_subject: <commit/artifact>
 material_open_decisions: <short list>
+loaded_lease_bricks: <exact paths and baseline>
 compaction_observed: yes | no | unknown
 ```
 

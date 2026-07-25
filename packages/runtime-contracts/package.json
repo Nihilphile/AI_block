@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run && pnpm run test:types",
-    "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts test/actor/actor.test.ts test/host/host.test.ts test/compatibility/compatibility.test.ts test/actor-template/actor-template.test.ts test/types/public-types.ts --pretty false"
+    "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts test/actor/actor.test.ts test/host/host.test.ts test/compatibility/compatibility.test.ts test/actor-template/actor-template.test.ts test/project-definition-brick/project-definition-brick.test.ts test/types/public-types.ts --pretty false"
   },
   "dependencies": {
     "ajv": "8.20.0",

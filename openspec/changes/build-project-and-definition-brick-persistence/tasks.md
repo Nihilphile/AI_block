@@ -6,10 +6,10 @@
 
 ## 2. Shared Runtime Contract surface
 
-- [ ] 2.1 Add strict root-exported schemas for the minimal Project record and Project create/read commands and results.
-- [ ] 2.2 Add strict root-exported schemas for Definition Brick aggregate summaries and create, revise, archive, aggregate read/list, history, and exact-revision operations.
-- [ ] 2.3 Add stable typed Project/Definition Brick application error categories while keeping HTTP, CLI, file, SQL, and driver details outside Runtime Contracts.
-- [ ] 2.4 Add Contract tests for valid round trips, strict rejection, Project/Brick identity and revision constraints, immutable kind, application errors, and root-only consumer imports.
+- [x] 2.1 Add strict root-exported schemas for the minimal Project record and Project create/read commands and results.
+- [x] 2.2 Add strict root-exported schemas for Definition Brick aggregate summaries and create, revise, archive, aggregate read/list, history, and exact-revision operations.
+- [x] 2.3 Add stable typed Project/Definition Brick application error categories while keeping HTTP, CLI, file, SQL, and driver details outside Runtime Contracts.
+- [x] 2.4 Add Contract tests for valid round trips, strict rejection, Project/Brick identity and revision constraints, immutable kind, application errors, and root-only consumer imports.
 
 ## 3. Project and Definition Brick application boundary
 

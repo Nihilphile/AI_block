@@ -46,6 +46,9 @@ export type ClientPrincipalId = Type.Static<typeof ClientPrincipalIdSchema>;
 export const GraphIdSchema = resourceIdSchema("graph_");
 export type GraphId = Type.Static<typeof GraphIdSchema>;
 
+export const DefinitionBrickIdSchema = resourceIdSchema("brick_");
+export type DefinitionBrickId = Type.Static<typeof DefinitionBrickIdSchema>;
+
 export const DefinitionBrickRevisionIdSchema = resourceIdSchema("brickrev_");
 export type DefinitionBrickRevisionId = Type.Static<typeof DefinitionBrickRevisionIdSchema>;
 

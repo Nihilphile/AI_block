@@ -98,13 +98,14 @@ export type RuntimeConfigBrickBody = Type.Static<typeof RuntimeConfigBrickBodySc
 
 // --- Registered Definition Brick revision (resolver output) ---
 
-const DefinitionBrickBodySchema = Type.Union([
+export const DefinitionBrickBodySchema = Type.Union([
   BrickSysPromptBodySchema,
   BrickPromptBodySchema,
   BackendBrickBodySchema,
   ToolsetBrickBodySchema,
   RuntimeConfigBrickBodySchema,
 ]);
+export type DefinitionBrickBody = Type.Static<typeof DefinitionBrickBodySchema>;
 
 export const DefinitionBrickRevisionSchema = Type.Object(
   {

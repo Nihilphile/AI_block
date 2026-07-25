@@ -101,6 +101,34 @@ import type {
   ValidationIssueCode,
 } from "../../src/index.js";
 
+import type {
+  ArchiveDefinitionBrickCommand,
+  ArchiveDefinitionBrickResult,
+  CreateDefinitionBrickCommand,
+  CreateDefinitionBrickResult,
+  CreateProjectCommand,
+  CreateProjectResult,
+  DefinitionBrickBody,
+  DefinitionBrickId,
+  DefinitionBrickStatus,
+  DefinitionBrickSummary,
+  ListDefinitionBrickHistoryCommand,
+  ListDefinitionBrickHistoryResult,
+  ListDefinitionBricksCommand,
+  ListDefinitionBricksResult,
+  ProjectDefinitionBrickError,
+  ProjectDefinitionBrickErrorCode,
+  ProjectRecord,
+  ReadDefinitionBrickCommand,
+  ReadDefinitionBrickResult,
+  ReadExactDefinitionBrickRevisionCommand,
+  ReadExactDefinitionBrickRevisionResult,
+  ReadProjectCommand,
+  ReadProjectResult,
+  ReviseDefinitionBrickCommand,
+  ReviseDefinitionBrickResult,
+} from "../../src/index.js";
+
 type AcceptedPublicDerivedTypes = {
   AckPayload: AckPayload;
   ActorConfigSnapshot: ActorConfigSnapshot;
@@ -204,5 +232,36 @@ type AcceptedPublicDerivedTypes = {
   ValidationIssueCode: ValidationIssueCode;
 };
 
+type ProjectDefinitionBrickPublicDerivedTypes = {
+  ArchiveDefinitionBrickCommand: ArchiveDefinitionBrickCommand;
+  ArchiveDefinitionBrickResult: ArchiveDefinitionBrickResult;
+  CreateDefinitionBrickCommand: CreateDefinitionBrickCommand;
+  CreateDefinitionBrickResult: CreateDefinitionBrickResult;
+  CreateProjectCommand: CreateProjectCommand;
+  CreateProjectResult: CreateProjectResult;
+  DefinitionBrickBody: DefinitionBrickBody;
+  DefinitionBrickId: DefinitionBrickId;
+  DefinitionBrickStatus: DefinitionBrickStatus;
+  DefinitionBrickSummary: DefinitionBrickSummary;
+  ListDefinitionBrickHistoryCommand: ListDefinitionBrickHistoryCommand;
+  ListDefinitionBrickHistoryResult: ListDefinitionBrickHistoryResult;
+  ListDefinitionBricksCommand: ListDefinitionBricksCommand;
+  ListDefinitionBricksResult: ListDefinitionBricksResult;
+  ProjectDefinitionBrickError: ProjectDefinitionBrickError;
+  ProjectDefinitionBrickErrorCode: ProjectDefinitionBrickErrorCode;
+  ProjectRecord: ProjectRecord;
+  ReadDefinitionBrickCommand: ReadDefinitionBrickCommand;
+  ReadDefinitionBrickResult: ReadDefinitionBrickResult;
+  ReadExactDefinitionBrickRevisionCommand: ReadExactDefinitionBrickRevisionCommand;
+  ReadExactDefinitionBrickRevisionResult: ReadExactDefinitionBrickRevisionResult;
+  ReadProjectCommand: ReadProjectCommand;
+  ReadProjectResult: ReadProjectResult;
+  ReviseDefinitionBrickCommand: ReviseDefinitionBrickCommand;
+  ReviseDefinitionBrickResult: ReviseDefinitionBrickResult;
+};
+
 declare const acceptedPublicDerivedTypes: AcceptedPublicDerivedTypes;
 void acceptedPublicDerivedTypes;
+
+declare const projectDefinitionBrickPublicDerivedTypes: ProjectDefinitionBrickPublicDerivedTypes;
+void projectDefinitionBrickPublicDerivedTypes;

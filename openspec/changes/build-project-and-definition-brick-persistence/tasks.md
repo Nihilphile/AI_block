@@ -1,7 +1,7 @@
 ## 1. W3 preflight and boundary freeze
 
 - [x] 1.1 Record the exact implementation baseline, clean-worktree evidence, W3 construction map, slice order, subject identity, and Task/Report paths before product writes begin.
-- [ ] 1.2 Close implementation choices for the Project module source/test roots, schema/migration layout, explicit database-path input, nonzero busy timeout, same-process write serialization, and Node `>=24.15 <25` enforcement without authorizing excluded modules.
+- [x] 1.2 Close implementation choices for the Project module source/test roots, schema/migration layout, explicit database-path input, nonzero busy timeout, same-process write serialization, and Node `>=24.15 <25` enforcement without authorizing excluded modules.
 - [ ] 1.3 Verify built-in `node:sqlite` and selected options against the pinned Node/type baseline; confirm no third-party SQLite runtime dependency is required and record the Compatibility-gate evidence.
 
 ## 2. Shared Runtime Contract surface

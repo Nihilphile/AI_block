@@ -2,33 +2,85 @@
 
 ## Accepted current state
 
-Project State System v0.1 is accepted and its OpenSpec change [`establish-project-state-system`](../../openspec/changes/establish-project-state-system/) is complete but not archived. The durable acceptance summary is the [Project State System v0.1 closeout](../../docs/construction/records/project-state-system/project-state-system-v0.1-closeout.md).
+Project State System v0.1 and Runtime Design Knowledge System v0.1 remain
+accepted documentation/process layers. Their canonical entries are the
+[Project State root](../README.md) and
+[Runtime design catalog](../../docs/design/README.md). They add no Runtime
+behavior and do not replace source, Contracts, tests, OpenSpec, construction
+evidence, or Git.
 
-The accepted scope is documentation/process-only: the sparse state tree and Runbook integration add no Runtime source, test, dependency, lockfile, product-design, or product-API change.
+The active product change is
+[`build-project-and-definition-brick-persistence`](../../openspec/changes/build-project-and-definition-brick-persistence/).
+Its accepted Contract-first surface includes:
 
-Runtime Design Knowledge System v0.1 has independently passed acceptance and semantic review with zero actionable findings. Its canonical entry is the [Runtime design catalog](../../docs/design/README.md), and confirmed current cross-module semantics route through the [Runtime invariant kernel](../../docs/design/current/runtime-invariants.md). This acceptance covers documentation routing and status preservation only: future files do not authorize product implementation, and the OpenSpec change remains unarchived pending a separate explicit archive action.
+- root-exported Project and Definition Brick application Contracts at
+  implementation subject `7d3eca4`;
+- the single shared Definition Brick digest implementation at subject
+  `f4ed012`;
+- the root-exported Definition Brick Body normalizer at subject `2d8eaaf`,
+  independently accepted by
+  [testing](../../docs/construction/records/project-persistence/reports/PP-contracts-002-acceptance-definition-brick-normalization.testing.md)
+  and
+  [Early Review](../../docs/construction/records/project-persistence/reports/PP-contracts-002-review-definition-brick-normalization.reviewing.md).
 
-The active product change is [`build-project-and-definition-brick-persistence`](../../openspec/changes/build-project-and-definition-brick-persistence/). Its proposal, design, capability specification, and task plan are complete and validated. It selects the bounded persistence-first path: minimal Project bootstrap plus durable Definition Brick authoring/history/exact resolution and an adapter to the existing Actor resolver.
-
-The Contract-first slice is accepted at implementation subject `7d3eca4`: additive root-exported Project/Definition Brick application values, aggregate identity, operation results, and stable errors are implemented with passing independent acceptance and Early Review. This Contract acceptance does not imply that the Project module, authoring behavior, SQLite persistence, or Actor resolver adapter exists.
+These accepted Contract boundaries do not by themselves establish Project
+persistence, Server composition, or Actor resolver integration.
 
 ## Current condition
 
-- The accepted Runtime Contracts, Host Gateway, ClaudeCodeAdapter, and reference-only ActorTemplate slices remain the current implementation evidence.
-- The new state cards are current summaries of those bounded slices, not evidence of end-to-end Runtime behavior.
-- No Runtime module is blocked by the Project State System change. Missing composition, persistence, CLI, Package workflow, reconnect/recovery, and Graph behavior remain deliberately deferred.
-- The active change has completed OpenSpec tasks `2.1` through `2.4` only. Runtime Contracts and their directly affected state card now include the accepted Project/Definition Brick application surface.
-- No Project module source/test root, durable authoring behavior, SQLite adapter, migration, production resolver, dependency, lockfile, Server composition, or executable Project workflow exists yet.
-- Actor creation, ActorTemplate/Snapshot production persistence, Host launch, CLI/HTTP, Package/Delivery, Run/Invocation, recovery automation, backup/export, and Graph remain explicitly outside the active slice.
+- OpenSpec tasks `2.1` through `2.4` and candidate implementation tasks `3.1`
+  through `3.5` are checked.
+- The Runtime Server
+  [Project Module candidate](../apps/runtime-server/modules/project/README.md)
+  exists at implementation subject `a1fb21d`, with bounded application source,
+  deterministic in-memory evidence, and no SQLite or production composition.
+- Independent
+  [testing](../../docs/construction/records/project-persistence/reports/PP-application-acceptance-001-project-brick-application.testing.md)
+  and
+  [Early Review](../../docs/construction/records/project-persistence/reports/PP-application-review-001-project-brick-application.reviewing.md)
+  did not accept that subject. They found two blocking defects:
+  1. create/revise returned and stored the submitted Body rather than the
+     canonical Body;
+  2. exact-revision reads did not distinguish missing claimed history from
+     ordinary future absence or reject a returned revision beyond the
+     aggregate's current revision.
+- The first defect's required public normalizer is now accepted in Runtime
+  Contracts. Project remediation itself has not been implemented or
+  re-accepted.
+- The Project card remains a candidate current view. Root/Runtime Server
+  routing and the system map intentionally remain unreconciled until the
+  Project module passes remediation, independent testing, and review.
+- SQLite, schema/migrations, restart recovery, production repositories,
+  external authoring adapters, Actor resolver wiring, Server composition,
+  execution, Package workflow, Run, and Graph remain deferred.
 
 ## Next entry point
 
-A new Orchestrator reads the [root state README](../README.md), [authority](./authority.md), [system map](./system-map.md), and this focus file, then loads the active persistence change and only the module cards relevant to the selected construction slice. Runtime design questions start at the [Runtime design catalog](../../docs/design/README.md).
+Resume
+[`PP-application-remediation-001`](../../docs/construction/records/project-persistence/tasks/PP-application-remediation-001-project-brick-integrity.md)
+under the current Runbook:
 
-The next construction action is Orchestrator-owned W3 preflight dispatch for the Project application/in-memory slice (`3.1` through `3.5`). No implementation Worker is authorized until its exact Task is committed, the Coder returns preflight, and the Orchestrator closes the source/test-root, ownership, transaction-port, and Project State creation choices. SQLite remains a later separately authorized slice.
+1. reload the Project Coder lease because the lease and Project State policies
+   changed;
+2. use the existing Project card as the target state context and Runtime
+   Contracts as the declared neighbor;
+3. perform a reply-only delta preflight confirming that accepted subject
+   `2d8eaaf` removes the canonicalization blocker;
+4. after `READY`, authorize one bounded implementation commit for the two
+   findings and their focused tests/card reconciliation;
+5. run independent focused re-test and re-review against the exact remediation
+   subject before accepting the module.
+
+Do not start SQLite or another product slice before this remediation closes.
 
 ## Reconciliation posture
 
-If scoped source, Contracts, tests, or accepted evidence contradict a card, record the mismatch in handoff and escalate it to the Orchestrator. Reconcile only the directly affected card when authorized; do not broaden the current focus into a repository-wide documentation rewrite.
+This Project card was created under the preceding Runbook lifecycle and already
+exists, so do not delete or recreate it. Treat it as the candidate card for the
+existing-module remediation flow.
 
-Planning does not create a Project/persistence card. Once authorized implementation establishes a real owned source/test boundary, the Coder may create only that directly affected module card. Testers report state mismatches without rewriting claims; Reviewers verify changed cards against the exact accepted subject. Root routing, the cross-module system map, this focus file, and accepted/deferred summaries remain Orchestrator-owned and are reconciled at acceptance.
+The Coder may update only its authorized Project implementation/evidence
+claims. Testers report mismatches without editing; Reviewers verify the
+candidate card. The Orchestrator owns Intent, stable ownership and exclusions,
+accepted/deferred condition, root/parent routing, the system map, this focus
+file, and final reconciliation.

@@ -1,7 +1,7 @@
 ---
 module: Runtime Server Project Module
-implementation_state: application-only
-work_state: active
+implementation_state: functional
+work_state: stable
 source_roots:
   - apps/runtime-server/src/modules/project/
 test_roots:
@@ -56,11 +56,14 @@ adapter, or Actor resolver integration is part of this boundary.
 
 ## Current condition
 
-The bounded application and deterministic in-memory behavior are implemented
-and locally self-verified. Independent testing and review remain required
-before acceptance. Production persistence, restart recovery, Server
-composition, external adapters, Actor-side resolver wiring, and every execution
-workflow remain deferred.
+The bounded application and deterministic in-memory behavior are accepted at
+implementation subject `0b0d0bf`. Independent focused testing and re-review
+closed the canonical-Body and exact-revision integrity findings with no
+remaining actionable finding or blocking evidence gap.
+
+This acceptance is application-only. Production persistence, restart recovery,
+Server composition, external adapters, Actor-side resolver wiring, and every
+execution workflow remain deferred.
 
 ## Read next
 
@@ -69,6 +72,9 @@ workflow remain deferred.
 - [Runtime Contracts card](../../../../packages/runtime-contracts/README.md)
 - [Current Runtime invariants](../../../../../docs/design/current/runtime-invariants.md)
 - [Project/Brick application Task](../../../../../docs/construction/records/project-persistence/tasks/PP-application-001-project-brick-application.md)
+- [Project integrity remediation Task](../../../../../docs/construction/records/project-persistence/tasks/PP-application-remediation-001-project-brick-integrity.md)
+- [Independent remediation testing](../../../../../docs/construction/records/project-persistence/reports/PP-application-remediation-acceptance-001-project-brick-integrity.testing.md)
+- [Focused remediation re-review](../../../../../docs/construction/records/project-persistence/reports/PP-application-remediation-review-001-project-brick-integrity.reviewing.md)
 - [Project persistence OpenSpec change](../../../../../openspec/changes/build-project-and-definition-brick-persistence/)
 
 ## Evidence
@@ -76,3 +82,7 @@ workflow remain deferred.
 - Source: [`apps/runtime-server/src/modules/project/`](../../../../../apps/runtime-server/src/modules/project/)
 - Tests: [`apps/runtime-server/test/modules/project/`](../../../../../apps/runtime-server/test/modules/project/)
 - Construction task: [PP-application-001](../../../../../docs/construction/records/project-persistence/tasks/PP-application-001-project-brick-application.md)
+- Accepted remediation evidence:
+  [testing](../../../../../docs/construction/records/project-persistence/reports/PP-application-remediation-acceptance-001-project-brick-integrity.testing.md)
+  and
+  [re-review](../../../../../docs/construction/records/project-persistence/reports/PP-application-remediation-review-001-project-brick-integrity.reviewing.md)

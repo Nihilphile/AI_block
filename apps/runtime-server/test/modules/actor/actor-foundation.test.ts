@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type {
   BackendBrickBody,
-  BrickKind,
   DefinitionBrickRevision,
   ExactBrickRef,
   ProjectId,
@@ -10,7 +9,6 @@ import type {
 import {
   bindDefinitionBrickRef,
   buildConfigurationDigestMaterial,
-  buildDefinitionBrickDigestMaterial,
   buildTemplateRevisionDigestMaterial,
   canonicalizeStructuredBody,
   canonicalizeText,
@@ -128,17 +126,4 @@ describe("Actor Module foundation values", () => {
     expect(canonicalizeStructuredBody(config)).toBe(canonicalizeStructuredBody({ ...config }));
   });
 
-  it("includes Brick kind and normalized Body in Definition Brick material", () => {
-    const kind: BrickKind = "sys_prompt";
-    expect(buildDefinitionBrickDigestMaterial(kind, { text: "\uFEFFone\r\ntwo" })).toEqual({
-      kind,
-      schema_version: "1.0.0",
-      body: { text: "one\ntwo" },
-    });
-    expect(buildDefinitionBrickDigestMaterial("prompt", { kind: "text", text: "one\r\ntwo" })).toEqual({
-      kind: "prompt",
-      schema_version: "1.0.0",
-      body: { kind: "text", text: "one\ntwo" },
-    });
-  });
 });

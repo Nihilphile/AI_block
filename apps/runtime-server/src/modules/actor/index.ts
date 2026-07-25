@@ -34,12 +34,10 @@ export type {
 export {
   bindDefinitionBrickRef,
   buildConfigurationDigestMaterial,
-  buildDefinitionBrickDigestMaterial,
   buildTemplateRevisionDigestMaterial,
   canonicalizeStructuredBody,
   canonicalizeText,
   computeConfigurationDigest,
-  computeDefinitionBrickDigest,
   computeTemplateRevisionDigest,
   parseExactBrickRef,
   sha256CanonicalJson,
@@ -47,7 +45,6 @@ export {
 export type {
   BoundDefinitionBrickRef,
   ConfigurationDigestMaterial,
-  DefinitionBrickDigestMaterial,
   DefinitionBrickRefBindingResult,
   ExactBrickRefParseResult,
   TemplateRevisionDigestMaterial,

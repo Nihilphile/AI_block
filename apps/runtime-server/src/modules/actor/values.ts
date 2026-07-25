@@ -5,12 +5,10 @@ import {
   ExactBrickRefSchema,
   type ActorTemplateSpec,
   type BackendBrickBody,
-  type BrickKind,
   type BrickPromptBody,
   type BrickSysPromptBody,
   type ConfigDigest,
   type DefinitionBrickRevision,
-  type DefinitionBrickDigest,
   type ExactBrickRef,
   type TemplateRevisionDigest,
   type ToolProviderBrickConfig,
@@ -108,39 +106,10 @@ export function canonicalizeStructuredBody(value: unknown): string {
   return serialized;
 }
 
-type DefinitionBrickBody = DefinitionBrickRevision["body"];
-
 function normalizePromptBody(body: BrickPromptBody): BrickPromptBody {
   return body.kind === "text"
     ? { kind: "text", text: canonicalizeText(body.text) }
     : { kind: "composite", parts: body.parts.map(normalizePromptBody) };
-}
-
-function normalizeDefinitionBrickBody(body: DefinitionBrickBody): DefinitionBrickBody {
-  if ("kind" in body) {
-    return normalizePromptBody(body);
-  }
-  if ("text" in body) {
-    return { text: canonicalizeText(body.text) } as BrickSysPromptBody;
-  }
-  return body;
-}
-
-export type DefinitionBrickDigestMaterial = Readonly<{
-  kind: BrickKind;
-  schema_version: "1.0.0";
-  body: DefinitionBrickBody;
-}>;
-
-export function buildDefinitionBrickDigestMaterial(
-  kind: BrickKind,
-  body: DefinitionBrickBody,
-): DefinitionBrickDigestMaterial {
-  return {
-    kind,
-    schema_version: "1.0.0",
-    body: normalizeDefinitionBrickBody(body),
-  };
 }
 
 export type TemplateRevisionDigestMaterial = Readonly<{
@@ -178,13 +147,6 @@ export function sha256CanonicalJson(value: unknown): string {
   const canonical = canonicalizeStructuredBody(value);
   const digest = createHash("sha256").update(canonical, "utf8").digest("hex");
   return `sha256:${digest}`;
-}
-
-export function computeDefinitionBrickDigest(
-  kind: BrickKind,
-  body: DefinitionBrickRevision["body"],
-): DefinitionBrickDigest {
-  return sha256CanonicalJson(buildDefinitionBrickDigestMaterial(kind, body)) as DefinitionBrickDigest;
 }
 
 export function computeTemplateRevisionDigest(

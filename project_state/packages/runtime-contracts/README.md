@@ -16,7 +16,7 @@ Runtime Contracts is the sole shared cross-application and cross-process schema/
 
 ## Implemented today
 
-The package is a private ESM, root-export-only boundary. It currently provides strict JSON-like decoding and validation, identity/version/time/error values, recursive Brick Prompt values, Package/Delivery schemas and SHA-256 helpers, Actor launch/invocation/session/process facts, ActorTemplate/Definition Brick/Snapshot contracts, Project and Definition Brick application values/commands/results/stable errors, and Host protocol envelopes, payloads, and ACKs. Definition Brick application summaries expose a Server-generated aggregate UID distinct from the Project-local human-readable ID, immutable revision UID, and digest; the existing exact `DefinitionBrickRevision` value remains compatible.
+The package is a private ESM, root-export-only boundary. It currently provides strict JSON-like decoding and validation, identity/version/time/error values, recursive Brick Prompt values, Package/Delivery schemas and SHA-256 helpers, Actor launch/invocation/session/process facts, ActorTemplate/Definition Brick/Snapshot contracts, Project and Definition Brick application values/commands/results/stable errors, the canonical Definition Brick Body digest helper, and Host protocol envelopes, payloads, and ACKs. Definition Brick application summaries expose a Server-generated aggregate UID distinct from the Project-local human-readable ID, immutable revision UID, and digest; the existing exact `DefinitionBrickRevision` value remains compatible. Runtime Contracts is the single implementation owner of Definition Brick text normalization, canonical material serialization, and digest computation shared by authoring and Actor consumers.
 
 The accepted current Package shape is one immutable Package with a Head plus exactly one Body whose value is one root `BrickPrompt`; mutable routing state belongs to Delivery. Package is currently a Contracts/value surface, and Runtime Server has no Package workflow implementation. A possible Package-as-Brick redesign is unresolved future scope, not accepted current intent.
 
@@ -30,7 +30,7 @@ Contract changes are cross-module interface changes. A future compatibility chan
 
 ## Current condition
 
-The accepted Phase 0B boundary is stable and the later ActorTemplate and Project/Definition Brick application additions are additive. The new Project/Definition Brick surface is a Contract-only vocabulary: it does not establish Project persistence, a Project module, Brick authoring workflow, or Actor resolver integration. Host, Actor, Package, and ActorTemplate vocabulary is ahead of current workflow implementations. `model_id` is preserved in ActorTemplate snapshots but is not a first-class field in the current `ActorLaunchSpec`; launchability therefore remains a deferred cross-module decision, not a Contract defect or blocker for this card.
+The accepted Phase 0B boundary is stable and the later ActorTemplate and Project/Definition Brick application additions are additive. The Project/Definition Brick surface, including its shared digest helper, does not establish Project persistence, a Project module, Brick authoring workflow, or Actor resolver integration. Host, Actor, Package, and ActorTemplate vocabulary is ahead of current workflow implementations. `model_id` is preserved in ActorTemplate snapshots but is not a first-class field in the current `ActorLaunchSpec`; launchability therefore remains a deferred cross-module decision, not a Contract defect or blocker for this card.
 
 ## Read next
 

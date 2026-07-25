@@ -8,11 +8,11 @@ import type {
   ToolProviderBrickConfig,
   ValidateActorTemplateCandidate,
 } from "@ai-block/runtime-contracts";
+import { computeDefinitionBrickDigest } from "@ai-block/runtime-contracts";
 import {
   compileActorTemplate,
   createActorTemplateValidationError,
   computeConfigurationDigest,
-  computeDefinitionBrickDigest,
   computeTemplateRevisionDigest,
   resolveAndValidateActorTemplateCandidate,
   validateActorTemplateCandidate,

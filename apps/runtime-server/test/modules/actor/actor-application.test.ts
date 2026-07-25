@@ -7,9 +7,9 @@ import type {
   ProjectId,
   ToolProviderBrickConfig,
 } from "@ai-block/runtime-contracts";
+import { computeDefinitionBrickDigest } from "@ai-block/runtime-contracts";
 import {
   ActorTemplateApplicationService,
-  computeDefinitionBrickDigest,
   type ActorTemplateCompileCommand,
 } from "../../../src/modules/actor/index.js";
 import { createInMemoryActorAdapters } from "./in-memory-adapters.js";

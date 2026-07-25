@@ -218,6 +218,7 @@ export {
   ListDefinitionBrickHistoryResultSchema,
   ReadExactDefinitionBrickRevisionCommandSchema,
   ReadExactDefinitionBrickRevisionResultSchema,
+  computeDefinitionBrickDigest,
 } from "./project-definition-brick/index.js";
 export type {
   DefinitionBrickStatus,

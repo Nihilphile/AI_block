@@ -3,6 +3,7 @@ import {
   BrickPromptBodySchema,
   BrickSysPromptBodySchema,
   CONTRACT_SCHEMA_VERSION,
+  computeDefinitionBrickDigest,
   decodeContract,
   DefinitionBrickRevisionSchema,
   RuntimeConfigBrickBodySchema,
@@ -20,7 +21,7 @@ import {
   type ValidateActorTemplateCandidate,
 } from "@ai-block/runtime-contracts";
 import type { ActorModulePorts } from "./ports.js";
-import { bindDefinitionBrickRef, computeDefinitionBrickDigest } from "./values.js";
+import { bindDefinitionBrickRef } from "./values.js";
 
 export type ActorTemplateValidationPorts = Pick<
   ActorModulePorts,

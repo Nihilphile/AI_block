@@ -16,7 +16,7 @@ The Actor Module is the Server-side semantic construction owner for typed Brick 
 
 ## Implemented today
 
-The accepted implementation is a reference-only ActorTemplate/ActorConfigSnapshot construction core behind ports. It resolves and validates exact Definition Bricks, canonicalizes values and digests, creates/revises/reads/lists/historizes/archives immutable Template revisions, and compiles and persists self-contained Snapshots with ordered prompt provenance and backend configuration. The Snapshot preserves `model_id`, but this module does not create a runtime Actor or launch a Host.
+The accepted implementation is a reference-only ActorTemplate/ActorConfigSnapshot construction core behind ports. It resolves and validates exact Definition Bricks, consumes the canonical Definition Brick digest helper from Runtime Contracts, locally canonicalizes Template/configuration digests, creates/revises/reads/lists/historizes/archives immutable Template revisions, and compiles and persists self-contained Snapshots with ordered prompt provenance and backend configuration. The Snapshot preserves `model_id`, but this module does not create a runtime Actor or launch a Host.
 
 The application uses injected Project namespace, resolver, validator, workspace, clock, identity, repository, and Unit-of-Work ports. The current repository/UoW implementations are test-only in-memory adapters; no production persistence adapter is part of this boundary.
 

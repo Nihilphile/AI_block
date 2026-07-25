@@ -199,6 +199,7 @@
     "ValidateActorTemplateCandidateResultSchema",
     "ValidationIssueCodeSchema",
     "ValidationIssueSchema",
+    "computeDefinitionBrickDigest",
     "computePackageContentHash",
     "decodeContract",
     "derivePackageHashMaterial",
@@ -675,7 +676,7 @@
       type: "module",
       scripts: {
         test: "vitest run && pnpm run test:types",
-        "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts test/actor/actor.test.ts test/host/host.test.ts test/compatibility/compatibility.test.ts test/actor-template/actor-template.test.ts test/project-definition-brick/project-definition-brick.test.ts test/types/public-types.ts --pretty false"
+        "test:types": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --strict --verbatimModuleSyntax --types node --skipLibCheck test/validation/contract-kernel.test.ts test/identity/identity.test.ts test/error/error-envelope.test.ts test/brick/brick.test.ts test/package/package.test.ts test/package/hash.test.ts test/actor/actor.test.ts test/host/host.test.ts test/compatibility/compatibility.test.ts test/actor-template/actor-template.test.ts test/project-definition-brick/definition-brick-digest.test.ts test/project-definition-brick/project-definition-brick.test.ts test/types/public-types.ts --pretty false"
       },
       dependencies: { ajv: "8.20.0", "ajv-formats": "3.0.1", canonicalize: "3.0.0", typebox: "1.3.6" },
       devDependencies: { "fast-check": "4.8.0", vitest: "4.1.10" },
@@ -743,7 +744,7 @@
           ["host", ["index.ts", "schemas.ts"]],
           ["actor-template", ["index.ts", "schemas.ts"]],
           ["package", ["hash.ts", "index.ts", "node-crypto.d.ts", "schemas.ts"]],
-          ["project-definition-brick", ["index.ts", "schemas.ts"]]
+          ["project-definition-brick", ["digest.ts", "index.ts", "schemas.ts"]]
         ]);
         for (const [directory, files] of expectedSubdirectories) {
           const directoryPath = join(sourceRoot, directory);
@@ -763,7 +764,7 @@
           ["host", ["host.test.ts"]],
           ["package", ["hash.test.ts", "package.test.ts"]],
           ["actor-template", ["actor-template.test.ts", "fixtures.ts"]],
-          ["project-definition-brick", ["project-definition-brick.test.ts"]],
+          ["project-definition-brick", ["definition-brick-digest.test.ts", "project-definition-brick.test.ts"]],
           ["types", ["public-types.ts"]]
         ]);
         for (const [directory, files] of expectedTests) {

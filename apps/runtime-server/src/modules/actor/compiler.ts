@@ -7,6 +7,7 @@ import {
   BrickSysPromptBodySchema,
   CanonicalTimestampSchema,
   CONTRACT_SCHEMA_VERSION,
+  computeDefinitionBrickDigest,
   decodeContract,
   DefinitionBrickRevisionSchema,
   ExactBrickRefSchema,
@@ -30,7 +31,6 @@ import {
 import {
   canonicalizeText,
   computeConfigurationDigest,
-  computeDefinitionBrickDigest,
   type ConfigurationDigestMaterial,
 } from "./values.js";
 import type { ResolvedActorTemplateCandidate, ResolvedActorTemplateBrick } from "./validation.js";

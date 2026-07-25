@@ -26,6 +26,7 @@ persistence, transport, CLI, file, Actor lifecycle, or execution behavior.
 - implementation write scope:
   - `packages/runtime-contracts/src/**`
   - `packages/runtime-contracts/test/**`
+  - `packages/runtime-contracts/package.json`
   - `project_state/packages/runtime-contracts/README.md`
   - checkbox state for OpenSpec tasks `1.1` through `2.4` only
   - `docs/construction/records/project-persistence/reports/PP-contracts-001-project-brick-contracts.coding.md`
@@ -55,6 +56,10 @@ persistence, transport, CLI, file, Actor lifecycle, or execution behavior.
     unsupported schema, and persistence failure.
 - Reuse the accepted Definition Brick revision, Body, exact-reference, digest,
   identity, and time values. Do not add a competing Brick representation.
+- Add one Server-generated globally unique Definition Brick aggregate UID that
+  remains distinct from the Project-local human-readable `brick_id`, immutable
+  revision UID, and content digest. Do not collapse aggregate identity into
+  `project_id + brick_id`.
 - Do not add HTTP status, route, CLI, argv, filesystem, SQL, migration,
   `node:sqlite`, database-path, driver-error, retry, recovery, or backup fields.
 - Do not add Project activation, alias, deletion, permissions, workspace-root,

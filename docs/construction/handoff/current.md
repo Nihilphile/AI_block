@@ -1,12 +1,12 @@
 ---
 status: active
-updated_at: 2026-07-26T04:47:28+08:00
-repository_subject: 46f51c15273b19770958bbe74f4c43cce8775ec1
+updated_at: 2026-07-26T05:21:54+08:00
+repository_subject: 438805a92ee82f110ecb1c6d31b9f91c19b9bc54
 handoff_record: self
 branch: main
 working_tree_at_subject: clean
-remote_sync_at_subject: ahead-of-origin-main-by-1
-next_product_slice: planned-not-implemented
+remote_sync_at_subject: ahead-of-origin-main-by-12
+next_product_slice: project-application-preflight
 ---
 
 # Current Orchestrator Handoff
@@ -23,18 +23,19 @@ override this handoff when they disagree.
 
 ## Current milestone
 
-The North Star and Runtime Design Knowledge System are established. The next
-product slice is selected and planned as minimal Project bootstrap plus durable
-Definition Brick authoring/history/exact resolution. Its OpenSpec proposal,
-design, capability specification, and task plan are complete and validated.
+The persistence-first product change is active and its Contract-first slice is
+accepted. Additive Project/Definition Brick application Contracts passed
+independent acceptance and Early Review at implementation subject `7d3eca4`.
 
-No product implementation has begun. The next action is an exact W3
-Contract-first Task followed by Coder preflight only; implementation remains
-unauthorized until the Orchestrator reviews that preflight.
+The next action is an exact W3 Project application/in-memory Task followed by
+Coder preflight only. SQLite remains a later separately authorized slice.
 
 ## Product baseline
 
-- The last accepted product slice is the reference-only
+- The latest accepted product slice is the Project/Definition Brick Runtime
+  Contract boundary at `7d3eca4`. It defines application values only and does
+  not prove persistence or authoring behavior.
+- The prior accepted implementation slice is the reference-only
   ActorTemplate/ActorConfigSnapshot construction core.
 - Runtime Contracts, Host Gateway, BackendSupervisor, FakeBackend,
   ClaudeCodeAdapter, and bounded ActorHost connection/command slices exist.
@@ -48,18 +49,17 @@ unauthorized until the Orchestrator reviews that preflight.
 
 - `166b1ac261c9d1a783339541ff7415581d87f7e4` committed and pushed the Runtime
   Design Knowledge System, North Star, and the earlier handoff record.
-- `46f51c15273b19770958bbe74f4c43cce8775ec1` is the accepted local planning
-  subject for the persistence-first slice. It contains the two bounded
-  exploration/research Task/Report pairs, all four OpenSpec planning artifacts,
-  and the Orchestrator-owned `project_state/_meta/current-focus.md`
-  reconciliation.
-- At that subject the worktree was clean and `main` was one commit ahead of
-  `origin/main`. This handoff update is a later orchestration-only record and
-  must not be mistaken for product implementation.
+- `7d3eca44f2b89011f9c979e1a6f6d3bad9018008` is the immutable accepted Contract
+  implementation subject. Independent testing passed at `2d98178`; Early Review
+  accepted it with no actionable finding at `438805a`.
+- The prerequisite checker allowlist repair is isolated at `705f9eb`; it
+  changes construction tooling, not Runtime behavior.
+- At `438805a`, the worktree was clean and `main` was 12 commits ahead of
+  `origin/main`. This handoff update is a later orchestration-only record.
 
 ## Recommended next product slice
 
-**Status: selected and planned; implementation not authorized.**
+**Status: Contract slice accepted; Project application slice next.**
 
 The bounded slice is explicit Project bootstrap plus Definition Brick
 create/revise/archive/read/list/history, durable exact revision resolution, and
@@ -89,27 +89,32 @@ automation, backup/export, and Graph.
 
 - Active Worker or lease: none.
 - Active implementation, test, or review subject: none.
-- Completed evidence Workers: `project-persistence-explorer-01@1` and
-  `project-persistence-researcher-01@1`; both are retired after accepted
-  Reports.
+- Completed/retired leases:
+  - `project-persistence-explorer-01@1`
+  - `project-persistence-researcher-01@1`
+  - `runtime-contracts-coder-02@1`
+  - `workspace-boundary-debugger-01@1`
+  - `runtime-contracts-tester-02@1`
+  - `runtime-contracts-reviewer-02@1`
 - Active product OpenSpec change:
   `build-project-and-definition-brick-persistence`; 4/4 planning artifacts
-  complete, implementation tasks 0/30.
-- Paused product task: creation and dispatch of the first W3 Contract Task and
-  Coder preflight.
+  complete, implementation tasks 4/30.
+- Paused product task: creation and dispatch of the Project
+  application/in-memory W3 Task and Coder preflight.
 
 ## Administrative queue
 
 - `build-project-and-definition-brick-persistence`: planning complete and
-  valid; implementation not started; unarchived.
+  valid; Contract tasks `2.1`–`2.4` complete and accepted; 26 tasks remain;
+  unarchived.
 - `reorganize-runtime-design-documents`: 24/24 complete; closeout complete;
   committed, pushed, and unarchived.
 - `establish-project-state-system`: 16/16 complete; closeout complete;
   unarchived.
 - `build-reference-only-actor-template`: 20/20 complete; closeout complete;
   unarchived.
-- Planning subject `46f51c1` is committed locally and not pushed at this
-  handoff subject. Archiving and pushing remain separate actions.
+- Current accepted orchestration subject `438805a` is committed locally and not
+  pushed at this handoff subject. Archiving and pushing remain separate actions.
 
 ## Active user directions
 
@@ -145,17 +150,16 @@ Read only:
 12. `openspec/changes/build-project-and-definition-brick-persistence/design.md`
 13. `openspec/changes/build-project-and-definition-brick-persistence/specs/project-definition-brick-persistence/spec.md`
 14. `openspec/changes/build-project-and-definition-brick-persistence/tasks.md`
+15. `docs/design/future/project-persistence-and-brick-authoring.md`
 
-Do not load the full future-design or history trees. Load the focused Project
-persistence future design only when composing the first implementation Task or
-reviewing a scope escalation.
+Do not load the full future-design or history trees.
 
 ## First actions
 
 1. Verify the branch, repository subject, handoff-record commit, worktree,
    remote state, and active OpenSpec status.
-2. Create and commit the exact W3 Contract-first Task, including its bounded
-   Project State consequence and explicit exclusion set.
+2. Create and commit the exact W3 Project application/in-memory Task, including
+   the new-card creation trigger and root/meta Project State exclusion.
 3. Dispatch a Coder for preflight only. Review the returned construction map,
    close delegated implementation choices, and issue a separate authorization
    before any product write.

@@ -1,13 +1,14 @@
 # PP-application-remediation-001 Project Brick Canonical Body and Exact-Revision Integrity
 
 - owner: Runtime Server Project Module
-- follows: PP-application-review-001
+- follows: PP-contracts-002-review-definition-brick-normalization
 - affected modules: Runtime Server Project Module; possible Runtime Contracts normalization owner
 - workflow: W3 remediation
 - base reason: independent acceptance and Early Review found two bounded fail-closed defects in a new state owner that later persistence and resolver work would consume
 - implementation/product subject: `a1fb21ddd44f81aec9754e1f62fb1bf22544835b`
 - finding baseline: `032dc3b`
 - orchestration baseline: task-record commit (self)
+- accepted prerequisite: Definition Brick Body normalizer subject `2d8eaaf54d7a1850d2b4d627331589084f9f4151`
 
 ## Objective
 
@@ -30,7 +31,6 @@ claimed immutable history.
   - `apps/runtime-server/src/modules/project/values.ts`
   - `apps/runtime-server/test/modules/project/project-application.test.ts`
   - `project_state/apps/runtime-server/modules/project/README.md`
-  - `docs/construction/records/project-persistence/reports/PP-application-remediation-001-project-brick-integrity.coding.md`
 - delegated discretion:
   - choose the smallest Project-internal correction for exact-revision
     coherence and error classification;
@@ -39,16 +39,17 @@ claimed immutable history.
 - tools/external actions: deterministic local inspection and verification only;
   no install, network, service, database, destructive, or Git-history action
 - delegation: none
+- authority mode: task
+- output mode: commit
 
 ## Frozen decisions and escalation
 
 - Preflight dispatch authorizes no edits.
 - Do not duplicate the accepted Runtime Contracts Definition Brick
   normalization algorithm in Project source.
-- Preflight must determine whether the accepted canonical Body can be obtained
-  from the current public Runtime Contracts surface. If not, return `BLOCKED`
-  with the exact minimal Contract/checker/test/card scope needed for a
-  single-owner public normalization boundary; do not implement around it.
+- Consume root-exported `normalizeDefinitionBrickBody` from accepted Runtime
+  Contracts subject `2d8eaaf`; do not deep-import, wrap, fork, or reimplement
+  its algorithm.
 - Canonical authoring must return and persist the normalized Body, including one
   leading BOM removal and CRLF/CR to LF normalization for every nested accepted
   text-bearing Body.
@@ -80,11 +81,18 @@ claimed immutable history.
     card;
   - Tester and Reviewer never edit state;
   - Orchestrator reconciles routing/meta only after re-acceptance.
+- Preserve and do not stage the user's pre-existing Runbook, Project State
+  policy/root/authority, Project State design, and
+  `establish-project-state-system` design edits that are outside this Task.
+  Overall worktree dirtiness from those paths is allowed; the authorized
+  remediation paths must start unchanged and be the only paths staged.
 
 ## References
 
 - `docs/construction/records/project-persistence/reports/PP-application-acceptance-001-project-brick-application.testing.md`
 - `docs/construction/records/project-persistence/reports/PP-application-review-001-project-brick-application.reviewing.md`
+- `docs/construction/records/project-persistence/reports/PP-contracts-002-acceptance-definition-brick-normalization.testing.md`
+- `docs/construction/records/project-persistence/reports/PP-contracts-002-review-definition-brick-normalization.reviewing.md`
 - `docs/construction/records/project-persistence/tasks/PP-application-001-project-brick-application.md`
 - `openspec/changes/build-project-and-definition-brick-persistence/specs/project-definition-brick-persistence/spec.md`
 
@@ -98,13 +106,20 @@ References are audit pointers only.
 2. After separate implementation authorization, both findings and only their
    associated evidence/card claims are corrected.
 3. Focused Project tests, Runtime Server types/full suite, relevant Contract
-   compatibility tests if the Contract surface changes, workspace build,
-   boundary checks, and diff/scope checks pass.
+   compatibility evidence, workspace build, boundary checks, and
+   diff/scope checks pass.
 4. Independent focused re-test and Early Review accept an immutable remediation
    subject before Project State routing/meta reconciliation.
+5. The authorized implementation, focused tests, and candidate Project card
+   update are committed together as:
+   `fix(server): enforce project brick integrity`.
 
 ## Handoff
 
-For preflight, return the required analysis and stop without editing or writing
-the coding Report. Do not begin remediation, change OpenSpec, update Project
-State, or schedule persistence.
+For preflight, use `output_mode: reply`, return the required analysis, and stop
+without editing. After explicit implementation authorization, use
+`output_mode: commit`, stage only authorized deliverables, and place a compact
+receipt in the commit body containing Task identity, baseline, exact
+verification, material deviation, and residual risk. Create no coding Report.
+Return the commit SHA and concise unique handoff, then stop. Do not change
+OpenSpec, reconcile root/meta state, or schedule persistence.

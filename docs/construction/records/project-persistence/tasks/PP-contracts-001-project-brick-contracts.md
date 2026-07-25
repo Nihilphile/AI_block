@@ -27,6 +27,7 @@ persistence, transport, CLI, file, Actor lifecycle, or execution behavior.
   - `packages/runtime-contracts/src/**`
   - `packages/runtime-contracts/test/**`
   - `packages/runtime-contracts/package.json`
+  - `scripts/check-workspace-boundaries.mjs`
   - `project_state/packages/runtime-contracts/README.md`
   - checkbox state for OpenSpec tasks `1.1` through `2.4` only
   - `docs/construction/records/project-persistence/reports/PP-contracts-001-project-brick-contracts.coding.md`
@@ -66,6 +67,10 @@ persistence, transport, CLI, file, Actor lifecycle, or execution behavior.
   Actor, ActorPool, Host, Package, Run, or Graph behavior.
 - Do not edit the Actor card, Project State root/meta files, design documents,
   North Star, another module, dependencies, manifests, or lockfiles.
+- `scripts/check-workspace-boundaries.mjs` may change only to add the authorized
+  Runtime Contracts source/test files to its complete topology manifests. Do
+  not change boundary rules, package-root probes, execution behavior, or another
+  workspace manifest.
 - If strict operation shapes require a new product semantic not settled by the
   loaded specification, stop with the exact choice and affected requirement.
 - Project State responsibility:

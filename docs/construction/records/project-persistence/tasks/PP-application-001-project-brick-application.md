@@ -1,11 +1,11 @@
 # PP-application-001 Project and Definition Brick Application Module
 
 - owner: Runtime Server Project Module
-- follows: PP-contracts-review-001
-- affected modules: new Runtime Server Project Module; Runtime Contracts consumer; potential Actor digest consumer boundary
+- follows: PP-digest-review-001
+- affected modules: new Runtime Server Project Module; Runtime Contracts consumer; workspace boundary-check tooling
 - workflow: W3
 - base reason: this slice establishes a new state owner and application boundary that later SQLite and Actor resolver slices will consume
-- implementation/product subject: `9daf5a0`
+- implementation/product subject: `8ce52b9`
 - orchestration baseline: task-record commit (self)
 
 ## Objective
@@ -28,6 +28,7 @@ excluding SQLite and every execution workflow.
 - implementation write scope:
   - `apps/runtime-server/src/modules/project/**`
   - `apps/runtime-server/test/modules/project/**`
+  - `scripts/check-workspace-boundaries.mjs`
   - `project_state/apps/runtime-server/modules/project/README.md`
   - checkbox state for OpenSpec tasks `3.1` through `3.5` only
   - `docs/construction/records/project-persistence/reports/PP-application-001-project-brick-application.coding.md`
@@ -36,6 +37,8 @@ excluding SQLite and every execution workflow.
   - define inward repository, transaction, identity, clock, canonicalization,
     digest, and validation ports consistent with the accepted Contracts;
   - implement deterministic in-memory adapters for module evidence;
+  - extend only the checker's exact Runtime Server Project source/test topology
+    and production-import policy required by the authorized new module;
   - create only the new directly affected Project module card after real
     source/test ownership exists.
 - tools/external actions: local repository inspection and deterministic local verification only; no install, network, service, database, destructive, or Git-history action
@@ -65,6 +68,19 @@ excluding SQLite and every execution workflow.
   without changing Runtime Contracts, Actor source, or another path, stop with
   the exact boundary decision and required scope; do not duplicate the
   algorithm.
+- The checker delta is limited to:
+  - adding `project` to the exact Runtime Server source-module topology;
+  - fixing the Project source file set to `application.ts`, `errors.ts`,
+    `index.ts`, `ports.ts`, and `values.ts`;
+  - adding `project` to the exact Runtime Server test-module topology;
+  - fixing the Project test file set to `in-memory-adapters.ts` and
+    `project-application.test.ts`;
+  - adding a Project production-import policy that permits only
+    `@ai-block/runtime-contracts` and same-module relative imports, with focused
+    policy regression evidence consistent with the existing checker.
+- Do not alter any other allowlist, topology, manifest expectation, import
+  policy, probe behavior, diagnostic, or checker rule. Stop if the authorized
+  Project module cannot pass within this exact checker delta.
 - Do not add SQLite, `node:sqlite`, schema/migrations, database paths, package
   dependencies, lockfiles, Server startup/composition, HTTP/CLI/file import,
   Project activation/deletion/alias/workspace roots, ActorTemplate/Snapshot
@@ -81,7 +97,8 @@ excluding SQLite and every execution workflow.
   - Orchestrator updates routing/meta/accepted-deferred summaries only at
     acceptance.
 - Use scope escalation for any manifest, configuration, dependency, existing
-  module, Contract, checker, or additional Project State path.
+  module, Contract, checker behavior outside the exact delta above, or
+  additional Project State path.
 
 ## References
 
@@ -111,12 +128,16 @@ context.
 4. The module depends inward on Runtime Contracts and its own ports; it does not
    import Actor, SQLite, transport, CLI, Host, Package, Run, or Graph
    implementation.
-5. Targeted Project tests, Runtime Server suite/type checks, workspace build,
+5. The boundary checker recognizes exactly the authorized Project source/test
+   topology and rejects Project production imports outside Runtime Contracts or
+   the same module.
+6. Targeted Project tests, Runtime Server suite/type checks, workspace build,
    boundary checks, and diff/no-excluded-scope checks pass.
-6. The new Project state card accurately describes only the implemented
+7. The new Project state card accurately describes only the implemented
    application/in-memory boundary and explicitly defers production persistence,
    Server composition, execution, and external adapters.
-7. The implementation and coding Report are committed together under:
+8. The implementation, exact checker delta, and coding Report are committed
+   together under:
    `feat(server): add project brick application module`.
 
 ## Handoff

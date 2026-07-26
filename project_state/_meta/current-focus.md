@@ -74,7 +74,11 @@ Integrated testing passed at `25cb066`, but review `2679a77` found one
 acceptance-blocking malformed-result/redaction defect. The exact correction is
 frozen in
 [`PP-actor-resolver-remediation-001`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-remediation-001-result-validation.md).
-No further product Worker is currently authorized.
+Remediation candidate `021c005` is self-verified and awaits the exact
+[`focused retest`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-remediation-acceptance-001-result-validation.md)
+and
+[`focused re-review`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-remediation-review-001-result-validation.md).
+No further product Worker is authorized.
 
 ## Reconciliation posture
 

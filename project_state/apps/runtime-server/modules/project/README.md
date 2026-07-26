@@ -50,6 +50,11 @@ a bounded lock timeout. Startup atomically bootstraps only a structurally empty
 store, validates an exact existing schema and migration ledger, and fails
 closed for unsupported or altered stores. Explicit close/reopen preserves
 Projects, aggregate lifecycle, immutable history, and exact revisions.
+Database configuration also rejects canonical paths equal to or below the
+executing workspace root without rejecting sibling-prefix paths. Exact and
+history reads cross-check each persisted revision's aggregate UID against the
+validated aggregate summary UID, so corruption on either side of that binding
+fails through the Project integrity boundary.
 
 ## Boundary and dependencies
 
@@ -73,11 +78,13 @@ implementation subject `0b0d0bf`. Independent focused testing and re-review
 closed the canonical-Body and exact-revision integrity findings with no
 remaining actionable finding or blocking evidence gap.
 
-The application behavior remains accepted at `0b0d0bf`. The versioned SQLite
-persistence implementation and its focused verification evidence are present
-in the current implementation work; independent persistence testing and
-review remain pending. Server composition, external adapters, Actor-side
-resolver wiring, and every execution workflow remain deferred.
+The application behavior remains accepted at `0b0d0bf`. Independent SQLite
+testing passed candidate `2cf9b84`, while review required remediation for
+revision aggregate-UID binding and workspace-contained database paths. The
+current remediation candidate closes both findings with focused
+self-verification; independent focused retest and re-review remain pending.
+Server composition, external adapters, Actor-side resolver wiring, and every
+execution workflow remain deferred.
 
 ## Read next
 
@@ -103,6 +110,12 @@ resolver wiring, and every execution workflow remain deferred.
   [`apps/runtime-server/test/modules/project/sqlite-persistence.test.ts`](../../../../../apps/runtime-server/test/modules/project/sqlite-persistence.test.ts)
 - SQLite construction task:
   [PP-sqlite-001](../../../../../docs/construction/records/project-persistence/tasks/PP-sqlite-001-versioned-project-persistence.md)
+- SQLite remediation task:
+  [PP-sqlite-remediation-001](../../../../../docs/construction/records/project-persistence/tasks/PP-sqlite-remediation-001-integrity-and-path-boundary.md)
+- Candidate SQLite evidence:
+  [independent testing](../../../../../docs/construction/records/project-persistence/reports/PP-sqlite-acceptance-001-versioned-project-persistence.testing.md)
+  and
+  [review findings](../../../../../docs/construction/records/project-persistence/reports/PP-sqlite-review-001-versioned-project-persistence.reviewing.md)
 - Accepted remediation evidence:
   [testing](../../../../../docs/construction/records/project-persistence/reports/PP-application-remediation-acceptance-001-project-brick-integrity.testing.md)
   and

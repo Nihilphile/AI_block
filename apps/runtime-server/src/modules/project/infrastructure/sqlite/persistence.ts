@@ -81,10 +81,15 @@ function summaryFromRow(row: SqliteRow): DefinitionBrickSummary {
   };
 }
 
-function revisionFromRow(row: SqliteRow): DefinitionBrickRevision {
+function revisionFromRow(
+  row: SqliteRow,
+  expectedBrickUid: unknown,
+): DefinitionBrickRevision {
   const revision = positiveSafeInteger(row.revision);
   if (
     typeof row.revision_uid !== "string"
+    || typeof row.brick_uid !== "string"
+    || row.brick_uid !== expectedBrickUid
     || typeof row.project_id !== "string"
     || typeof row.brick_id !== "string"
     || typeof row.kind !== "string"
@@ -172,12 +177,14 @@ class SqliteProjectRepositories {
       ORDER BY brick_id
     `);
     this.selectRevision = database.prepare(`
-      SELECT revision_uid, project_id, brick_id, kind, revision, body_json, digest, created_at
+      SELECT revision_uid, brick_uid, project_id, brick_id, kind, revision,
+        body_json, digest, created_at
       FROM definition_brick_revisions
       WHERE project_id = $project_id AND brick_id = $brick_id AND revision = $revision
     `);
     this.selectRevisions = database.prepare(`
-      SELECT revision_uid, project_id, brick_id, kind, revision, body_json, digest, created_at
+      SELECT revision_uid, brick_uid, project_id, brick_id, kind, revision,
+        body_json, digest, created_at
       FROM definition_brick_revisions
       WHERE project_id = $project_id AND brick_id = $brick_id
       ORDER BY revision
@@ -296,30 +303,33 @@ class SqliteProjectRepositories {
     brickId: HumanReadableId,
     revision: PositiveRevision,
   ): Promise<DefinitionBrickRevision | undefined> {
+    const summaryRow = this.selectSummary.get({
+      $project_id: projectId,
+      $brick_id: brickId,
+    });
     const row = this.selectRevision.get({
       $project_id: projectId,
       $brick_id: brickId,
       $revision: revision,
     });
-    return row === undefined ? undefined : revisionFromRow(row);
+    return row === undefined
+      ? undefined
+      : revisionFromRow(row, summaryRow?.brick_uid);
   }
 
   private async listRevisions(
     projectId: ProjectId,
     brickId: HumanReadableId,
   ): Promise<readonly DefinitionBrickRevision[] | undefined> {
-    if (
-      this.selectSummary.get({
-        $project_id: projectId,
-        $brick_id: brickId,
-      }) === undefined
-    ) {
-      return undefined;
-    }
+    const summaryRow = this.selectSummary.get({
+      $project_id: projectId,
+      $brick_id: brickId,
+    });
+    if (summaryRow === undefined) return undefined;
     return this.selectRevisions.all({
       $project_id: projectId,
       $brick_id: brickId,
-    }).map(revisionFromRow);
+    }).map((row) => revisionFromRow(row, summaryRow.brick_uid));
   }
 
   private async appendRevision(

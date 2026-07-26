@@ -1,13 +1,15 @@
 import {
+  existsSync,
   mkdtempSync,
   mkdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
   DefinitionBrickId,
   DefinitionBrickRevisionId,
@@ -153,6 +155,52 @@ describe("Project SQLite persistence", () => {
       raw.close();
     }
     await persistence.close();
+  });
+
+  it("rejects workspace-contained paths without overmatching sibling prefixes", async () => {
+    const workspaceRoot = realpathSync(process.cwd());
+    const repositoryModulePath = join(workspaceRoot, "apps", "runtime-server");
+    const descendantParent = existsSync(repositoryModulePath)
+      ? repositoryModulePath
+      : join(workspaceRoot, "src");
+    const workspaceCandidates = [
+      join(workspaceRoot, "ai-block-project-sqlite-remediation-root.sqlite"),
+      join(
+        descendantParent,
+        "ai-block-project-sqlite-remediation-descendant.sqlite",
+      ),
+    ];
+    for (const databasePath of workspaceCandidates) {
+      expect(existsSync(databasePath)).toBe(false);
+      expect(openProjectSqlitePersistence({ databasePath })).toEqual(
+        factoryPersistenceFailure,
+      );
+      expect(existsSync(databasePath)).toBe(false);
+    }
+
+    const { directory } = temporaryDatabase();
+    const mockWorkspace = join(directory, "workspace");
+    const mockWorkspaceChild = join(mockWorkspace, "child");
+    const siblingPrefix = join(directory, "workspace-sibling");
+    mkdirSync(mockWorkspaceChild, { recursive: true });
+    mkdirSync(siblingPrefix);
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(mockWorkspace);
+    try {
+      expect(openProjectSqlitePersistence({
+        databasePath: join(mockWorkspace, "project.sqlite"),
+      })).toEqual(factoryPersistenceFailure);
+      expect(openProjectSqlitePersistence({
+        databasePath: join(mockWorkspaceChild, "project.sqlite"),
+      })).toEqual(factoryPersistenceFailure);
+
+      const sibling = openProjectSqlitePersistence({
+        databasePath: join(siblingPrefix, "project.sqlite"),
+      });
+      expect(sibling.ok).toBe(true);
+      if (sibling.ok) await sibling.persistence.close();
+    } finally {
+      cwd.mockRestore();
+    }
   });
 
   it("binds hostile Body values and preserves durable archive/history and Project isolation", async () => {
@@ -463,5 +511,71 @@ describe("Project SQLite persistence", () => {
     } finally {
       raw.close();
     }
+  });
+
+  it("fails exact and history reads when a revision aggregate UID binding is corrupted", async () => {
+    const { databasePath } = temporaryDatabase();
+    const { service } = openHarness(databasePath, 3);
+    const projectId = await createProject(service);
+    const created = await service.createDefinitionBrick(createBrick(projectId, "uid-binding"));
+    expect(created).toMatchObject({ revision: { revision: 1 } });
+    expect(await service.listDefinitionBrickHistory({
+      project_id: projectId,
+      brick_id: "uid-binding",
+    })).toMatchObject({ revisions: [{ revision: 1 }] });
+
+    const raw = new DatabaseSync(databasePath);
+    try {
+      raw.exec("PRAGMA foreign_keys = OFF");
+      raw.prepare(`
+        UPDATE definition_brick_revisions
+        SET brick_uid = ?
+        WHERE project_id = ? AND brick_id = ? AND revision = 1
+      `).run(`brick_${uuid(9_001)}`, projectId, "uid-binding");
+    } finally {
+      raw.close();
+    }
+
+    expect(await service.readExactDefinitionBrickRevision({
+      project_id: projectId,
+      ref: { id: "uid-binding", revision: 1 },
+    })).toEqual(integrityFailure);
+    expect(await service.listDefinitionBrickHistory({
+      project_id: projectId,
+      brick_id: "uid-binding",
+    })).toEqual(integrityFailure);
+  });
+
+  it("fails exact and history reads when an aggregate UID no longer binds its revisions", async () => {
+    const { databasePath } = temporaryDatabase();
+    const { service } = openHarness(databasePath, 4);
+    const projectId = await createProject(service);
+    const created = await service.createDefinitionBrick(createBrick(projectId, "aggregate-uid"));
+    expect(created).toMatchObject({ revision: { revision: 1 } });
+    expect(await service.readExactDefinitionBrickRevision({
+      project_id: projectId,
+      ref: { id: "aggregate-uid", revision: 1 },
+    })).toMatchObject({ revision: { revision: 1 } });
+
+    const raw = new DatabaseSync(databasePath);
+    try {
+      raw.exec("PRAGMA foreign_keys = OFF");
+      raw.prepare(`
+        UPDATE definition_brick_aggregates
+        SET brick_uid = ?
+        WHERE project_id = ? AND brick_id = ?
+      `).run(`brick_${uuid(9_002)}`, projectId, "aggregate-uid");
+    } finally {
+      raw.close();
+    }
+
+    expect(await service.readExactDefinitionBrickRevision({
+      project_id: projectId,
+      ref: { id: "aggregate-uid", revision: 1 },
+    })).toEqual(integrityFailure);
+    expect(await service.listDefinitionBrickHistory({
+      project_id: projectId,
+      brick_id: "aggregate-uid",
+    })).toEqual(integrityFailure);
   });
 });

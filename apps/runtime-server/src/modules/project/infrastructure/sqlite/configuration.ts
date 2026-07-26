@@ -1,5 +1,5 @@
 import { statSync, realpathSync } from "node:fs";
-import { basename, dirname, isAbsolute, join } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 export const PROJECT_SQLITE_BUSY_TIMEOUT_MS = 250;
@@ -15,6 +15,20 @@ export type ConfiguredProjectSqliteDatabase = Readonly<{
 
 export class ProjectSqliteConfigurationError extends Error {}
 
+function isPathAtOrBelow(rootPath: string, candidatePath: string): boolean {
+  const comparedRoot = process.platform === "win32" ? rootPath.toLowerCase() : rootPath;
+  const comparedCandidate = process.platform === "win32"
+    ? candidatePath.toLowerCase()
+    : candidatePath;
+  const relativePath = relative(comparedRoot, comparedCandidate);
+  return relativePath === ""
+    || (
+      relativePath !== ".."
+      && !relativePath.startsWith(`..${sep}`)
+      && !isAbsolute(relativePath)
+    );
+}
+
 function canonicalDatabasePath(databasePath: string): string {
   if (
     databasePath.length === 0
@@ -29,18 +43,25 @@ function canonicalDatabasePath(databasePath: string): string {
     throw new ProjectSqliteConfigurationError("database parent is not a directory");
   }
 
+  let canonicalPath: string;
   try {
     const target = statSync(databasePath);
     if (!target.isFile()) {
       throw new ProjectSqliteConfigurationError("database path is not a file");
     }
-    return realpathSync(databasePath);
+    canonicalPath = realpathSync(databasePath);
   } catch (error) {
     if (error instanceof ProjectSqliteConfigurationError) throw error;
     const code = (error as NodeJS.ErrnoException).code;
     if (code !== "ENOENT") throw error;
-    return join(parentPath, basename(databasePath));
+    canonicalPath = join(parentPath, basename(databasePath));
   }
+
+  const workspaceRoot = realpathSync(process.cwd());
+  if (isPathAtOrBelow(workspaceRoot, canonicalPath)) {
+    throw new ProjectSqliteConfigurationError("database path is inside the workspace");
+  }
+  return canonicalPath;
 }
 
 function verifyConnectionSettings(database: DatabaseSync): void {

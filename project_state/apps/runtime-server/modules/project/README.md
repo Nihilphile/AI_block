@@ -56,20 +56,33 @@ history reads cross-check each persisted revision's aggregate UID against the
 validated aggregate summary UID, so corruption on either side of that binding
 fails through the Project integrity boundary.
 
+A Project-owned infrastructure provider now adapts that accepted exact-read
+surface to the existing Actor `DefinitionBrickResolverPort` without importing
+Actor or SQLite details. It returns only the unchanged exact persisted revision
+or ordinary absence for a missing Project, Brick, or revision; integrity,
+persistence, and every unexpected outcome throw a fixed redacted local
+failure. The Actor application continues to own conversion of that failure to
+its existing operation result. Focused evidence proves exact revision selection
+after later revisions, archived history, restart, Snapshot UID/digest
+provenance, and fail-closed corruption behavior.
+
 ## Boundary and dependencies
 
 Application production source depends only on Runtime Contracts and
-same-module relative imports. The owned SQLite infrastructure additionally
-depends only on the built-in `node:sqlite`, `node:fs`, and `node:path`
-facilities. It does not import Actor implementation, transport, CLI,
+same-module relative imports. The Project-owned resolver infrastructure
+depends only on that exact-read application capability and Runtime Contracts;
+it is structurally injected into the existing Actor resolver port without an
+Actor import. The owned SQLite infrastructure additionally depends only on the
+built-in `node:sqlite`, `node:fs`, and `node:path` facilities. It does not
+import Actor implementation, transport, CLI,
 ActorHost, Host Gateway, Package, Run, Graph, or Server composition. The
 Project Unit of Work owns only Project records and Definition Brick
 aggregate/revision state; it does not coordinate ActorTemplate or Snapshot
 state.
 
 The in-memory adapters remain deterministic test evidence. Server composition,
-public database-path configuration, external authoring adapters, and Actor
-resolver integration are not part of this boundary.
+public database-path configuration, external authoring adapters, and every
+ActorTemplate/Snapshot persistence concern are not part of this boundary.
 
 ## Current condition
 
@@ -84,10 +97,12 @@ focused retest `4c0c5d9` and focused re-review `bf25b86` closed the prior
 revision aggregate-UID binding and workspace-contained database-path findings
 with no remaining actionable finding or blocking evidence gap.
 
-The accepted adapter remains synchronous and uncomposed, with a bounded 250 ms
-cross-process contention timeout. Cross-process stress, automated recovery,
-Server composition, external adapters, Actor-side resolver wiring, and every
-execution workflow remain deferred.
+The accepted SQLite adapter remains synchronous and uncomposed, with a bounded
+250 ms cross-process contention timeout. The resolver provider integration is
+self-verified at the pending integration subject; independent integrated
+acceptance and module/boundary review remain required. Cross-process stress,
+automated recovery, Server composition, external adapters, and every execution
+workflow remain deferred.
 
 ## Read next
 
@@ -111,6 +126,10 @@ execution workflow remain deferred.
   [`apps/runtime-server/src/modules/project/infrastructure/sqlite/`](../../../../../apps/runtime-server/src/modules/project/infrastructure/sqlite/)
 - SQLite focused test:
   [`apps/runtime-server/test/modules/project/sqlite-persistence.test.ts`](../../../../../apps/runtime-server/test/modules/project/sqlite-persistence.test.ts)
+- Resolver provider source:
+  [`apps/runtime-server/src/modules/project/infrastructure/actor-definition-brick-resolver.ts`](../../../../../apps/runtime-server/src/modules/project/infrastructure/actor-definition-brick-resolver.ts)
+- Resolver focused cross-module test:
+  [`apps/runtime-server/test/modules/project/actor-definition-brick-resolver.test.ts`](../../../../../apps/runtime-server/test/modules/project/actor-definition-brick-resolver.test.ts)
 - SQLite construction task:
   [PP-sqlite-001](../../../../../docs/construction/records/project-persistence/tasks/PP-sqlite-001-versioned-project-persistence.md)
 - SQLite remediation task:

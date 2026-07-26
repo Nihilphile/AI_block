@@ -3,6 +3,9 @@ export {
   runtimeContractsDefinitionBrickDigest,
 } from "./values.js";
 export {
+  createProjectDefinitionBrickResolver,
+} from "./infrastructure/actor-definition-brick-resolver.js";
+export {
   openProjectSqlitePersistence,
 } from "./infrastructure/sqlite/index.js";
 export type {

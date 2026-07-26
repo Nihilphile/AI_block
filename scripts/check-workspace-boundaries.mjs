@@ -362,6 +362,13 @@
       allowedPackages: new Set(["@ai-block/runtime-contracts"])
     },
     {
+      name: "Project resolver infrastructure",
+      root: resolve(apps[0].dir, "src", "modules", "project", "infrastructure"),
+      relativeRoot: resolve(apps[0].dir, "src", "modules", "project"),
+      excludedRoots: [resolve(apps[0].dir, "src", "modules", "project", "infrastructure", "sqlite")],
+      allowedPackages: new Set(["@ai-block/runtime-contracts"])
+    },
+    {
       name: "Project SQLite infrastructure",
       root: resolve(apps[0].dir, "src", "modules", "project", "infrastructure", "sqlite"),
       relativeRoot: resolve(apps[0].dir, "src", "modules", "project"),
@@ -525,10 +532,12 @@
     const actorPolicy = productionImportPolicies[0];
     const contractsPolicy = productionImportPolicies[1];
     const projectPolicy = productionImportPolicies[2];
-    const projectSqlitePolicy = productionImportPolicies[3];
+    const projectResolverPolicy = productionImportPolicies[3];
+    const projectSqlitePolicy = productionImportPolicies[4];
     const actorSource = join(actorPolicy.root, "application.ts");
     const contractsSource = join(contractsPolicy.root, "index.ts");
     const projectSource = join(projectPolicy.root, "application.ts");
+    const projectResolverSource = join(projectResolverPolicy.root, "actor-definition-brick-resolver.ts");
     const projectSqliteSource = join(projectSqlitePolicy.root, "persistence.ts");
     const assertCategories = (label, policy, sourcePath, sourceText, expected) => {
       const actual = productionImportViolations(policy, sourcePath, sourceText)
@@ -611,6 +620,20 @@
       projectSource,
       'import "@ai-block/actor-host"; import "../actor/index.js";',
       ["forbidden_external_import", "relative_escape"]
+    );
+    assertCategories(
+      "allowed Project resolver imports",
+      projectResolverPolicy,
+      projectResolverSource,
+      'import type { ProjectId } from "@ai-block/runtime-contracts"; import type { ProjectModulePorts } from "../ports.js";',
+      []
+    );
+    assertCategories(
+      "Project resolver forbidden imports",
+      projectResolverPolicy,
+      projectResolverSource,
+      'import "node:sqlite"; import "../../actor/index.js"; import "@ai-block/runtime-server";',
+      ["forbidden_external_import", "relative_escape", "forbidden_external_import"]
     );
     assertCategories(
       "allowed Project SQLite imports",
@@ -771,7 +794,7 @@
           const projectRoot = join(modulesRoot, "project");
           check(same(readdirSync(projectRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["application.ts", "errors.ts", "index.ts", "infrastructure", "ports.ts", "values.ts"]), `${modulesRoot}/project: Project source files mismatch`);
           const projectInfrastructureRoot = join(projectRoot, "infrastructure");
-          check(same(readdirSync(projectInfrastructureRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["sqlite"]), `${projectInfrastructureRoot}: Project infrastructure topology mismatch`);
+          check(same(readdirSync(projectInfrastructureRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor-definition-brick-resolver.ts", "sqlite"]), `${projectInfrastructureRoot}: Project infrastructure topology mismatch`);
           const projectSqliteRoot = join(projectInfrastructureRoot, "sqlite");
           check(same(readdirSync(projectSqliteRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["configuration.ts", "index.ts", "migrations", "persistence.ts"]), `${projectSqliteRoot}: Project SQLite source files mismatch`);
           check(same(readdirSync(join(projectSqliteRoot, "migrations"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["v1.ts"]), `${projectSqliteRoot}/migrations: Project SQLite migration files mismatch`);
@@ -844,7 +867,7 @@
         check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor", "host-gateway", "project"]), `${modulesRoot}: Runtime Server test module topology mismatch`);
         check(same(readdirSync(join(modulesRoot, "host-gateway"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway.test.ts"]), `${modulesRoot}/host-gateway: Runtime Server Host Gateway test files mismatch`);
         check(same(readdirSync(join(modulesRoot, "actor"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor-application.test.ts", "actor-foundation.test.ts", "actor-validation-compiler.test.ts", "in-memory-adapters.ts"]), `${modulesRoot}/actor: Actor test files mismatch`);
-        check(same(readdirSync(join(modulesRoot, "project"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["in-memory-adapters.ts", "project-application.test.ts", "sqlite-persistence.test.ts"]), `${modulesRoot}/project: Project test files mismatch`);
+        check(same(readdirSync(join(modulesRoot, "project"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor-definition-brick-resolver.test.ts", "in-memory-adapters.ts", "project-application.test.ts", "sqlite-persistence.test.ts"]), `${modulesRoot}/project: Project test files mismatch`);
       }
     }
     const forbiddenCatchAll = new Set(["common", "shared", "core", "utils"]);

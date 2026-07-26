@@ -29,9 +29,9 @@
 
 ## 5. Actor resolver integration
 
-- [ ] 5.1 Add an adapter compatible with the existing Actor `DefinitionBrickResolverPort` that returns exact persisted revisions or ordinary absence without changing Actor resolver semantics.
-- [ ] 5.2 Add focused cross-module tests proving exact Project/ID/revision resolution, archived historical resolution, no latest-revision substitution, Snapshot provenance compatibility, and fail-closed integrity behavior.
-- [ ] 5.3 Verify dependency direction and workspace boundaries: Actor and Project application code do not import SQLite details, consumers use Runtime Contracts from the package root, and no excluded Server composition or execution workflow is introduced.
+- [x] 5.1 Add an adapter compatible with the existing Actor `DefinitionBrickResolverPort` that returns exact persisted revisions or ordinary absence without changing Actor resolver semantics.
+- [x] 5.2 Add focused cross-module tests proving exact Project/ID/revision resolution, archived historical resolution, no latest-revision substitution, Snapshot provenance compatibility, and fail-closed integrity behavior.
+- [x] 5.3 Verify dependency direction and workspace boundaries: Actor and Project application code do not import SQLite details, consumers use Runtime Contracts from the package root, and no excluded Server composition or execution workflow is introduced.
 
 ## 6. Project State reconciliation
 

@@ -42,8 +42,9 @@ blocking evidence gap.
   [Project Module](../apps/runtime-server/modules/project/README.md) owns the
   accepted application boundary, deterministic in-memory evidence, canonical
   Body authoring/integrity, and exact-revision coherence.
-- The Project boundary has a committed self-verified SQLite persistence
-  candidate at `2cf9b84`; independent testing and Early Review are pending.
+- The Project boundary has a committed SQLite persistence candidate at
+  `2cf9b84`. Independent testing passed, but Early Review found two
+  acceptance-blocking integrity/path-boundary defects; remediation is pending.
   Server composition, external adapters, Actor resolver wiring, and automated
   recovery remain absent.
 - Root/Runtime Server routing and the system map include the accepted Project
@@ -54,17 +55,17 @@ blocking evidence gap.
 
 ## Next entry point
 
-The immutable SQLite candidate is `2cf9b84`, implemented under
+The immutable reviewed SQLite candidate is `2cf9b84`, implemented under
 [`PP-sqlite-001`](../../docs/construction/records/project-persistence/tasks/PP-sqlite-001-versioned-project-persistence.md)
 with Node `v24.18.0`, pnpm `11.10.0`, and the retained
-`@types/node 24.13.3`. It is not accepted yet.
+`@types/node 24.13.3`. Independent testing passed at `df5ef46`; Early Review
+requires remediation at `d0d763f`.
 
-The next entry points are the committed independent
-[`testing Task`](../../docs/construction/records/project-persistence/tasks/PP-sqlite-acceptance-001-versioned-project-persistence.md)
-and subsequent
-[`Early Review Task`](../../docs/construction/records/project-persistence/tasks/PP-sqlite-review-001-versioned-project-persistence.md).
-No Actor resolver Worker is authorized until both evidence gates accept the
-exact candidate.
+The next entry point is the bounded
+[`remediation Task`](../../docs/construction/records/project-persistence/tasks/PP-sqlite-remediation-001-integrity-and-path-boundary.md),
+followed by focused independent retest and re-review against the new exact
+subject. No Actor resolver Worker is authorized until both findings close and
+both evidence gates accept that subject.
 
 ## Reconciliation posture
 

@@ -66,7 +66,11 @@ the no-write
 The preflight returned READY with existing ports/Contracts sufficient and a
 Project-owned provider boundary. The exact implementation is frozen in
 [`PP-actor-resolver-001`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-001-persisted-definition-bricks.md);
-no implementation Worker is currently authorized.
+candidate `2da0f00` is self-verified and awaiting independent
+[`integrated testing`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-acceptance-001-persisted-definition-bricks.md)
+and subsequent
+[`module/boundary review`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-review-001-persisted-definition-bricks.md).
+No further product Worker is authorized.
 
 ## Reconciliation posture
 

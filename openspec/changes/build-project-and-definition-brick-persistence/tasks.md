@@ -44,7 +44,7 @@
 - [ ] 7.1 Run targeted Contract, Project module, SQLite adapter, and Actor resolver tests plus relevant build, type, workspace-boundary, clean-install, restart, and no-excluded-scope checks; record exact self-verification.
 - [ ] 7.2 Commit the integrated implementation subject and perform independent testing of the full Project-create → Brick-author → restart → exact Actor-resolve path, including required failure, concurrency, integrity, and compatibility evidence.
 - [ ] 7.3 Perform independent module/boundary review of Contracts, ownership, transactions, schema/migration, security configuration, synchronous-runtime bounds, error mapping, state cards, and exclusion discipline.
-- [x] 7.4 Apply only authorized bounded remediation, then run focused retest and re-review against the new exact subject until no acceptance-blocking finding remains.
+- [ ] 7.4 Apply only authorized bounded remediation, then run focused retest and re-review against the new exact subject until no acceptance-blocking finding remains.
 
 ## 8. Orchestrator acceptance and closeout
 

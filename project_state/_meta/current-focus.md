@@ -70,7 +70,11 @@ candidate `2da0f00` is self-verified and awaiting independent
 [`integrated testing`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-acceptance-001-persisted-definition-bricks.md)
 and subsequent
 [`module/boundary review`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-review-001-persisted-definition-bricks.md).
-No further product Worker is authorized.
+Integrated testing passed at `25cb066`, but review `2679a77` found one
+acceptance-blocking malformed-result/redaction defect. The exact correction is
+frozen in
+[`PP-actor-resolver-remediation-001`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-remediation-001-result-validation.md).
+No further product Worker is currently authorized.
 
 ## Reconciliation posture
 

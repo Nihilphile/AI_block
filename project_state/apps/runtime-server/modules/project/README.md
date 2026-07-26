@@ -64,7 +64,12 @@ persistence, and every unexpected outcome throw a fixed redacted local
 failure. The Actor application continues to own conversion of that failure to
 its existing operation result. Focused evidence proves exact revision selection
 after later revisions, archived history, restart, Snapshot UID/digest
-provenance, and fail-closed corruption behavior.
+provenance, and fail-closed corruption behavior. The provider runtime-validates
+the complete structural reader result with the root Runtime Contract schema,
+then verifies the returned aggregate/revision Project, Brick, kind, and
+revision binding before returning it. Null, malformed, ambiguous, mismatched,
+or thrown reader outcomes all remain inside the same fixed redacted failure
+boundary and never become absence.
 
 ## Boundary and dependencies
 
@@ -99,10 +104,10 @@ with no remaining actionable finding or blocking evidence gap.
 
 The accepted SQLite adapter remains synchronous and uncomposed, with a bounded
 250 ms cross-process contention timeout. The resolver provider integration is
-self-verified at the pending integration subject; independent integrated
-acceptance and module/boundary review remain required. Cross-process stress,
-automated recovery, Server composition, external adapters, and every execution
-workflow remain deferred.
+self-verified at the remediation candidate after structural-reader result
+validation; focused independent retest and re-review remain required.
+Cross-process stress, automated recovery, Server composition, external
+adapters, and every execution workflow remain deferred.
 
 ## Read next
 
@@ -130,6 +135,8 @@ workflow remain deferred.
   [`apps/runtime-server/src/modules/project/infrastructure/actor-definition-brick-resolver.ts`](../../../../../apps/runtime-server/src/modules/project/infrastructure/actor-definition-brick-resolver.ts)
 - Resolver focused cross-module test:
   [`apps/runtime-server/test/modules/project/actor-definition-brick-resolver.test.ts`](../../../../../apps/runtime-server/test/modules/project/actor-definition-brick-resolver.test.ts)
+- Resolver result-validation remediation task:
+  [PP-actor-resolver-remediation-001](../../../../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-remediation-001-result-validation.md)
 - SQLite construction task:
   [PP-sqlite-001](../../../../../docs/construction/records/project-persistence/tasks/PP-sqlite-001-versioned-project-persistence.md)
 - SQLite remediation task:

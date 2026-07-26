@@ -1,3 +1,7 @@
+import {
+  decodeContract,
+  ReadExactDefinitionBrickRevisionResultSchema,
+} from "@ai-block/runtime-contracts";
 import type {
   DefinitionBrickRevision,
   ExactBrickRef,
@@ -32,19 +36,33 @@ export function createProjectDefinitionBrickResolver(
 }> {
   return {
     resolveExact: async (projectId, reference) => {
-      let result: ReadExactDefinitionBrickRevisionResult;
       try {
-        result = await reader.readExactDefinitionBrickRevision({
+        const result: ReadExactDefinitionBrickRevisionResult = await reader.readExactDefinitionBrickRevision({
           project_id: projectId,
           ref: reference,
         });
+        const decoded = decodeContract(ReadExactDefinitionBrickRevisionResultSchema, result);
+        if (!decoded.ok) throw resolutionFailure();
+
+        if ("revision" in decoded.value) {
+          const { brick, revision } = decoded.value;
+          if (
+            brick.project_id !== projectId
+            || brick.brick_id !== reference.id
+            || brick.kind !== revision.kind
+            || revision.project_id !== projectId
+            || revision.brick_id !== reference.id
+            || revision.revision !== reference.revision
+          ) {
+            throw resolutionFailure();
+          }
+          return revision as DefinitionBrickRevision;
+        }
+        if (absenceCodes.has(decoded.value.error.code)) return undefined;
+        throw resolutionFailure();
       } catch {
         throw resolutionFailure();
       }
-
-      if ("revision" in result) return result.revision;
-      if (absenceCodes.has(result.error.code)) return undefined;
-      throw resolutionFailure();
     },
   };
 }

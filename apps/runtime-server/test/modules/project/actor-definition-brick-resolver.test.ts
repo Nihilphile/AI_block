@@ -151,6 +151,25 @@ function createActorHarness(
   return { adapters, service: new ActorTemplateApplicationService(adapters.ports) };
 }
 
+type StructuralReader = Parameters<typeof createProjectDefinitionBrickResolver>[0];
+
+function readerReturning(value: unknown): StructuralReader {
+  return {
+    readExactDefinitionBrickRevision: async () => value as never,
+  };
+}
+
+async function exactResult(
+  service: ProjectApplicationService,
+  projectId: ProjectId,
+  reference: ExactBrickRef,
+) {
+  const result = await service.readExactDefinitionBrickRevision({ project_id: projectId, ref: reference });
+  expect("revision" in result).toBe(true);
+  if (!("revision" in result)) throw new Error(result.error.code);
+  return result;
+}
+
 describe("Project persisted Definition Brick resolver", () => {
   it("returns only the requested Project-local revision and maps ordinary misses to absence", async () => {
     const { service } = openHarness(temporaryDatabase());
@@ -174,6 +193,66 @@ describe("Project persisted Definition Brick resolver", () => {
     expect(await actorPort.resolveExact(project1, { id: "shared", revision: 3 })).toBeUndefined();
     expect(await actorPort.resolveExact(project1, { id: "missing", revision: 1 })).toBeUndefined();
     expect(await actorPort.resolveExact(`project_${uuid(99)}` as ProjectId, { id: "shared", revision: 1 })).toBeUndefined();
+  });
+
+  it("validates every structural reader result inside the fixed redacted failure boundary", async () => {
+    const { service } = openHarness(temporaryDatabase(), 10);
+    const projectId = await createProject(service);
+    const otherProjectId = await createProject(service);
+    const reference = { id: "system", revision: 1 } as ExactBrickRef;
+    await createBrick(service, projectId, "system", "sys_prompt", { text: "System one" });
+    await createBrick(service, projectId, "other", "sys_prompt", { text: "Other" });
+    await createBrick(service, projectId, "prompt", "prompt", { kind: "text", text: "Prompt" });
+    await createBrick(service, otherProjectId, "system", "sys_prompt", { text: "Other Project" });
+    expect(await service.reviseDefinitionBrick({
+      project_id: projectId,
+      brick_id: "system",
+      base_revision: 1,
+      kind: "sys_prompt",
+      body: { text: "System two" },
+    })).toMatchObject({ revision: { revision: 2 } });
+
+    const valid = await exactResult(service, projectId, reference);
+    const mismatchedProject = await exactResult(service, otherProjectId, reference);
+    const mismatchedBrick = await exactResult(service, projectId, { id: "other", revision: 1 });
+    const mismatchedKind = { ...valid, brick: { ...valid.brick, kind: "prompt" as const } };
+    const mismatchedRevision = await exactResult(service, projectId, { id: "system", revision: 2 });
+
+    const validResolver = createProjectDefinitionBrickResolver(readerReturning(valid));
+    expect(await validResolver.resolveExact(projectId, reference)).toEqual(valid.revision);
+    for (const code of [
+      "project_not_found",
+      "definition_brick_not_found",
+      "definition_brick_revision_not_found",
+    ] as const) {
+      const resolver = createProjectDefinitionBrickResolver(readerReturning({
+        error: { code, category: "not_found" },
+      }));
+      await expect(resolver.resolveExact(projectId, reference)).resolves.toBeUndefined();
+    }
+
+    for (const malformed of [
+      null,
+      { revision: undefined },
+      { error: { code: "project_not_found" } },
+      { ...valid, error: { code: "project_not_found", category: "not_found" } },
+      mismatchedProject,
+      mismatchedBrick,
+      mismatchedKind,
+      mismatchedRevision,
+    ]) {
+      const resolver = createProjectDefinitionBrickResolver(readerReturning(malformed));
+      await expect(resolver.resolveExact(projectId, reference))
+        .rejects.toThrow("Persisted Definition Brick resolution failed.");
+    }
+
+    const throwingReader: StructuralReader = {
+      readExactDefinitionBrickRevision: async () => {
+        throw new Error("unredacted reader detail");
+      },
+    };
+    await expect(createProjectDefinitionBrickResolver(throwingReader).resolveExact(projectId, reference))
+      .rejects.toThrow("Persisted Definition Brick resolution failed.");
   });
 
   it("preserves archived exact provenance through Project restart and Snapshot compilation", async () => {

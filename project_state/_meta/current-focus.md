@@ -60,9 +60,10 @@ blocking evidence gap.
 The next planned product slice is OpenSpec tasks `5.1` through `5.3`: adapt
 exact persisted Definition Brick revisions to the existing Actor
 `DefinitionBrickResolverPort` without changing resolver semantics or adding
-Server composition. The Orchestrator must freeze that cross-module Task and
-state context before authorizing a Worker; no Actor-integration Worker is
-currently authorized.
+Server composition. Its ownership/dependency boundary is being frozen through
+the no-write
+[`preflight Task`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-preflight-001-persisted-definition-bricks.md).
+No Actor-integration implementation Worker is currently authorized.
 
 ## Reconciliation posture
 

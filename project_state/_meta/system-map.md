@@ -11,6 +11,9 @@ Actor Module     Host Gateway core    Project Module
                          ↑                   ↑
                WebSocket adapter     Project SQLite adapter
 
+Project resolver provider - - -> Actor Module exact resolver port
+                               (available, not Server-composed)
+
 ActorHost ───────┐
 Runtime CLI ─────┼──> Runtime Contracts
 Contract tests ──┘
@@ -20,7 +23,9 @@ Runtime Server currently contains independently testable Actor, Host Gateway,
 and Project application slices plus a loopback WebSocket adapter. The Project
 slice owns explicit Project records, Definition Brick authoring/history, and
 an accepted file-backed schema-v1 SQLite adapter behind inward ports. The
-adapter is not composed at a Server root. Runtime Server has no composition
+Project-owned resolver provider structurally satisfies the Actor Module's
+existing exact-revision consumer port without an Actor-to-SQLite dependency.
+Neither adapter is composed at a Server root. Runtime Server has no composition
 root or running daemon. ActorHost has Host-local backend/protocol slices but no
 application startup. Runtime CLI has no executable command surface. Package is
 currently a Runtime Contracts boundary, not a Server workflow: one immutable
@@ -77,6 +82,10 @@ and accepted Project SQLite remediation
 [testing](../../docs/construction/records/project-persistence/reports/PP-sqlite-remediation-acceptance-001-integrity-and-path-boundary.testing.md)
 and
 [re-review](../../docs/construction/records/project-persistence/reports/PP-sqlite-remediation-review-001-integrity-and-path-boundary.reviewing.md),
+accepted persisted resolver remediation
+[testing](../../docs/construction/records/project-persistence/reports/PP-actor-resolver-remediation-acceptance-001-result-validation.testing.md)
+and
+[re-review](../../docs/construction/records/project-persistence/reports/PP-actor-resolver-remediation-review-001-result-validation.reviewing.md),
 together with the scoped source/test roots named by the cards.
 
 ## Planned or deferred boundaries without cards

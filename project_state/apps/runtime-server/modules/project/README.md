@@ -104,10 +104,14 @@ with no remaining actionable finding or blocking evidence gap.
 
 The accepted SQLite adapter remains synchronous and uncomposed, with a bounded
 250 ms cross-process contention timeout. The resolver provider integration is
-self-verified at the remediation candidate after structural-reader result
-validation; focused independent retest and re-review remain required.
+accepted at remediation subject `021c005`; independent focused retest
+`f785656` and focused re-review `0bca963` closed the
+malformed-result/redaction finding with no remaining actionable finding or
+blocking evidence gap.
+
 Cross-process stress, automated recovery, Server composition, external
-adapters, and every execution workflow remain deferred.
+adapters, ActorTemplate/Snapshot production persistence, and every execution
+workflow remain deferred.
 
 ## Read next
 
@@ -137,6 +141,18 @@ adapters, and every execution workflow remain deferred.
   [`apps/runtime-server/test/modules/project/actor-definition-brick-resolver.test.ts`](../../../../../apps/runtime-server/test/modules/project/actor-definition-brick-resolver.test.ts)
 - Resolver result-validation remediation task:
   [PP-actor-resolver-remediation-001](../../../../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-remediation-001-result-validation.md)
+- Resolver integration task:
+  [PP-actor-resolver-001](../../../../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-001-persisted-definition-bricks.md)
+- Original resolver evidence:
+  [integrated testing](../../../../../docs/construction/records/project-persistence/reports/PP-actor-resolver-acceptance-001-persisted-definition-bricks.testing.md)
+  and
+  [review finding](../../../../../docs/construction/records/project-persistence/reports/PP-actor-resolver-review-001-persisted-definition-bricks.reviewing.md)
+- Accepted resolver remediation evidence:
+  [focused retest](../../../../../docs/construction/records/project-persistence/reports/PP-actor-resolver-remediation-acceptance-001-result-validation.testing.md)
+  and
+  [focused re-review](../../../../../docs/construction/records/project-persistence/reports/PP-actor-resolver-remediation-review-001-result-validation.reviewing.md)
+- Change closeout:
+  [Project and Definition Brick persistence](../../../../../docs/construction/records/project-persistence/project-definition-brick-persistence-closeout.md)
 - SQLite construction task:
   [PP-sqlite-001](../../../../../docs/construction/records/project-persistence/tasks/PP-sqlite-001-versioned-project-persistence.md)
 - SQLite remediation task:

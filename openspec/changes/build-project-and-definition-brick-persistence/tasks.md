@@ -36,18 +36,18 @@
 ## 6. Project State reconciliation
 
 - [x] 6.1 Once real Project module source/test ownership exists, create its single default Project State card with accurate intent, implemented behavior, boundaries, current condition, read routes, and evidence; do not create future facets.
-- [ ] 6.2 Reconcile the Runtime Contracts card for the implemented shared surface and reconcile the Actor card only if its production dependency, implemented behavior, condition, or evidence route actually changes.
-- [ ] 6.3 Have testing report any state-card mismatch without editing implementation claims, and have review verify every changed card against the exact committed implementation subject.
+- [x] 6.2 Reconcile the Runtime Contracts card for the implemented shared surface and reconcile the Actor card only if its production dependency, implemented behavior, condition, or evidence route actually changes.
+- [x] 6.3 Have testing report any state-card mismatch without editing implementation claims, and have review verify every changed card against the exact committed implementation subject.
 
 ## 7. Verification, independent acceptance, and review
 
-- [ ] 7.1 Run targeted Contract, Project module, SQLite adapter, and Actor resolver tests plus relevant build, type, workspace-boundary, clean-install, restart, and no-excluded-scope checks; record exact self-verification.
-- [ ] 7.2 Commit the integrated implementation subject and perform independent testing of the full Project-create → Brick-author → restart → exact Actor-resolve path, including required failure, concurrency, integrity, and compatibility evidence.
-- [ ] 7.3 Perform independent module/boundary review of Contracts, ownership, transactions, schema/migration, security configuration, synchronous-runtime bounds, error mapping, state cards, and exclusion discipline.
-- [ ] 7.4 Apply only authorized bounded remediation, then run focused retest and re-review against the new exact subject until no acceptance-blocking finding remains.
+- [x] 7.1 Run targeted Contract, Project module, SQLite adapter, and Actor resolver tests plus relevant build, type, workspace-boundary, clean-install, restart, and no-excluded-scope checks; record exact self-verification.
+- [x] 7.2 Commit the integrated implementation subject and perform independent testing of the full Project-create → Brick-author → restart → exact Actor-resolve path, including required failure, concurrency, integrity, and compatibility evidence.
+- [x] 7.3 Perform independent module/boundary review of Contracts, ownership, transactions, schema/migration, security configuration, synchronous-runtime bounds, error mapping, state cards, and exclusion discipline.
+- [x] 7.4 Apply only authorized bounded remediation, then run focused retest and re-review against the new exact subject until no acceptance-blocking finding remains.
 
 ## 8. Orchestrator acceptance and closeout
 
-- [ ] 8.1 Reconcile Orchestrator-owned `project_state/README.md`, `_meta/system-map.md`, `_meta/current-focus.md`, and accepted/deferred summaries only after the implementation and evidence are accepted.
-- [ ] 8.2 Record the accepted subject, evidence, residual risks, Node/SQLite compatibility policy, exact implemented/deferred scope, Project State result, and recovery limitations in a durable closeout.
-- [ ] 8.3 Refresh `docs/construction/handoff/current.md` with the accepted repository subject, active Worker/lease state, administrative queue, and next undecided product boundary; keep OpenSpec archiving as a separate explicit action.
+- [x] 8.1 Reconcile Orchestrator-owned `project_state/README.md`, `_meta/system-map.md`, `_meta/current-focus.md`, and accepted/deferred summaries only after the implementation and evidence are accepted.
+- [x] 8.2 Record the accepted subject, evidence, residual risks, Node/SQLite compatibility policy, exact implemented/deferred scope, Project State result, and recovery limitations in a durable closeout.
+- [x] 8.3 Refresh `docs/construction/handoff/current.md` with the accepted repository subject, active Worker/lease state, administrative queue, and next undecided product boundary; keep OpenSpec archiving as a separate explicit action.

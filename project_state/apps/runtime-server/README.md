@@ -9,10 +9,11 @@ owned cards:
 - [Runtime Server Project Module](./modules/project/README.md)
 
 All three consume [Runtime Contracts](../../packages/runtime-contracts/README.md).
-The Server currently has no composition root, daemon lifecycle, API surface,
-or production persistence wiring; those are deferred boundaries in the
-[system map](../../_meta/system-map.md), not claims of an implemented Server
-composition module.
+The Project Module owns an accepted uncomposed file-backed SQLite adapter. The
+Server still has no composition root, daemon lifecycle, API surface, or
+production persistence wiring at the Server root; those are deferred
+boundaries in the [system map](../../_meta/system-map.md), not claims of an
+implemented Server composition module.
 
 Before a Server task, read the [root state route](../../README.md), the
 applicable module card, the Task/procedure, and then the scoped source/tests.

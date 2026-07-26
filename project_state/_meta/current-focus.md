@@ -36,46 +36,41 @@ blocking evidence gap.
 
 ## Current condition
 
-- OpenSpec tasks `2.1` through `2.4` and accepted application tasks `3.1`
-  through `3.5` are checked.
+- OpenSpec preflight `1.1` through `1.3`, Contracts `2.1` through `2.4`,
+  application `3.1` through `3.5`, and SQLite `4.1` through `4.5` are checked.
 - The Runtime Server
   [Project Module](../apps/runtime-server/modules/project/README.md) owns the
   accepted application boundary, deterministic in-memory evidence, canonical
   Body authoring/integrity, and exact-revision coherence.
-- The Project boundary has a self-verified SQLite remediation candidate at
-  `38fe697`. It closes the two P1 integrity/path-boundary findings in local
-  evidence; focused independent retest and re-review are pending. Server
-  composition, external adapters, Actor resolver wiring, and automated
-  recovery remain absent.
+- The Project boundary owns accepted file-backed SQLite persistence at
+  remediation subject `38fe697`. Independent focused
+  [testing](../../docs/construction/records/project-persistence/reports/PP-sqlite-remediation-acceptance-001-integrity-and-path-boundary.testing.md)
+  and
+  [re-review](../../docs/construction/records/project-persistence/reports/PP-sqlite-remediation-review-001-integrity-and-path-boundary.reviewing.md)
+  close both P1 findings with no remaining actionable finding or blocking
+  evidence gap.
 - Root/Runtime Server routing and the system map include the accepted Project
-  application boundary.
-- Acceptance of SQLite persistence, external authoring adapters, Actor resolver
-  wiring, Server composition, automated recovery, execution, Package workflow,
-  Run, and Graph remain deferred.
+  application and uncomposed Project-owned SQLite boundary.
+- External authoring adapters, Actor resolver wiring, Server composition,
+  automated recovery, execution, Package workflow, Run, and Graph remain
+  deferred.
 
 ## Next entry point
 
-The defective reviewed SQLite candidate was `2cf9b84`, implemented under
-[`PP-sqlite-001`](../../docs/construction/records/project-persistence/tasks/PP-sqlite-001-versioned-project-persistence.md)
-with Node `v24.18.0`, pnpm `11.10.0`, and the retained
-`@types/node 24.13.3`. Independent testing passed at `df5ef46`; Early Review
-required remediation at `d0d763f`. The bounded correction is `38fe697`.
-
-The next entry points are the
-[`focused retest Task`](../../docs/construction/records/project-persistence/tasks/PP-sqlite-remediation-acceptance-001-integrity-and-path-boundary.md)
-and subsequent
-[`focused re-review Task`](../../docs/construction/records/project-persistence/tasks/PP-sqlite-remediation-review-001-integrity-and-path-boundary.md)
-against `38fe697`. No Actor resolver Worker is authorized until both findings
-close and both evidence gates accept that exact subject.
+The next planned product slice is OpenSpec tasks `5.1` through `5.3`: adapt
+exact persisted Definition Brick revisions to the existing Actor
+`DefinitionBrickResolverPort` without changing resolver semantics or adding
+Server composition. The Orchestrator must freeze that cross-module Task and
+state context before authorizing a Worker; no Actor-integration Worker is
+currently authorized.
 
 ## Reconciliation posture
 
 The Project card and its root/parent/system-map routes are accepted current
 views and must not be deleted or recreated.
 
-The Orchestrator owns persistence evidence acceptance, any remediation
-authorization, the later Actor-integration decision, and every root/meta
-reconciliation.
+The Orchestrator owns the Actor-integration Task boundary, later evidence
+acceptance, and every root/meta reconciliation.
 Future Coders may update only authorized Project implementation/evidence
 claims; Testers report mismatches without editing and Reviewers verify changed
 claims against exact subjects.

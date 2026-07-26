@@ -50,5 +50,6 @@ map, focus, and acceptance summaries remain Orchestrator-owned.
 
 The Project State System itself is documentation/process-only and creates no
 Runtime behavior, dependency, lockfile, source, or test changes. Package, Run,
-Graph, and SQLite remain visible in the system map without speculative empty
-cards.
+and Graph remain visible in the system map without speculative empty cards.
+The accepted Project-owned SQLite adapter is routed through the existing
+Project Module card rather than a separate infrastructure card.

@@ -78,11 +78,14 @@ implementation subject `0b0d0bf`. Independent focused testing and re-review
 closed the canonical-Body and exact-revision integrity findings with no
 remaining actionable finding or blocking evidence gap.
 
-The application behavior remains accepted at `0b0d0bf`. Independent SQLite
-testing passed candidate `2cf9b84`, while review required remediation for
-revision aggregate-UID binding and workspace-contained database paths. The
-current remediation candidate closes both findings with focused
-self-verification; independent focused retest and re-review remain pending.
+The application behavior remains accepted at `0b0d0bf`. The file-backed
+SQLite boundary is accepted at remediation subject `38fe697`; independent
+focused retest `4c0c5d9` and focused re-review `bf25b86` closed the prior
+revision aggregate-UID binding and workspace-contained database-path findings
+with no remaining actionable finding or blocking evidence gap.
+
+The accepted adapter remains synchronous and uncomposed, with a bounded 250 ms
+cross-process contention timeout. Cross-process stress, automated recovery,
 Server composition, external adapters, Actor-side resolver wiring, and every
 execution workflow remain deferred.
 
@@ -112,11 +115,15 @@ execution workflow remain deferred.
   [PP-sqlite-001](../../../../../docs/construction/records/project-persistence/tasks/PP-sqlite-001-versioned-project-persistence.md)
 - SQLite remediation task:
   [PP-sqlite-remediation-001](../../../../../docs/construction/records/project-persistence/tasks/PP-sqlite-remediation-001-integrity-and-path-boundary.md)
-- Candidate SQLite evidence:
+- Original SQLite evidence:
   [independent testing](../../../../../docs/construction/records/project-persistence/reports/PP-sqlite-acceptance-001-versioned-project-persistence.testing.md)
   and
   [review findings](../../../../../docs/construction/records/project-persistence/reports/PP-sqlite-review-001-versioned-project-persistence.reviewing.md)
-- Accepted remediation evidence:
+- Accepted SQLite remediation evidence:
+  [focused retest](../../../../../docs/construction/records/project-persistence/reports/PP-sqlite-remediation-acceptance-001-integrity-and-path-boundary.testing.md)
+  and
+  [focused re-review](../../../../../docs/construction/records/project-persistence/reports/PP-sqlite-remediation-review-001-integrity-and-path-boundary.reviewing.md)
+- Accepted application remediation evidence:
   [testing](../../../../../docs/construction/records/project-persistence/reports/PP-application-remediation-acceptance-001-project-brick-integrity.testing.md)
   and
   [re-review](../../../../../docs/construction/records/project-persistence/reports/PP-application-remediation-review-001-project-brick-integrity.reviewing.md)

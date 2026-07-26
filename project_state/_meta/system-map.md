@@ -8,8 +8,8 @@ This is a sparse current-state map, not a literal source-tree index. The five ca
 Runtime Contracts
    ↑                 ↑                    ↑
 Actor Module     Host Gateway core    Project Module
-                         ↑
-              WebSocket infrastructure adapter
+                         ↑                   ↑
+               WebSocket adapter     Project SQLite adapter
 
 ActorHost ───────┐
 Runtime CLI ─────┼──> Runtime Contracts
@@ -18,10 +18,10 @@ Contract tests ──┘
 
 Runtime Server currently contains independently testable Actor, Host Gateway,
 and Project application slices plus a loopback WebSocket adapter. The Project
-slice owns explicit Project records and Definition Brick authoring/history
-behind inward ports with deterministic in-memory evidence; it has no production
-persistence or Server composition. Runtime Server has no composition root or
-running daemon. ActorHost has Host-local backend/protocol slices but no
+slice owns explicit Project records, Definition Brick authoring/history, and
+an accepted file-backed schema-v1 SQLite adapter behind inward ports. The
+adapter is not composed at a Server root. Runtime Server has no composition
+root or running daemon. ActorHost has Host-local backend/protocol slices but no
 application startup. Runtime CLI has no executable command surface. Package is
 currently a Runtime Contracts boundary, not a Server workflow: one immutable
 Package has a Head plus exactly one Body whose value is one root `BrickPrompt`,
@@ -62,26 +62,29 @@ The following mismatches were reconciled before card creation. “Intent” is t
 | ActorHost | Intent is one-Actor execution ownership with backend/session lifecycle and Server reporting. Current source proves supervisor, FakeBackend, process/Claude adapter, connection, command processing, and WebSocket slices; startup wiring, heartbeat/reconnect, outbox, Package/completion emission, and recovery are absent. | Card is `partial` and separates Host-local behavior from deferred application lifecycle. |
 | Runtime Contracts and Package | Intent makes Contracts the shared schema/value boundary and Package a future workflow-owned module. The accepted current Package is immutable Head plus exactly one root-`BrickPrompt` Body; mutable routing belongs to Delivery. Current source supplies the Contracts and hash helper, while Server has no Package module or publication/routing service. A Package-as-Brick redesign is not accepted current intent. | Package remains a Contracts-only planned/deferred workflow boundary; no Package card is created and any redesign remains unresolved. |
 | Runtime CLI and Server | Intent is stateless CLI → Server API and an authoritative Server composition root. Current CLI is a type-consumer fixture and Server has no startup/composition root or API surface. | CLI is deferred; Server remains a routing node and no Server card is created. |
-| Run, Graph, SQLite | Designs name these as future ownership/persistence boundaries. Current source/evidence does not establish independently hand-offable implementations. | Keep them visible here as planned/deferred map entries only; create no empty cards. |
+| Run and Graph | Designs name these as future ownership boundaries. Current source/evidence does not establish independently hand-offable implementations. | Keep them visible here as planned/deferred map entries only; create no empty cards. |
 
 Evidence for the reconciliation includes the accepted
 [Runtime Contracts closeout](../../docs/construction/records/runtime-contracts/phase-0b-closeout.md),
 [ActorTemplate closeout](../../docs/construction/records/actor-template/reference-only-actor-template-closeout.md),
 [Host Gateway closeout](../../docs/construction/records/host-gateway/host-gateway-walking-skeleton-closeout.md),
 [ClaudeCodeAdapter closeout](../../docs/construction/records/claude-code-adapter/claude-code-adapter-v0.1-closeout.md),
-and Project integrity
+and Project application integrity
 [testing](../../docs/construction/records/project-persistence/reports/PP-application-remediation-acceptance-001-project-brick-integrity.testing.md)
 and
 [re-review](../../docs/construction/records/project-persistence/reports/PP-application-remediation-review-001-project-brick-integrity.reviewing.md),
+and accepted Project SQLite remediation
+[testing](../../docs/construction/records/project-persistence/reports/PP-sqlite-remediation-acceptance-001-integrity-and-path-boundary.testing.md)
+and
+[re-review](../../docs/construction/records/project-persistence/reports/PP-sqlite-remediation-review-001-integrity-and-path-boundary.reviewing.md),
 together with the scoped source/test roots named by the cards.
 
 ## Planned or deferred boundaries without cards
 
-- Project production persistence and Runtime activation
+- Project Runtime activation and Server-root persistence composition
 - Package workflow and Delivery persistence/routing
 - Run Engine
 - Graph and GraphRun
-- SQLite/persistence infrastructure
 - Runtime Server composition/API root
 
 These entries are visible for orientation only. They do not authorize implementation or imply that the boundary is blocked.

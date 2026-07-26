@@ -42,10 +42,10 @@ blocking evidence gap.
   [Project Module](../apps/runtime-server/modules/project/README.md) owns the
   accepted application boundary, deterministic in-memory evidence, canonical
   Body authoring/integrity, and exact-revision coherence.
-- The Project boundary has a committed SQLite persistence candidate at
-  `2cf9b84`. Independent testing passed, but Early Review found two
-  acceptance-blocking integrity/path-boundary defects; remediation is pending.
-  Server composition, external adapters, Actor resolver wiring, and automated
+- The Project boundary has a self-verified SQLite remediation candidate at
+  `38fe697`. It closes the two P1 integrity/path-boundary findings in local
+  evidence; focused independent retest and re-review are pending. Server
+  composition, external adapters, Actor resolver wiring, and automated
   recovery remain absent.
 - Root/Runtime Server routing and the system map include the accepted Project
   application boundary.
@@ -55,17 +55,18 @@ blocking evidence gap.
 
 ## Next entry point
 
-The immutable reviewed SQLite candidate is `2cf9b84`, implemented under
+The defective reviewed SQLite candidate was `2cf9b84`, implemented under
 [`PP-sqlite-001`](../../docs/construction/records/project-persistence/tasks/PP-sqlite-001-versioned-project-persistence.md)
 with Node `v24.18.0`, pnpm `11.10.0`, and the retained
 `@types/node 24.13.3`. Independent testing passed at `df5ef46`; Early Review
-requires remediation at `d0d763f`.
+required remediation at `d0d763f`. The bounded correction is `38fe697`.
 
-The next entry point is the bounded
-[`remediation Task`](../../docs/construction/records/project-persistence/tasks/PP-sqlite-remediation-001-integrity-and-path-boundary.md),
-followed by focused independent retest and re-review against the new exact
-subject. No Actor resolver Worker is authorized until both findings close and
-both evidence gates accept that subject.
+The next entry points are the
+[`focused retest Task`](../../docs/construction/records/project-persistence/tasks/PP-sqlite-remediation-acceptance-001-integrity-and-path-boundary.md)
+and subsequent
+[`focused re-review Task`](../../docs/construction/records/project-persistence/tasks/PP-sqlite-remediation-review-001-integrity-and-path-boundary.md)
+against `38fe697`. No Actor resolver Worker is authorized until both findings
+close and both evidence gates accept that exact subject.
 
 ## Reconciliation posture
 

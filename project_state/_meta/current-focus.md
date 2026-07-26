@@ -63,7 +63,10 @@ exact persisted Definition Brick revisions to the existing Actor
 Server composition. Its ownership/dependency boundary is being frozen through
 the no-write
 [`preflight Task`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-preflight-001-persisted-definition-bricks.md).
-No Actor-integration implementation Worker is currently authorized.
+The preflight returned READY with existing ports/Contracts sufficient and a
+Project-owned provider boundary. The exact implementation is frozen in
+[`PP-actor-resolver-001`](../../docs/construction/records/project-persistence/tasks/PP-actor-resolver-001-persisted-definition-bricks.md);
+no implementation Worker is currently authorized.
 
 ## Reconciliation posture
 

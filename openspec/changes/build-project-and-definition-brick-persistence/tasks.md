@@ -2,7 +2,7 @@
 
 - [x] 1.1 Record the exact implementation baseline, clean-worktree evidence, W3 construction map, slice order, subject identity, and Task/Report paths before product writes begin.
 - [x] 1.2 Close implementation choices for the Project module source/test roots, schema/migration layout, explicit database-path input, nonzero busy timeout, same-process write serialization, and Node `>=24.15 <25` enforcement without authorizing excluded modules.
-- [ ] 1.3 Verify built-in `node:sqlite` and selected options against the pinned Node/type baseline; confirm no third-party SQLite runtime dependency is required and record the Compatibility-gate evidence.
+- [x] 1.3 Verify built-in `node:sqlite` and selected options against the pinned Node/type baseline; confirm no third-party SQLite runtime dependency is required and record the Compatibility-gate evidence.
 
 ## 2. Shared Runtime Contract surface
 
@@ -21,11 +21,11 @@
 
 ## 4. Versioned `node:sqlite` persistence
 
-- [ ] 4.1 Enforce the Node `>=24.15 <25` runtime floor and add the file-backed `node:sqlite` adapter configuration with explicit absolute path, foreign keys, defensive mode, disabled extensions, safe integer behavior, and bounded lock timeout.
-- [ ] 4.2 Implement schema version 1 bootstrap for the migration ledger, Projects, Definition Brick aggregates, and immutable revisions with required primary, foreign-key, uniqueness, lifecycle, revision, and integrity constraints.
-- [ ] 4.3 Implement prepared repositories and explicit transaction handling for Project create/read and Brick create/revise/archive/read/list/history/exact resolution, including rollback-before-mapping for all failures.
-- [ ] 4.4 Implement startup schema validation and fail-closed handling for unsupported versions, failed initialization/migration, invalid configuration, lock/constraint failures, persistence failures, and corrupt Contract/digest records.
-- [ ] 4.5 Add SQLite adapter tests for clean bootstrap, close/reopen durability, prepared values, rollback, concurrent stale-base conflict, archive/history, Project isolation, lock timeout, constraints, migration failure, unsupported schema, and integrity corruption.
+- [x] 4.1 Enforce the Node `>=24.15 <25` runtime floor and add the file-backed `node:sqlite` adapter configuration with explicit absolute path, foreign keys, defensive mode, disabled extensions, safe integer behavior, and bounded lock timeout.
+- [x] 4.2 Implement schema version 1 bootstrap for the migration ledger, Projects, Definition Brick aggregates, and immutable revisions with required primary, foreign-key, uniqueness, lifecycle, revision, and integrity constraints.
+- [x] 4.3 Implement prepared repositories and explicit transaction handling for Project create/read and Brick create/revise/archive/read/list/history/exact resolution, including rollback-before-mapping for all failures.
+- [x] 4.4 Implement startup schema validation and fail-closed handling for unsupported versions, failed initialization/migration, invalid configuration, lock/constraint failures, persistence failures, and corrupt Contract/digest records.
+- [x] 4.5 Add SQLite adapter tests for clean bootstrap, close/reopen durability, prepared values, rollback, concurrent stale-base conflict, archive/history, Project isolation, lock timeout, constraints, migration failure, unsupported schema, and integrity corruption.
 
 ## 5. Actor resolver integration
 

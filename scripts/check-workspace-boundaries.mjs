@@ -358,7 +358,14 @@
     {
       name: "Project Module",
       root: resolve(apps[0].dir, "src", "modules", "project"),
+      excludedRoots: [resolve(apps[0].dir, "src", "modules", "project", "infrastructure")],
       allowedPackages: new Set(["@ai-block/runtime-contracts"])
+    },
+    {
+      name: "Project SQLite infrastructure",
+      root: resolve(apps[0].dir, "src", "modules", "project", "infrastructure", "sqlite"),
+      relativeRoot: resolve(apps[0].dir, "src", "modules", "project"),
+      allowedPackages: new Set(["@ai-block/runtime-contracts", "node:fs", "node:path", "node:sqlite"])
     }
   ];
   const failures = [];
@@ -485,7 +492,7 @@
     if (specifier.startsWith(".")) {
       const resolvedPath = resolveRelativeProductionImport(sourcePath, specifier);
       if (resolvedPath === undefined) return "unresolved_relative_import";
-      return isContainedPath(policy.root, resolve(resolvedPath)) ? undefined : "relative_escape";
+      return isContainedPath(policy.relativeRoot ?? policy.root, resolve(resolvedPath)) ? undefined : "relative_escape";
     }
     return policy.allowedPackages.has(specifier) ? undefined : "forbidden_external_import";
   }
@@ -499,13 +506,14 @@
       .filter((violation) => violation.category !== undefined);
   }
 
-  function productionSourceFiles(sourceRoot) {
+  function productionSourceFiles(sourceRoot, excludedRoots = []) {
     const files = [];
     const pending = [sourceRoot];
     while (pending.length > 0) {
       const current = pending.pop();
       for (const entry of readdirSync(current, { withFileTypes: true })) {
         const child = join(current, entry.name);
+        if (excludedRoots.some((excludedRoot) => isContainedPath(excludedRoot, child))) continue;
         if (entry.isDirectory()) pending.push(child);
         else if (entry.isFile() && child.endsWith(".ts")) files.push(child);
       }
@@ -517,9 +525,11 @@
     const actorPolicy = productionImportPolicies[0];
     const contractsPolicy = productionImportPolicies[1];
     const projectPolicy = productionImportPolicies[2];
+    const projectSqlitePolicy = productionImportPolicies[3];
     const actorSource = join(actorPolicy.root, "application.ts");
     const contractsSource = join(contractsPolicy.root, "index.ts");
     const projectSource = join(projectPolicy.root, "application.ts");
+    const projectSqliteSource = join(projectSqlitePolicy.root, "persistence.ts");
     const assertCategories = (label, policy, sourcePath, sourceText, expected) => {
       const actual = productionImportViolations(policy, sourcePath, sourceText)
         .map((violation) => violation.category);
@@ -602,11 +612,25 @@
       'import "@ai-block/actor-host"; import "../actor/index.js";',
       ["forbidden_external_import", "relative_escape"]
     );
+    assertCategories(
+      "allowed Project SQLite imports",
+      projectSqlitePolicy,
+      projectSqliteSource,
+      'import type { ProjectId } from "@ai-block/runtime-contracts"; import { DatabaseSync } from "node:sqlite"; import { statSync } from "node:fs"; import { join } from "node:path"; import type { ProjectUnitOfWorkPort } from "../../ports.js";',
+      []
+    );
+    assertCategories(
+      "Project SQLite forbidden imports",
+      projectSqlitePolicy,
+      projectSqliteSource,
+      'import "node:crypto"; import "@ai-block/runtime-server"; import "../../../actor/index.js";',
+      ["forbidden_external_import", "forbidden_external_import", "relative_escape"]
+    );
   }
 
   function checkProductionImportBoundaries() {
     for (const policy of productionImportPolicies) {
-      for (const sourcePath of productionSourceFiles(policy.root)) {
+      for (const sourcePath of productionSourceFiles(policy.root, policy.excludedRoots)) {
         const sourceRelative = sourceRelativePath(policy.root, sourcePath);
         for (const violation of productionImportViolations(policy, sourcePath, readText(sourcePath))) {
           check(
@@ -633,7 +657,7 @@
       private: true,
       type: "module",
       packageManager: "pnpm@11.10.0",
-      engines: { node: ">=24 <25", pnpm: "11.10.0" },
+      engines: { node: ">=24.15 <25", pnpm: "11.10.0" },
       scripts: {
         build: "tsc -b tsconfig.json",
         clean: "tsc -b tsconfig.json --clean",
@@ -744,7 +768,13 @@
           check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor", "host-gateway", "project"]), `${modulesRoot}: Runtime Server module topology mismatch`);
           check(same(readdirSync(join(modulesRoot, "host-gateway"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway.ts", "ports.ts"]), `${modulesRoot}/host-gateway: Runtime Server Host Gateway source files mismatch`);
           check(same(readdirSync(join(modulesRoot, "actor"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["application.ts", "compiler.ts", "index.ts", "ports.ts", "validation.ts", "values.ts"]), `${modulesRoot}/actor: Actor source files mismatch`);
-          check(same(readdirSync(join(modulesRoot, "project"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["application.ts", "errors.ts", "index.ts", "ports.ts", "values.ts"]), `${modulesRoot}/project: Project source files mismatch`);
+          const projectRoot = join(modulesRoot, "project");
+          check(same(readdirSync(projectRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["application.ts", "errors.ts", "index.ts", "infrastructure", "ports.ts", "values.ts"]), `${modulesRoot}/project: Project source files mismatch`);
+          const projectInfrastructureRoot = join(projectRoot, "infrastructure");
+          check(same(readdirSync(projectInfrastructureRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["sqlite"]), `${projectInfrastructureRoot}: Project infrastructure topology mismatch`);
+          const projectSqliteRoot = join(projectInfrastructureRoot, "sqlite");
+          check(same(readdirSync(projectSqliteRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["configuration.ts", "index.ts", "migrations", "persistence.ts"]), `${projectSqliteRoot}: Project SQLite source files mismatch`);
+          check(same(readdirSync(join(projectSqliteRoot, "migrations"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["v1.ts"]), `${projectSqliteRoot}/migrations: Project SQLite migration files mismatch`);
         } else if (unit === apps[1]) {
           check(same(entries.map((entry) => entry.name).sort(), ["backend", "main.ts", "server-connection"]), `${sourceRoot}: ActorHost source topology mismatch`);
           const backendRoot = join(sourceRoot, "backend");
@@ -814,7 +844,7 @@
         check(same(readdirSync(modulesRoot, { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor", "host-gateway", "project"]), `${modulesRoot}: Runtime Server test module topology mismatch`);
         check(same(readdirSync(join(modulesRoot, "host-gateway"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["host-gateway.test.ts"]), `${modulesRoot}/host-gateway: Runtime Server Host Gateway test files mismatch`);
         check(same(readdirSync(join(modulesRoot, "actor"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["actor-application.test.ts", "actor-foundation.test.ts", "actor-validation-compiler.test.ts", "in-memory-adapters.ts"]), `${modulesRoot}/actor: Actor test files mismatch`);
-        check(same(readdirSync(join(modulesRoot, "project"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["in-memory-adapters.ts", "project-application.test.ts"]), `${modulesRoot}/project: Project test files mismatch`);
+        check(same(readdirSync(join(modulesRoot, "project"), { withFileTypes: true }).map((entry) => entry.name).sort(), ["in-memory-adapters.ts", "project-application.test.ts", "sqlite-persistence.test.ts"]), `${modulesRoot}/project: Project test files mismatch`);
       }
     }
     const forbiddenCatchAll = new Set(["common", "shared", "core", "utils"]);
@@ -1008,6 +1038,14 @@ export type RuntimeContractsConsumerFixture = ActorLaunchSpec | HostToServerMess
   }
 
   function checkToolchain() {
+    const runtime = process.versions.node.split(".").map((part) => Number(part));
+    check(
+      runtime.length === 3
+        && runtime.every(Number.isInteger)
+        && runtime[0] === 24
+        && runtime[1] >= 15,
+      `Node runtime ${process.versions.node} does not satisfy >=24.15 <25`
+    );
     runPnpm("pnpm version", ["--version"], (status, stdout, stderr) => status === 0 && stdout.trim() === "11.10.0" && stderr.trim() === "");
     runPnpm("TypeScript version", ["exec", "tsc", "--version"], (status, stdout, stderr) => status === 0 && stdout.trim() === "Version 7.0.2" && stderr.trim() === "");
   }

@@ -2,6 +2,14 @@ export { ProjectApplicationService } from "./application.js";
 export {
   runtimeContractsDefinitionBrickDigest,
 } from "./values.js";
+export {
+  openProjectSqlitePersistence,
+} from "./infrastructure/sqlite/index.js";
+export type {
+  OpenProjectSqlitePersistenceResult,
+  ProjectSqliteConfiguration,
+  ProjectSqlitePersistence,
+} from "./infrastructure/sqlite/index.js";
 export type {
   DefinitionBrickAppendWriteResult,
   DefinitionBrickArchiveWriteResult,

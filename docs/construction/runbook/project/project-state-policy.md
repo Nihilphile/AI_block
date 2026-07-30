@@ -77,3 +77,22 @@ prose express the lifecycle; do not add a parallel phase database.
 Cards contain current, reusable orientation only. They do not copy command
 logs, failed attempts, full Task semantics, historical narratives, or evidence
 that is better retained in Git or a focused Report.
+
+The same boundary applies to root/meta views. `current-focus.md` is a compact
+product-frontier view, not a construction status document. It may state:
+
+- the current accepted product position relevant to the frontier;
+- the smallest unresolved product boundary;
+- genuine blockers expressed as missing product decisions or capabilities;
+- the next product entry point.
+
+It must not retain:
+
+- completed or active Worker lease history;
+- Task or OpenSpec progress counters;
+- commit, testing, or review subject chains;
+- command, environment, or remote-divergence status;
+- administrative queues or handoff instructions;
+- milestone chronology already preserved by construction records and Git.
+
+Rewrite focus as the frontier changes; do not append a timeline.

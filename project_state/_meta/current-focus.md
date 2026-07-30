@@ -1,91 +1,46 @@
 # Current Focus
 
-## Accepted current state
+## Current product frontier
 
-Project State System v0.1 and Runtime Design Knowledge System v0.1 remain
-accepted documentation/process layers. Their canonical entries are the
-[Project State root](../README.md) and
-[Runtime design catalog](../../docs/design/README.md). They add no Runtime
-behavior and do not replace source, Contracts, tests, OpenSpec, construction
-evidence, or Git.
+The current frontier is the transition from durable Project-owned Definition
+Brick resolution and immutable Actor configuration to a runtime Actor identity.
 
-The active product change is
-[`build-project-and-definition-brick-persistence`](../../openspec/changes/build-project-and-definition-brick-persistence/).
-Its accepted Contract-first surface includes:
+The accepted current product can:
 
-- root-exported Project and Definition Brick application Contracts at
-  implementation subject `7d3eca4`;
-- the single shared Definition Brick digest implementation at subject
-  `f4ed012`;
-- the root-exported Definition Brick Body normalizer at subject `2d8eaaf`,
-  independently accepted by
-  [testing](../../docs/construction/records/project-persistence/reports/PP-contracts-002-acceptance-definition-brick-normalization.testing.md)
-  and
-  [Early Review](../../docs/construction/records/project-persistence/reports/PP-contracts-002-review-definition-brick-normalization.reviewing.md).
+- author and persist Project-local Definition Bricks with exact revision
+  history;
+- resolve an exact persisted Definition Brick revision through the
+  Project-owned provider required by the Actor Module;
+- validate and compile typed Definition Bricks and ActorTemplates into an
+  immutable, self-contained `ActorConfigSnapshot`.
 
-These accepted Contract boundaries do not by themselves establish Project
-persistence, Server composition, or Actor resolver integration.
+The Actor Module does not yet provide production persistence for
+ActorTemplate/Snapshot state and does not create a runtime Actor.
 
-The Runtime Server Project application/in-memory boundary is accepted at
-implementation subject `0b0d0bf`. Its independent
-[focused testing](../../docs/construction/records/project-persistence/reports/PP-application-remediation-acceptance-001-project-brick-integrity.testing.md)
-and
-[focused re-review](../../docs/construction/records/project-persistence/reports/PP-application-remediation-review-001-project-brick-integrity.reviewing.md)
-closed both prior integrity findings with no remaining actionable finding or
-blocking evidence gap.
+## Conditions shaping the frontier
 
-The complete Project persistence and exact Actor resolver boundary is accepted
-at final remediation subject `021c005`. Independent
-[focused testing](../../docs/construction/records/project-persistence/reports/PP-actor-resolver-remediation-acceptance-001-result-validation.testing.md)
-and
-[focused re-review](../../docs/construction/records/project-persistence/reports/PP-actor-resolver-remediation-review-001-result-validation.reviewing.md)
-closed the final malformed-result/redaction finding with no remaining
-actionable finding or blocking evidence gap. The durable
-[closeout](../../docs/construction/records/project-persistence/project-definition-brick-persistence-closeout.md)
-records the full subject/evidence chain.
+- Actor identity remains separate from a backend process or model session.
+- Static Snapshot configuration remains separate from dynamic Package and Run
+  input.
+- `model_id` is preserved by the Snapshot, but its first-class Host launch
+  transport is not yet settled.
+- Host Gateway and ActorHost have accepted bounded protocol/backend slices, but
+  neither is attached to a Runtime Server composition root.
+- Direct Actor execution must be established before Graph construction.
 
-## Current condition
+## Next product entry point
 
-- OpenSpec implementation and closeout tasks are `30/30` complete. The change
-  remains deliberately unarchived.
-- The Runtime Server
-  [Project Module](../apps/runtime-server/modules/project/README.md) owns the
-  accepted application boundary, deterministic in-memory evidence, canonical
-  Body authoring/integrity, exact-revision coherence, Project-owned SQLite
-  persistence, and the provider for the existing Actor exact resolver port.
-- The Project boundary owns accepted file-backed SQLite persistence at
-  remediation subject `38fe697`. Independent focused
-  [testing](../../docs/construction/records/project-persistence/reports/PP-sqlite-remediation-acceptance-001-integrity-and-path-boundary.testing.md)
-  and
-  [re-review](../../docs/construction/records/project-persistence/reports/PP-sqlite-remediation-review-001-integrity-and-path-boundary.reviewing.md)
-  close both P1 findings with no remaining actionable finding or blocking
-  evidence gap.
-- Root/Runtime Server routing and the system map include the accepted Project
-  application, uncomposed Project-owned SQLite boundary, and available
-  Project-to-Actor resolver provider.
-- Server-root resolver/database wiring, external authoring adapters,
-  ActorTemplate/Snapshot production persistence, Actor creation, Host launch,
-  Server composition, automated recovery, execution, Package workflow, Run,
-  and Graph remain deferred.
+Decide the smallest Direct Actor boundary after `ActorConfigSnapshot`.
+The leading boundary is immutable Actor creation from an accepted exact
+Snapshot, with Host launch controlled as a separate subsequent boundary.
 
-## Next entry point
+That decision must settle Actor ownership, identity and persistence semantics,
+Contract impact, atomicity, and explicit exclusions before product
+construction is authorized.
 
-The persistence-first OpenSpec change is implementation-complete and accepted.
-Archiving it is a separate administrative action and is not authorized by this
-closeout.
+## Deferred beyond this frontier
 
-The next product boundary is undecided. A likely Direct Actor continuation is
-immutable Actor creation from an accepted ActorConfigSnapshot followed by a
-separately controlled Host-launch boundary. That requires a new design/OpenSpec
-decision; no product Worker or lease is active.
-
-## Reconciliation posture
-
-The Project card and its root/parent/system-map routes are accepted current
-views and must not be deleted or recreated.
-
-The Orchestrator owns the next product-boundary decision, OpenSpec archive
-decision, and every root/meta reconciliation.
-Future Coders may update only authorized Project implementation/evidence
-claims; Testers report mismatches without editing and Reviewers verify changed
-claims against exact subjects.
+Server composition, Host launch and recovery, ActorPool/Trace behavior,
+backend-session persistence, Package/Delivery workflow, Run/Invocation,
+Graph execution, external authoring adapters, backup/import/export, and
+cross-family units of work remain deferred.

@@ -6,7 +6,8 @@
 
 1. Read [authority](./_meta/authority.md) to identify which repository source governs each question.
 2. Read the [system map](./_meta/system-map.md) for current boundaries, dependency direction, and planned/deferred areas.
-3. Read [current focus](./_meta/current-focus.md) for active construction scope, named blockers, and the next entry point.
+3. Read [current focus](./_meta/current-focus.md) for the current product frontier,
+   accepted conditions that shape it, and the next product entry point.
 4. Load one target card below before opening its local source and tests.
 
 ## Current module cards
@@ -47,6 +48,12 @@ authorized Coder reconciles actual implementation, roots, local dependencies,
 condition, and evidence on the directly affected card. Testers report
 mismatches; Reviewers verify candidate cards. Root/parent routing, cross-module
 map, focus, and acceptance summaries remain Orchestrator-owned.
+
+Project State never records a construction timeline. In particular, root/meta
+views and module cards do not retain completed Worker leases, task progress,
+commit chains, command history, handoff instructions, or an old-versus-new
+narrative. Git, OpenSpec, construction records, and an intentionally active
+handoff retain those concerns when they are needed.
 
 The Project State System itself is documentation/process-only and creates no
 Runtime behavior, dependency, lockfile, source, or test changes. Package, Run,

@@ -30,6 +30,12 @@ boundaries, accepted/deferred condition, and root/meta routing.
 
 Cards describe the accepted approach that is true today. When an approach changes, rewrite the current statement and link the relevant historical record or OpenSpec artifact. Do not preserve an old-versus-new narrative in the card.
 
+`current-focus.md` follows the same rule. It identifies the current product
+frontier, the accepted conditions that shape it, genuine product blockers, and
+the next product entry point. It is not a live construction log and does not
+track Worker leases, task completion, commit subjects, evidence chronology,
+administrative queues, or handoff procedure.
+
 ## Key references
 
 - [Project State System design](../../docs/construction/project-state-system-design.md)
